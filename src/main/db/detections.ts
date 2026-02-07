@@ -176,4 +176,3 @@ export function updateDetectionClipPath(id: number, clipPath: string): void {
   const db = getDb();
   db.prepare('UPDATE detections SET clip_path = ? WHERE id = ?').run(clipPath, id);
 }
-

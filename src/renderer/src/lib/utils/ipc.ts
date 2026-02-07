@@ -185,4 +185,3 @@ export function exportRegionAsWav(wavBytes: Uint8Array, defaultName?: string): P
 export function saveSpectrogram(clipPath: string, freqMax: number, height: number, dataUrl: string): Promise<string> {
   return window.birda.invoke('clip:save-spectrogram', clipPath, freqMax, height, dataUrl) as Promise<string>;
 }
-
