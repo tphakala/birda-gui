@@ -21,12 +21,13 @@
     openFileDialog,
     openFolderDialog,
     listModels,
+    listAvailableModels,
     readCoordinates,
     getLocations,
     scanSource,
   } from '$lib/utils/ipc';
   import { formatNumber, parseRecordingStart } from '$lib/utils/format';
-  import type { EnrichedDetection, InstalledModel, Location, SourceScanResult } from '$shared/types';
+  import type { AvailableModel, EnrichedDetection, InstalledModel, Location, SourceScanResult } from '$shared/types';
   import { onMount } from 'svelte';
   import * as m from '$paraglide/messages';
 
@@ -46,6 +47,8 @@
 
   // --- Results table state ---
   let installedModels = $state<InstalledModel[]>([]);
+  let availableModels = $state<AvailableModel[]>([]);
+  const modelNames = $derived(new Map(availableModels.map((m) => [m.id, m.name])));
   let detections = $state<EnrichedDetection[]>([]);
   let total = $state(0);
   let loading = $state(false);
@@ -390,7 +393,7 @@
   onMount(async () => {
     void load();
     try {
-      installedModels = await listModels();
+      [installedModels, availableModels] = await Promise.all([listModels(), listAvailableModels()]);
       if (installedModels.length > 0 && !installedModels.some((mod) => mod.id === appState.selectedModel)) {
         appState.selectedModel = installedModels[0].id;
       }
@@ -469,9 +472,11 @@
           <span class="text-base-content/70 text-xs font-medium">{m.analysis_model()}</span>
           <select bind:value={appState.selectedModel} class="select select-bordered select-sm mt-1 w-full">
             {#each installedModels as model (model.id)}
-              <option value={model.id}>{model.id}</option>
+              <option value={model.id}>{modelNames.get(model.id) ?? model.id}</option>
             {:else}
-              <option value={appState.selectedModel}>{appState.selectedModel}</option>
+              <option value={appState.selectedModel}
+                >{modelNames.get(appState.selectedModel) ?? appState.selectedModel}</option
+              >
             {/each}
           </select>
         </label>
@@ -614,9 +619,11 @@
       {m.analysis_model()}
       <select bind:value={appState.selectedModel} class="select select-bordered select-sm">
         {#each installedModels as model (model.id)}
-          <option value={model.id}>{model.id}</option>
+          <option value={model.id}>{modelNames.get(model.id) ?? model.id}</option>
         {:else}
-          <option value={appState.selectedModel}>{appState.selectedModel}</option>
+          <option value={appState.selectedModel}
+            >{modelNames.get(appState.selectedModel) ?? appState.selectedModel}</option
+          >
         {/each}
       </select>
     </label>

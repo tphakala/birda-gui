@@ -42,8 +42,8 @@ function parseAudioMothComment(comment: string | undefined, artist: string | und
     const batteryMatch = /battery was (?:greater than |less than )?([\d.]+)V/.exec(comment);
     if (batteryMatch) batteryV = parseFloat(batteryMatch[1]);
 
-    // "temperature was 16.1C"
-    const tempMatch = /temperature was ([\d.]+)C/.exec(comment);
+    // "temperature was 16.1C" or "temperature was -0.7C"
+    const tempMatch = /temperature was (-?[\d.]+)C/.exec(comment);
     if (tempMatch) temperatureC = parseFloat(tempMatch[1]);
   }
 

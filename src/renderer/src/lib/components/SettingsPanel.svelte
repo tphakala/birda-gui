@@ -15,6 +15,8 @@
     ExternalLink,
     Cpu,
   } from '@lucide/svelte';
+  import logoBirdnet from '../../assets/logo-birdnet.png';
+  import logoGoogle from '../../assets/logo-google.png';
   import {
     getSettings,
     setSettings,
@@ -122,7 +124,20 @@
     MIT: 'https://opensource.org/licenses/MIT',
   };
 
+  const MODEL_LOGOS: Record<string, string> = {
+    birdnet: logoBirdnet,
+    perch: logoGoogle,
+  };
+
+  function getModelLogo(id: string): string | null {
+    for (const [prefix, logo] of Object.entries(MODEL_LOGOS)) {
+      if (id.startsWith(prefix)) return logo;
+    }
+    return null;
+  }
+
   const modelInList = $derived(installedModels.some((mod) => mod.id === settings.default_model));
+  const modelNames = $derived(new Map(availableModelsToInstall.map((m) => [m.id, m.name])));
 
   $effect(() => {
     appState.theme = settings.theme;
@@ -345,10 +360,12 @@
               <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_defaultModel()}</span>
               <select bind:value={settings.default_model} class="select select-bordered mt-1 w-full">
                 {#if !modelInList && settings.default_model}
-                  <option value={settings.default_model}>{settings.default_model}</option>
+                  <option value={settings.default_model}
+                    >{modelNames.get(settings.default_model) ?? settings.default_model}</option
+                  >
                 {/if}
                 {#each installedModels as model (model.id)}
-                  <option value={model.id}>{model.id}</option>
+                  <option value={model.id}>{modelNames.get(model.id) ?? model.id}</option>
                 {/each}
               </select>
             </label>
@@ -493,28 +510,33 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {#each installedModels as model (model.id)}
               {@const info = availableModelsToInstall.find((a) => a.id === model.id)}
+              {@const logo = getModelLogo(model.id)}
               <div class="card border-base-300 bg-base-200 border">
                 <div class="card-body gap-3 p-4">
                   <div class="flex items-start gap-3">
-                    <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
-                      <Cpu size={24} class="text-primary" />
-                    </div>
+                    {#if logo}
+                      <img src={logo} alt="" class="size-10 shrink-0 rounded-lg" />
+                    {:else}
+                      <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
+                        <Cpu size={24} class="text-primary" />
+                      </div>
+                    {/if}
                     <div class="min-w-0 flex-1">
                       <h4 class="text-sm font-semibold">{info?.name ?? model.id}</h4>
                       {#if info?.description}
-                        <p class="text-base-content/50 mt-0.5 line-clamp-2 text-xs">{info.description}</p>
+                        <p class="text-base-content/70 mt-0.5 line-clamp-2 text-xs">{info.description}</p>
                       {/if}
-                      <p class="text-base-content/40 mt-1 text-xs">{info?.vendor ?? ''}</p>
+                      <p class="text-base-content/60 mt-1 text-xs">{info?.vendor ?? ''}</p>
                     </div>
                   </div>
 
                   <div class="border-base-300 flex items-center justify-between border-t pt-3">
                     <div class="flex items-center gap-2">
                       {#if info?.version}
-                        <span class="text-base-content/40 text-xs">v{info.version}</span>
-                        <span class="text-base-content/20">·</span>
+                        <span class="text-base-content/60 text-xs">v{info.version}</span>
+                        <span class="text-base-content/40">·</span>
                       {/if}
-                      <span class="text-base-content/40 text-xs">{model.model_type}</span>
+                      <span class="text-base-content/60 text-xs">{model.model_type}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                       <button
@@ -553,34 +575,34 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {#each availableModelsToInstall as model (model.id)}
               {@const isInstalled = installedIds.has(model.id)}
+              {@const logo = getModelLogo(model.id)}
               <div class="card border-base-300 bg-base-200 relative overflow-hidden border">
-                {#if model.recommended}
-                  <div class="bg-primary text-primary-content px-3 py-1 text-xs font-semibold">
-                    {m.settings_models_recommended()}
-                  </div>
-                {/if}
                 <div class="card-body gap-3 p-4">
                   <div class="flex items-start gap-3">
-                    <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
-                      <Cpu size={24} class="text-primary" />
-                    </div>
+                    {#if logo}
+                      <img src={logo} alt="" class="size-10 shrink-0 rounded-lg" />
+                    {:else}
+                      <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
+                        <Cpu size={24} class="text-primary" />
+                      </div>
+                    {/if}
                     <div class="min-w-0 flex-1">
                       <h4 class="text-sm font-semibold">{model.name}</h4>
                       {#if model.description}
-                        <p class="text-base-content/50 mt-0.5 line-clamp-2 text-xs">{model.description}</p>
+                        <p class="text-base-content/70 mt-0.5 line-clamp-2 text-xs">{model.description}</p>
                       {/if}
-                      <p class="text-base-content/40 mt-1 text-xs">{model.vendor}</p>
+                      <p class="text-base-content/60 mt-1 text-xs">{model.vendor}</p>
                     </div>
                   </div>
 
                   <div class="border-base-300 flex items-center justify-between border-t pt-3">
                     <div class="flex items-center gap-2">
-                      <span class="text-base-content/40 text-xs">v{model.version}</span>
-                      <span class="text-base-content/20">·</span>
-                      <span class="text-base-content/40 text-xs">{model.model_type}</span>
+                      <span class="text-base-content/60 text-xs">v{model.version}</span>
+                      <span class="text-base-content/40">·</span>
+                      <span class="text-base-content/60 text-xs">{model.model_type}</span>
                       {#if !model.commercial_use}
                         <span class="text-base-content/20">·</span>
-                        <span class="text-warning text-xs">{m.settings_models_nonCommercial()}</span>
+                        <span class="text-error/80 text-xs">{m.settings_models_nonCommercial()}</span>
                       {/if}
                     </div>
                     {#if isInstalled}

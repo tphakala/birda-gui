@@ -10,13 +10,14 @@
     Waves,
     CircleDot,
     Cpu,
-    Volume2,
     Battery,
     Thermometer,
+    Calendar,
+    Play,
   } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { analysisState } from '$lib/stores/analysis.svelte';
-  import { formatDuration, formatFileSize } from '$lib/utils/format';
+  import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
   import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -112,6 +113,37 @@
             >
           </div>
         {/if}
+        {#if file.audiomoth?.recordedAtUtc ?? parseRecordingStart(file.name)}
+          {@const isUtc = !!file.audiomoth?.recordedAtUtc}
+          {@const recStart = isUtc ? new Date(file.audiomoth!.recordedAtUtc!) : parseRecordingStart(file.name)!}
+          {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
+          <div class="flex items-center gap-2">
+            <Calendar size={14} class="text-base-content/40" />
+            <span class="text-base-content/60">{m.sourceFiles_recordingDate()}</span>
+            <span class="ml-auto font-medium"
+              >{recStart.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                ...tzOpt,
+              })}</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <Play size={14} class="text-base-content/40" />
+            <span class="text-base-content/60">{m.sourceFiles_recordingStartTime()}</span>
+            <span class="ml-auto font-medium tabular-nums"
+              >{recStart.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZoneName: 'short',
+                ...tzOpt,
+              })}</span
+            >
+          </div>
+        {/if}
       </div>
       {#if file.audiomoth}
         <div class="border-base-300 mt-4 border-t pt-3">
@@ -120,11 +152,6 @@
             AudioMoth {file.audiomoth.deviceId}
           </div>
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="flex items-center gap-2">
-              <Volume2 size={14} class="text-base-content/40" />
-              <span class="text-base-content/60">{m.sourceFiles_gain()}</span>
-              <span class="ml-auto font-medium">{file.audiomoth.gain}</span>
-            </div>
             {#if file.audiomoth.batteryV !== null}
               <div class="flex items-center gap-2">
                 <Battery size={14} class="text-base-content/40" />
@@ -137,13 +164,6 @@
                 <Thermometer size={14} class="text-base-content/40" />
                 <span class="text-base-content/60">{m.sourceFiles_temperature()}</span>
                 <span class="ml-auto font-medium">{file.audiomoth.temperatureC}°C</span>
-              </div>
-            {/if}
-            {#if file.audiomoth.recordedAtUtc}
-              <div class="flex items-center gap-2">
-                <Clock size={14} class="text-base-content/40" />
-                <span class="text-base-content/60">{m.sourceFiles_recordedUtc()}</span>
-                <span class="ml-auto font-medium">{new Date(file.audiomoth.recordedAtUtc).toLocaleString()}</span>
               </div>
             {/if}
           </div>
