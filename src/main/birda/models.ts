@@ -47,27 +47,31 @@ export async function installModel(name: string, onProgress?: (line: string) => 
 
     let stdout = '';
     let stderr = '';
+    let stdoutRemainder = '';
+    let stderrRemainder = '';
+
+    const reportProgress = (chunk: string, remainder: string): string => {
+      if (!onProgress) return remainder + chunk;
+      const text = remainder + chunk;
+      const parts = text.split('\n');
+      const newRemainder = parts.pop() ?? '';
+      for (const line of parts) {
+        const trimmed = line.trim();
+        if (trimmed) onProgress(trimmed);
+      }
+      return newRemainder;
+    };
 
     proc.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       stdout += text;
-      if (onProgress) {
-        for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (trimmed) onProgress(trimmed);
-        }
-      }
+      stdoutRemainder = reportProgress(text, stdoutRemainder);
     });
 
     proc.stderr.on('data', (data: Buffer) => {
       const text = data.toString();
       stderr += text;
-      if (onProgress) {
-        for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (trimmed) onProgress(trimmed);
-        }
-      }
+      stderrRemainder = reportProgress(text, stderrRemainder);
     });
 
     // Auto-accept the license prompt; the GUI shows its own acceptance dialog
@@ -76,6 +80,10 @@ export async function installModel(name: string, onProgress?: (line: string) => 
     proc.stdin.end();
 
     proc.on('close', (code) => {
+      if (onProgress) {
+        if (stdoutRemainder.trim()) onProgress(stdoutRemainder.trim());
+        if (stderrRemainder.trim()) onProgress(stderrRemainder.trim());
+      }
       if (code !== 0) {
         reject(new Error(`Model install failed: ${stderr || stdout}`));
       } else {

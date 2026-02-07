@@ -115,7 +115,6 @@
   async function handleAcceptAndInstall() {
     if (!licenseModel) return;
     const id = licenseModel.id;
-    const name = licenseModel.name;
     licenseModel = null;
     installing = id;
     installProgress = '';
@@ -174,15 +173,23 @@
   });
 
   async function handleSkip() {
-    await setSettings({ setup_completed: true });
+    try {
+      await setSettings({ setup_completed: true });
+    } catch {
+      // Proceed even if persisting fails — user can redo setup later
+    }
     oncomplete();
   }
 
   async function handleFinish() {
-    await setSettings({
-      species_language: selectedLanguage,
-      setup_completed: true,
-    });
+    try {
+      await setSettings({
+        species_language: selectedLanguage,
+        setup_completed: true,
+      });
+    } catch {
+      // Proceed even if persisting fails
+    }
     oncomplete();
   }
 </script>

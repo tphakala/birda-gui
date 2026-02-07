@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain } from 'electron';
 import { listModels, listAvailable, installModel, modelInfo } from '../birda/models';
 
 export function registerModelHandlers(): void {
@@ -10,10 +10,12 @@ export function registerModelHandlers(): void {
     return listAvailable();
   });
 
-  ipcMain.handle('birda:models-install', async (_event, name: string) => {
-    const win = BrowserWindow.getFocusedWindow();
+  ipcMain.handle('birda:models-install', async (event, name: string) => {
+    const sender = event.sender;
     return installModel(name, (line) => {
-      win?.webContents.send('birda:models-install-progress', line);
+      if (!sender.isDestroyed()) {
+        sender.send('birda:models-install-progress', line);
+      }
     });
   });
 

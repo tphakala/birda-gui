@@ -35,7 +35,22 @@
   let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
 
-  function handleWizardComplete() {
+  async function handleWizardComplete() {
+    try {
+      const settings = await getSettings();
+      appState.theme = settings.theme;
+      appState.analysisConfidence = settings.default_confidence;
+      if (settings.default_model) {
+        appState.selectedModel = settings.default_model;
+      }
+    } catch {
+      // proceed with existing state
+    }
+    try {
+      appState.catalogStats = await getCatalogStats();
+    } catch {
+      // DB may not be ready
+    }
     showWizard = false;
   }
 
