@@ -1,0 +1,20 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowJs": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "exactOptionalPropertyTypes": true,
+    "paths": {
+      "$lib/*": ["./src/renderer/src/lib/*"],
+      "$shared/*": ["./shared/*"],
+      "$paraglide/*": ["./src/renderer/src/paraglide/*"]
+    }
+  },
+  "include": ["src/renderer/**/*", "shared/**/*"]
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+release/
+docs/plans/
+logs/
+*.db
+*.db-wal
+*.db-shm
+src/renderer/src/paraglide/
+.env
+.env.*
+.claude
+nul

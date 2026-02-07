@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "paths": {
+      "$shared/*": ["./shared/*"]
+    }
+  },
+  "include": ["src/main/**/*", "src/preload/**/*", "shared/**/*"]
+}

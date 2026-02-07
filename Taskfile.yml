@@ -1,0 +1,125 @@
+version: '3'
+
+vars:
+  OUT_DIR: out
+  RELEASE_DIR: release
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # === Development ===
+
+  dev:
+    desc: Start dev server (electron-vite HMR + Electron)
+    cmds:
+      - npx electron-vite dev
+
+  # === Building ===
+
+  build:
+    desc: Build all targets (main + preload + renderer)
+    cmds:
+      - npx electron-vite build
+
+  # === Linting & Type Checking ===
+
+  check:
+    desc: Run svelte-check for type errors and warnings
+    cmds:
+      - npx svelte-check --tsconfig ./tsconfig.json
+
+  eslint:
+    desc: Run ESLint on all source files
+    cmds:
+      - npx eslint src/ shared/
+
+  lint:
+    desc: Run all lint and type checks (ESLint + svelte-check + tsc)
+    deps:
+      - eslint
+      - check
+      - typecheck:main
+
+  lint:fix:
+    desc: Run ESLint with auto-fix
+    cmds:
+      - npx eslint --fix src/ shared/
+
+  typecheck:main:
+    desc: Type check main process (no emit)
+    cmds:
+      - npx tsc -p tsconfig.node.json --noEmit
+
+  # === Formatting ===
+
+  format:
+    desc: Format all files with Prettier
+    cmds:
+      - npx prettier --write "src/**/*.{ts,svelte}" "shared/**/*.ts"
+
+  format:check:
+    desc: Check formatting (CI-friendly)
+    cmds:
+      - npx prettier --check "src/**/*.{ts,svelte}" "shared/**/*.ts"
+
+  # === Packaging ===
+
+  pack:
+    desc: Build and package (unpacked, for testing)
+    deps:
+      - build
+    cmds:
+      - npx electron-builder --dir
+
+  dist:
+    desc: Build and create distributable for current platform
+    deps:
+      - build
+    cmds:
+      - npx electron-builder
+
+  dist:linux:
+    desc: Build and package for Linux (AppImage + deb)
+    deps:
+      - build
+    cmds:
+      - npx electron-builder --linux
+
+  dist:win:
+    desc: Build and package for Windows (NSIS)
+    deps:
+      - build
+    cmds:
+      - npx electron-builder --win
+
+  dist:mac:
+    desc: Build and package for macOS (dmg)
+    deps:
+      - build
+    cmds:
+      - npx electron-builder --mac
+
+  # === Utilities ===
+
+  rebuild:
+    desc: Rebuild native modules (better-sqlite3) for Electron
+    cmds:
+      - npx electron-rebuild -f -w better-sqlite3
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.OUT_DIR}} {{.RELEASE_DIR}}
+
+  clean:all:
+    desc: Remove build artifacts and node_modules
+    cmds:
+      - rm -rf {{.OUT_DIR}} {{.RELEASE_DIR}} node_modules
+
+  install:
+    desc: Install dependencies and rebuild native modules
+    cmds:
+      - npm install
