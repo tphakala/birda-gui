@@ -24,6 +24,7 @@
     getBirdaConfig,
     openExecutableDialog,
     openFolderDialog,
+    openInExplorer,
     getAvailableLanguages,
     getCatalogStats,
     clearDatabase,
@@ -96,6 +97,7 @@
   let birdaStatus = $state<{ available: boolean; path?: string; error?: string } | null>(null);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
+  let savedSettings = $state<AppSettings | null>(null);
   let saving = $state(false);
   let saved = $state(false);
   let error = $state<string | null>(null);
@@ -143,10 +145,19 @@
     appState.theme = settings.theme;
   });
 
+  $effect(() => {
+    if (!savedSettings) {
+      appState.settingsHasUnsavedChanges = false;
+      return;
+    }
+    appState.settingsHasUnsavedChanges = JSON.stringify($state.snapshot(settings)) !== JSON.stringify(savedSettings);
+  });
+
   async function load() {
     try {
       const loaded = await getSettings();
       settings = { ...settings, ...loaded };
+      savedSettings = structuredClone($state.snapshot(settings));
       appState.theme = loaded.theme;
 
       birdaStatus = await checkBirda();
@@ -200,6 +211,7 @@
     error = null;
     try {
       settings = await setSettings($state.snapshot(settings));
+      savedSettings = structuredClone($state.snapshot(settings));
     } catch (e) {
       error = (e as Error).message;
     } finally {
@@ -214,6 +226,7 @@
     try {
       const previousLang = settings.ui_language;
       settings = await setSettings($state.snapshot(settings));
+      savedSettings = structuredClone($state.snapshot(settings));
       birdaStatus = await checkBirda();
 
       // If UI language changed, reload to apply new locale
@@ -238,7 +251,7 @@
   }
 
   async function browseClipDir() {
-    const path = await openFolderDialog();
+    const path = await openFolderDialog(settings.clip_output_dir || undefined);
     if (path) settings.clip_output_dir = path;
   }
 
@@ -263,6 +276,7 @@
   onDestroy(() => {
     if (savedTimer) clearTimeout(savedTimer);
     if (clearResultTimer) clearTimeout(clearResultTimer);
+    appState.settingsHasUnsavedChanges = false;
   });
 </script>
 
@@ -437,6 +451,14 @@
             <span class="text-base-content/70 text-sm font-medium">{m.settings_storage_clipDir()}</span>
             <div class="mt-1 flex gap-2">
               <input type="text" bind:value={settings.clip_output_dir} class="input input-bordered flex-1" />
+              <button
+                onclick={() => settings.clip_output_dir && openInExplorer(settings.clip_output_dir)}
+                disabled={!settings.clip_output_dir}
+                class="btn btn-outline gap-1.5"
+                title={m.settings_storage_openClipDir()}
+              >
+                <ExternalLink size={16} />
+              </button>
               <button onclick={browseClipDir} class="btn btn-outline gap-1.5">
                 <FolderOpen size={16} />
                 {m.common_button_browse()}

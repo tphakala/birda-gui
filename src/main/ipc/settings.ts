@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app } from 'electron';
+import { ipcMain, dialog, shell, app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { getConfig, getConfigPath } from '../birda/config';
@@ -116,11 +116,16 @@ export async function registerSettingsHandlers(): Promise<void> {
     return result.canceled ? null : result.filePaths[0];
   });
 
-  ipcMain.handle('fs:open-folder-dialog', async (_event) => {
+  ipcMain.handle('fs:open-folder-dialog', async (_event, defaultPath?: string) => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
+      ...(defaultPath ? { defaultPath } : {}),
     });
     return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle('fs:open-in-explorer', async (_event, folderPath: string) => {
+    await shell.openPath(folderPath);
   });
 
   ipcMain.handle('fs:read-coordinates', async (_event, folderPath: string) => {

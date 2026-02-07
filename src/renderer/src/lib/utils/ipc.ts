@@ -122,8 +122,12 @@ export function openExecutableDialog(): Promise<string | null> {
   return window.birda.invoke('fs:open-executable-dialog') as Promise<string | null>;
 }
 
-export function openFolderDialog(): Promise<string | null> {
-  return window.birda.invoke('fs:open-folder-dialog') as Promise<string | null>;
+export function openFolderDialog(defaultPath?: string): Promise<string | null> {
+  return window.birda.invoke('fs:open-folder-dialog', defaultPath) as Promise<string | null>;
+}
+
+export function openInExplorer(folderPath: string): Promise<void> {
+  return window.birda.invoke('fs:open-in-explorer', folderPath) as Promise<void>;
 }
 
 export function scanSource(sourcePath: string): Promise<SourceScanResult> {

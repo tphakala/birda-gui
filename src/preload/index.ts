@@ -34,6 +34,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'fs:open-folder-dialog',
   'fs:read-coordinates',
   'fs:scan-source',
+  'fs:open-in-explorer',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([

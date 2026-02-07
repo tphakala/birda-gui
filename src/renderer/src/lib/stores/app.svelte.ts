@@ -20,4 +20,5 @@ export const appState = $state({
   lastRunId: null as number | null,
   lastSourceFile: null as string | null,
   theme: 'system' as 'system' | 'light' | 'dark',
+  settingsHasUnsavedChanges: false,
 });

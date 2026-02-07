@@ -41,9 +41,14 @@
 
   "settings_storage_title": "Storage",
   "settings_storage_clipDir": "Clip Output Directory",
+  "settings_storage_openClipDir": "Open clip directory",
   "settings_storage_dbLocation": "Database Location",
 
   "settings_saved": "Saved",
+  "settings_unsavedModal_title": "Unsaved Changes",
+  "settings_unsavedModal_warning": "You have unsaved settings changes. If you leave now, your changes will be lost.",
+  "settings_unsavedModal_discard": "Discard Changes",
+  "settings_unsavedModal_stayOnPage": "Stay on Page",
 
   "settings_models_installed": "Installed",
   "settings_models_catalog": "Catalog",
@@ -192,6 +197,8 @@
   "analysis_openFolder": "Open Folder",
   "analysis_model": "Model",
   "analysis_locationDate": "Location & Date",
+  "analysis_statusCoords": "Coords",
+  "analysis_statusDate": "Date",
   "analysis_previousLocation": "Previous location...",
   "analysis_recordingDatePlaceholder": "Recording date...",
   "analysis_recordingDate": "Recording Date",

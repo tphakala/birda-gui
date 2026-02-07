@@ -11,6 +11,8 @@
     ChevronLeft,
     ChevronRight,
     TriangleAlert,
+    Check,
+    Minus,
   } from '@lucide/svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
@@ -499,7 +501,19 @@
 
         <!-- Location & Date section -->
         <div class="border-base-300 space-y-3 rounded-lg border p-3">
-          <h3 class="text-base-content/50 text-xs font-medium">{m.analysis_locationDate()}</h3>
+          <div class="flex items-center gap-1.5">
+            <h3 class="text-base-content/50 text-xs font-medium">{m.analysis_locationDate()}</h3>
+            <div class="ml-auto flex gap-1">
+              <span class="badge badge-xs gap-0.5 {hasCoords ? 'badge-success' : 'badge-ghost text-base-content/30'}">
+                {#if hasCoords}<Check size={10} />{:else}<Minus size={10} />{/if}
+                {m.analysis_statusCoords()}
+              </span>
+              <span class="badge badge-xs gap-0.5 {hasDate ? 'badge-success' : 'badge-ghost text-base-content/30'}">
+                {#if hasDate}<Check size={10} />{:else}<Minus size={10} />{/if}
+                {m.analysis_statusDate()}
+              </span>
+            </div>
+          </div>
 
           <!-- Previous locations dropdown -->
           {#if previousLocations.length > 0}
@@ -581,7 +595,7 @@
           {:else}
             <button
               onclick={handleStartClick}
-              class="btn btn-primary shadow-primary/25 hover:shadow-primary/30 w-full gap-2 shadow-lg transition-all duration-200 hover:shadow-xl hover:brightness-110"
+              class="btn btn-primary w-full gap-2 transition-all duration-200 hover:brightness-110"
             >
               <Play size={18} />
               {m.analysis_startAnalysis()}
