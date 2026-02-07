@@ -25,8 +25,13 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "prepare": "husky"
   },
+  "homepage": "https://github.com/tphakala/birda-gui",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tphakala/birda-gui.git"
+  },
   "keywords": [],
-  "author": "",
+  "author": "Tomi P. Hakala",
   "license": "MIT",
   "build": {
     "compression": "store",

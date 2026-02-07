@@ -1,0 +1,182 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version override (e.g., 0.1.0). Defaults to package.json version.'
+        required: false
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Paraglide output
+        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Audit dependencies
+        run: npm audit --omit=dev
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "### Release version: $VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) !== package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-latest
+            dist-flag: --linux
+          - platform: windows
+            os: windows-latest
+            dist-flag: --win
+          - platform: macos
+            os: macos-latest
+            dist-flag: --mac
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Paraglide output
+        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide
+
+      - name: Build
+        run: npm run build
+
+      - name: Package
+        run: npx electron-builder ${{ matrix.dist-flag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/*.yml
+            release/*.yaml
+            !release/builder-debug.yml
+            !release/builder-effective-config.yaml
+          if-no-files-found: error
+          retention-days: 5
+
+  release:
+    name: Create GitHub Release
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List release artifacts
+        shell: bash
+        run: ls -lh artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', needs.validate.outputs.version) }}
+          name: Birda GUI v${{ needs.validate.outputs.version }}
+          draft: true
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/*.exe
+            artifacts/*.dmg
+            artifacts/*.AppImage
+            artifacts/*.deb
+          body: |
+            ## Installation
+
+            | Platform | File | Type |
+            |----------|------|------|
+            | Windows | `Birda GUI Setup ${{ needs.validate.outputs.version }}.exe` | Installer |
+            | Windows | `Birda GUI ${{ needs.validate.outputs.version }}.exe` | Portable |
+            | Linux | `Birda GUI-${{ needs.validate.outputs.version }}.AppImage` | AppImage |
+            | Linux | `birda-gui_${{ needs.validate.outputs.version }}_amd64.deb` | Debian package |
+            | macOS | `Birda GUI-${{ needs.validate.outputs.version }}.dmg` | Disk image |
+
+            ### Prerequisites
+
+            [birda](https://github.com/tphakala/birda) CLI must be installed and available on your PATH.
+
+            ### macOS Users
+
+            This app is not yet code-signed. After downloading, right-click the app and select **Open** to bypass Gatekeeper.
