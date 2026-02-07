@@ -284,7 +284,7 @@
             <ChevronLeft size={16} />
             {m.wizard_back()}
           </button>
-          <button onclick={nextStep} class="btn btn-primary gap-1">
+          <button onclick={nextStep} disabled={!birdaStatus?.available} class="btn btn-primary gap-1">
             {m.wizard_next()}
             <ChevronRight size={16} />
           </button>
@@ -377,10 +377,17 @@
         </div>
 
         {#if availableModels.length === 0 && !modelsError}
-          <div class="text-base-content/50 py-8 text-center text-sm">
-            <Loader size={20} class="mx-auto mb-2 animate-spin opacity-30" />
-            <p>{m.settings_models_loadingCatalog()}</p>
-          </div>
+          {#if !birdaStatus?.available}
+            <div role="alert" class="alert alert-warning mt-4">
+              <CircleX size={16} />
+              <span class="text-sm">{m.wizard_model_noCli()}</span>
+            </div>
+          {:else}
+            <div class="text-base-content/50 py-8 text-center text-sm">
+              <Loader size={20} class="mx-auto mb-2 animate-spin opacity-30" />
+              <p>{m.settings_models_loadingCatalog()}</p>
+            </div>
+          {/if}
         {/if}
 
         <div class="mt-8 flex items-center justify-between">

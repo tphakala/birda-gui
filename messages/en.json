@@ -257,6 +257,7 @@
   "wizard_model_installing": "Installing {name}...",
   "wizard_model_installed": "installed",
   "wizard_model_hasModels": "You have {count} model(s) installed. You can install more later from Settings.",
+  "wizard_model_noCli": "birda CLI is not available. Go back to the previous step to set up the CLI before installing models.",
 
   "wizard_language_title": "Species Language",
   "wizard_language_subtitle": "Choose the language for bird species names shown in detection results.",
