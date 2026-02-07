@@ -27,7 +27,7 @@
 <div class="space-y-2">
   <div class="flex items-center gap-2">
     <MapPin size={16} class="text-base-content/50" />
-    <span class="text-sm font-medium text-base-content/70">{m.coords_title()}</span>
+    <span class="text-base-content/70 text-sm font-medium">{m.coords_title()}</span>
     {#if autoDetected}
       <span class="badge badge-success badge-sm">{m.coords_autoDetected()}</span>
     {/if}
@@ -44,7 +44,7 @@
 
   <div class="flex gap-3">
     <label class="flex-1">
-      <span class="text-xs text-base-content/70">{m.coords_latitude()}</span>
+      <span class="text-base-content/70 text-xs">{m.coords_latitude()}</span>
       <input
         type="number"
         step="0.0001"
@@ -56,7 +56,7 @@
       />
     </label>
     <label class="flex-1">
-      <span class="text-xs text-base-content/70">{m.coords_longitude()}</span>
+      <span class="text-base-content/70 text-xs">{m.coords_longitude()}</span>
       <input
         type="number"
         step="0.0001"
@@ -78,14 +78,14 @@
           <MapPin size={16} class="text-primary" />
           <span class="font-medium">{m.coords_pickTitle()}</span>
           {#if hasCoords}
-            <span class="text-sm text-base-content/50">{latitude}, {longitude}</span>
+            <span class="text-base-content/50 text-sm">{latitude}, {longitude}</span>
           {/if}
         </div>
         <button onclick={() => (showMapModal = false)} class="btn btn-ghost btn-sm btn-square">
           <X size={18} />
         </button>
       </div>
-      <div class="h-[28rem] border-t border-base-300">
+      <div class="border-base-300 h-[28rem] border-t">
         <MapLibre
           style="https://tiles.openfreemap.org/styles/bright"
           center={hasCoords ? [longitude, latitude] : [24.9384, 60.1699]}
@@ -100,7 +100,7 @@
           {/if}
         </MapLibre>
       </div>
-      <p class="px-4 py-2 text-xs text-base-content/50">{m.coords_clickToSet()}</p>
+      <p class="text-base-content/50 px-4 py-2 text-xs">{m.coords_clickToSet()}</p>
     </div>
     <form method="dialog" class="modal-backdrop">
       <button onclick={() => (showMapModal = false)}>close</button>

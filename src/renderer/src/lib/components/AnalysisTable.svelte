@@ -64,15 +64,15 @@
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden">
-  <div class="flex-1 overflow-auto bg-base-100">
-    <table class="table table-sm">
+  <div class="bg-base-100 flex-1 overflow-auto">
+    <table class="table-sm table">
       <thead>
         <tr>
           <th class="w-8"></th>
           {#each columns as col, i (col.key)}
-            <th class="{col.class ?? ''}">
+            <th class={col.class ?? ''}>
               <button
-                class="flex items-center gap-1 hover:text-base-content"
+                class="hover:text-base-content flex items-center gap-1"
                 onclick={() => {
                   onsort(col.key);
                 }}
@@ -98,7 +98,7 @@
       <tbody>
         {#each detections as detection (detection.id)}
           <tr
-            class="cursor-pointer hover {expandedId === detection.id ? 'bg-primary/10' : ''}"
+            class="hover cursor-pointer {expandedId === detection.id ? 'bg-primary/10' : ''}"
             onclick={() => {
               toggleExpand(detection.id);
             }}
@@ -112,12 +112,10 @@
             </td>
             <td class="tabular-nums">{formatTime(detection.start_time)}</td>
             {#if recordingStart}
-              <td class="tabular-nums text-base-content/60"
-                >{formatClockTime(recordingStart, detection.start_time)}</td
-              >
+              <td class="text-base-content/60 tabular-nums">{formatClockTime(recordingStart, detection.start_time)}</td>
             {/if}
             <td class="font-medium">{detection.common_name}</td>
-            <td class="italic text-base-content/50">{detection.scientific_name}</td>
+            <td class="text-base-content/50 italic">{detection.scientific_name}</td>
             <td class="text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
           </tr>
           {#if expandedId === detection.id}
@@ -143,13 +141,21 @@
   </div>
 
   <!-- Pagination -->
-  <div class="flex items-center justify-between border-t border-base-300 bg-base-200 px-3 py-2 text-xs text-base-content/60">
-    <span>{total === 1 ? m.pagination_detectionCountSingular({ count: String(total) }) : m.pagination_detectionCount({ count: String(total) })}</span>
+  <div
+    class="border-base-300 bg-base-200 text-base-content/60 flex items-center justify-between border-t px-3 py-2 text-xs"
+  >
+    <span
+      >{total === 1
+        ? m.pagination_detectionCountSingular({ count: String(total) })
+        : m.pagination_detectionCount({ count: String(total) })}</span
+    >
     <div class="flex items-center gap-2">
       <button onclick={prevPage} disabled={currentPage <= 1} class="btn btn-ghost btn-xs">
         <ChevronLeft size={14} />
       </button>
-      <span class="tabular-nums">{m.pagination_pageOf({ current: String(currentPage), total: String(totalPages) })}</span>
+      <span class="tabular-nums"
+        >{m.pagination_pageOf({ current: String(currentPage), total: String(totalPages) })}</span
+      >
       <button onclick={nextPage} disabled={currentPage >= totalPages} class="btn btn-ghost btn-xs">
         <ChevronRight size={14} />
       </button>

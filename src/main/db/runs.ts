@@ -39,7 +39,9 @@ export function getRunById(id: number): AnalysisRun | undefined {
 export function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
   const db = getDb();
   return db
-    .prepare("SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status = 'completed' ORDER BY completed_at DESC")
+    .prepare(
+      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status = 'completed' ORDER BY completed_at DESC",
+    )
     .all(sourcePath, model) as AnalysisRun[];
 }
 

@@ -50,7 +50,7 @@
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden">
-  <div class="border-b border-base-300 bg-base-200 p-2">
+  <div class="border-base-300 bg-base-200 border-b p-2">
     <SpeciesSearch onselect={handleSpeciesSelect} onclear={handleSpeciesClear} />
   </div>
   <MapView />

@@ -5,7 +5,13 @@ export interface BirdaEventEnvelope {
   payload: unknown;
 }
 
-export type BirdaEventType = 'pipeline_started' | 'file_started' | 'progress' | 'file_completed' | 'pipeline_completed' | 'detections';
+export type BirdaEventType =
+  | 'pipeline_started'
+  | 'file_started'
+  | 'progress'
+  | 'file_completed'
+  | 'pipeline_completed'
+  | 'detections';
 
 export interface PipelineStartedPayload {
   total_files: number;

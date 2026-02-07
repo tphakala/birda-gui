@@ -11,7 +11,7 @@
   ];
 </script>
 
-<nav class="flex w-[72px] shrink-0 flex-col border-r border-base-300 bg-base-200">
+<nav class="border-base-300 bg-base-200 flex w-[72px] shrink-0 flex-col border-r">
   <div class="flex flex-col gap-1 py-2">
     {#each tabs as tab (tab.id)}
       <button
@@ -24,10 +24,10 @@
       >
         <!-- Active indicator -->
         {#if appState.activeTab === tab.id}
-          <span class="absolute top-1 bottom-1 left-0 w-[3px] rounded-r-full bg-primary"></span>
+          <span class="bg-primary absolute top-1 bottom-1 left-0 w-[3px] rounded-r-full"></span>
         {/if}
         <tab.icon size={22} />
-        <span class="text-[10px] font-medium leading-tight">{tab.label}</span>
+        <span class="text-[10px] leading-tight font-medium">{tab.label}</span>
       </button>
     {/each}
   </div>

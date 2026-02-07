@@ -1,5 +1,19 @@
 <script lang="ts">
-  import { FileHeadphone, FolderOpen, Check, X, Loader, Clock, HardDrive, Waves, CircleDot, Cpu, Volume2, Battery, Thermometer } from '@lucide/svelte';
+  import {
+    FileHeadphone,
+    FolderOpen,
+    Check,
+    X,
+    Loader,
+    Clock,
+    HardDrive,
+    Waves,
+    CircleDot,
+    Cpu,
+    Volume2,
+    Battery,
+    Thermometer,
+  } from '@lucide/svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { analysisState } from '$lib/stores/analysis.svelte';
   import { formatDuration, formatFileSize } from '$lib/utils/format';
@@ -51,17 +65,17 @@
 
 {#if scanning}
   <div class="flex flex-1 items-center justify-center">
-    <Loader size={24} class="animate-spin text-primary" />
-    <span class="ml-2 text-sm text-base-content/50">{m.sourceFiles_scanning()}</span>
+    <Loader size={24} class="text-primary animate-spin" />
+    <span class="text-base-content/50 ml-2 text-sm">{m.sourceFiles_scanning()}</span>
   </div>
 {:else if scanResult?.files.length === 1}
   <!-- Single file info card -->
   {@const file = scanResult.files[0]}
   <div class="flex flex-1 flex-col p-6">
-    <h3 class="mb-4 text-sm font-medium text-base-content/70">{m.sourceFiles_sourceFile()}</h3>
-    <div class="card border border-base-300 bg-base-100 p-5">
+    <h3 class="text-base-content/70 mb-4 text-sm font-medium">{m.sourceFiles_sourceFile()}</h3>
+    <div class="card border-base-300 bg-base-100 border p-5">
       <div class="flex items-center gap-3">
-        <FileHeadphone size={24} class="shrink-0 text-primary" />
+        <FileHeadphone size={24} class="text-primary shrink-0" />
         <div class="min-w-0">
           <p class="truncate font-medium">{file.name}</p>
           <span class="badge badge-sm mt-1">{file.format.toUpperCase()}</span>
@@ -89,13 +103,19 @@
           <div class="flex items-center gap-2">
             <CircleDot size={14} class="text-base-content/40" />
             <span class="text-base-content/60">{m.sourceFiles_channels()}</span>
-            <span class="ml-auto font-medium">{file.channels === 1 ? m.sourceFiles_mono() : file.channels === 2 ? m.sourceFiles_stereo() : file.channels}</span>
+            <span class="ml-auto font-medium"
+              >{file.channels === 1
+                ? m.sourceFiles_mono()
+                : file.channels === 2
+                  ? m.sourceFiles_stereo()
+                  : file.channels}</span
+            >
           </div>
         {/if}
       </div>
       {#if file.audiomoth}
-        <div class="mt-4 border-t border-base-300 pt-3">
-          <div class="mb-2 flex items-center gap-2 text-xs font-medium text-base-content/50">
+        <div class="border-base-300 mt-4 border-t pt-3">
+          <div class="text-base-content/50 mb-2 flex items-center gap-2 text-xs font-medium">
             <Cpu size={12} />
             AudioMoth {file.audiomoth.deviceId}
           </div>
@@ -134,18 +154,18 @@
 {:else if scanResult && scanResult.files.length > 1}
   <!-- Folder file list -->
   <div class="flex flex-1 flex-col overflow-hidden">
-    <div class="flex items-center gap-3 border-b border-base-300 bg-base-200/50 px-4 py-2.5">
+    <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2.5">
       <FolderOpen size={16} class="text-primary" />
       <span class="text-sm font-medium">{m.sourceFiles_fileCount({ count: String(scanResult.files.length) })}</span>
-      <span class="text-xs text-base-content/40">|</span>
-      <span class="text-xs text-base-content/50">{formatDuration(scanResult.totalDuration)}</span>
-      <span class="text-xs text-base-content/40">|</span>
-      <span class="text-xs text-base-content/50">{formatFileSize(scanResult.totalSize)}</span>
+      <span class="text-base-content/40 text-xs">|</span>
+      <span class="text-base-content/50 text-xs">{formatDuration(scanResult.totalDuration)}</span>
+      <span class="text-base-content/40 text-xs">|</span>
+      <span class="text-base-content/50 text-xs">{formatFileSize(scanResult.totalSize)}</span>
     </div>
     <div class="flex-1 overflow-y-auto pr-4">
-      <table class="table table-xs w-full">
-        <thead class="sticky top-0 bg-base-100">
-          <tr class="text-xs text-base-content/50">
+      <table class="table-xs table w-full">
+        <thead class="bg-base-100 sticky top-0">
+          <tr class="text-base-content/50 text-xs">
             <th class="w-8 text-center">#</th>
             <th>{m.sourceFiles_columnName()}</th>
             <th class="w-20 text-right">{m.sourceFiles_duration()}</th>
@@ -160,28 +180,30 @@
           {#each scanResult.files as file, i (file.path)}
             {@const status = getStatus(file.path)}
             <tr
-              class="hover:bg-base-200/50 {status === 'processing' ? 'bg-primary/5' : ''} {status === 'failed' ? 'bg-error/5' : ''}"
+              class="hover:bg-base-200/50 {status === 'processing' ? 'bg-primary/5' : ''} {status === 'failed'
+                ? 'bg-error/5'
+                : ''}"
             >
-              <td class="text-center text-base-content/30">{i + 1}</td>
+              <td class="text-base-content/30 text-center">{i + 1}</td>
               <td class="max-w-0 truncate">{file.name}</td>
-              <td class="text-right tabular-nums text-base-content/60">{formatDuration(file.durationSec)}</td>
+              <td class="text-base-content/60 text-right tabular-nums">{formatDuration(file.durationSec)}</td>
               <td class="text-center"><span class="badge badge-ghost badge-xs">{file.format}</span></td>
-              <td class="text-right text-base-content/50">{formatFileSize(file.size)}</td>
+              <td class="text-base-content/50 text-right">{formatFileSize(file.size)}</td>
               {#if analysisRunning || analysisState.status !== 'idle'}
                 <td class="text-center">
                   {#if status === 'processing'}
                     <div class="flex items-center justify-center gap-1">
-                      <Loader size={12} class="animate-spin text-primary" />
-                      <span class="text-xs tabular-nums text-primary">{getPercent(file.path).toFixed(0)}%</span>
+                      <Loader size={12} class="text-primary animate-spin" />
+                      <span class="text-primary text-xs tabular-nums">{getPercent(file.path).toFixed(0)}%</span>
                     </div>
                   {:else if status === 'completed'}
-                    <Check size={14} class="mx-auto text-success" />
+                    <Check size={14} class="text-success mx-auto" />
                   {:else if status === 'failed'}
-                    <X size={14} class="mx-auto text-error" />
+                    <X size={14} class="text-error mx-auto" />
                   {:else if status === 'skipped'}
-                    <span class="text-xs text-warning">{m.sourceFiles_statusSkip()}</span>
+                    <span class="text-warning text-xs">{m.sourceFiles_statusSkip()}</span>
                   {:else if status === 'pending'}
-                    <span class="text-xs text-base-content/20">...</span>
+                    <span class="text-base-content/20 text-xs">...</span>
                   {/if}
                 </td>
               {/if}
@@ -192,7 +214,7 @@
     </div>
   </div>
 {:else if scanResult?.files.length === 0}
-  <div class="flex flex-1 flex-col items-center justify-center gap-2 text-base-content/40">
+  <div class="text-base-content/40 flex flex-1 flex-col items-center justify-center gap-2">
     <FolderOpen size={32} />
     <p class="text-sm">{m.sourceFiles_noAudioFiles()}</p>
     <p class="text-xs">{m.sourceFiles_supportedFormats()}</p>

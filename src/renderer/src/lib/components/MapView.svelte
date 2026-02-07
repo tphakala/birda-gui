@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class="relative flex-1 bg-base-200">
+<div class="bg-base-200 relative flex-1">
   <MapLibre
     style="https://tiles.openfreemap.org/styles/bright"
     center={[24.9384, 60.1699]}
@@ -59,9 +59,9 @@
     {#if selectedLocation}
       {@const loc = selectedLocation}
       <Popup lnglat={[loc.longitude, loc.latitude]} onclose={() => (selectedLocation = null)}>
-        <div class="min-w-40 bg-base-100 p-2 text-base-content">
+        <div class="bg-base-100 text-base-content min-w-40 p-2">
           <h4 class="text-sm font-semibold">{loc.name ?? m.map_unknownLocation()}</h4>
-          <p class="text-xs text-base-content/60">
+          <p class="text-base-content/60 text-xs">
             {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
           </p>
           <p class="mt-1 text-xs">{m.status_detections({ count: String(loc.detection_count) })}</p>

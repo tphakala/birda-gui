@@ -335,17 +335,13 @@
   }
 </script>
 
-<div class="border-t border-base-300 bg-base-200 px-4 py-3">
+<div class="border-base-300 bg-base-200 border-t px-4 py-3">
   {#if error}
     <div role="alert" class="alert alert-error py-2 text-sm">{error}</div>
   {:else}
     <div class="flex items-start gap-3">
       <!-- Play button -->
-      <button
-        onclick={togglePlay}
-        disabled={loading}
-        class="btn btn-primary btn-circle btn-sm mt-1 shrink-0"
-      >
+      <button onclick={togglePlay} disabled={loading} class="btn btn-primary btn-circle btn-sm mt-1 shrink-0">
         {#if loading}
           <LoaderCircle size={16} class="animate-spin" />
         {:else if playing}
@@ -357,7 +353,7 @@
 
       <!-- Waveform + Spectrogram -->
       <div class="min-w-0 flex-1">
-        <div class="mb-1 flex items-center gap-3 text-xs text-base-content/60">
+        <div class="text-base-content/60 mb-1 flex items-center gap-3 text-xs">
           <span class="tabular-nums">{formatTime(detection.start_time)} - {formatTime(detection.end_time)}</span>
           <span>{detection.common_name}</span>
           <span class="text-base-content/40">({formatConfidence(detection.confidence)})</span>
@@ -365,22 +361,15 @@
             <span class="ml-auto tabular-nums">{currentTime.toFixed(1)}s / {duration.toFixed(1)}s</span>
           {/if}
         </div>
-        <div bind:this={waveformEl} class="rounded border border-base-300 bg-base-100"></div>
-        <div
-          bind:this={spectrogramEl}
-          class="mt-1 overflow-hidden rounded border border-base-300 bg-base-100"
-        ></div>
+        <div bind:this={waveformEl} class="border-base-300 bg-base-100 rounded border"></div>
+        <div bind:this={spectrogramEl} class="border-base-300 bg-base-100 mt-1 overflow-hidden rounded border"></div>
 
         <!-- Spectrogram controls -->
         {#if !loading}
-          <div class="mt-1 flex items-center gap-3 text-xs text-base-content/70">
+          <div class="text-base-content/70 mt-1 flex items-center gap-3 text-xs">
             <label class="flex items-center gap-1">
               {m.detail_freqMax()}
-              <select
-                value={freqMax}
-                onchange={handleFreqChange}
-                class="select select-bordered select-xs"
-              >
+              <select value={freqMax} onchange={handleFreqChange} class="select select-bordered select-xs">
                 {#each freqOptions as opt (opt.value)}
                   <option value={opt.value}>{opt.label}</option>
                 {/each}
@@ -388,11 +377,7 @@
             </label>
             <label class="flex items-center gap-1">
               {m.detail_height()}
-              <select
-                value={spectrogramHeight}
-                onchange={handleHeightChange}
-                class="select select-bordered select-xs"
-              >
+              <select value={spectrogramHeight} onchange={handleHeightChange} class="select select-bordered select-xs">
                 <option value={128}>{m.settings_spectrogram_heightSmall()}</option>
                 <option value={160}>{m.settings_spectrogram_heightMedium()}</option>
                 <option value={256}>{m.settings_spectrogram_heightLarge()}</option>
@@ -413,7 +398,12 @@
               <span class="w-8 text-right tabular-nums">{Math.round(gain * 100)}%</span>
             </div>
             {#if nyquist}
-              <span>{m.detail_sampleRate({ rate: (sampleRate / 1000).toFixed(1), nyquist: (nyquist / 1000).toFixed(1) })}</span>
+              <span
+                >{m.detail_sampleRate({
+                  rate: (sampleRate / 1000).toFixed(1),
+                  nyquist: (nyquist / 1000).toFixed(1),
+                })}</span
+              >
             {/if}
           </div>
         {/if}
@@ -421,8 +411,12 @@
         <!-- Region toolbar -->
         {#if activeRegion && !loading}
           <div class="mt-1 flex items-center gap-2 text-xs">
-            <span class="tabular-nums text-base-content/60">
-              {m.detail_selection({ start: activeRegion.start.toFixed(2), end: activeRegion.end.toFixed(2), duration: (activeRegion.end - activeRegion.start).toFixed(2) })}
+            <span class="text-base-content/60 tabular-nums">
+              {m.detail_selection({
+                start: activeRegion.start.toFixed(2),
+                end: activeRegion.end.toFixed(2),
+                duration: (activeRegion.end - activeRegion.start).toFixed(2),
+              })}
             </span>
             <button
               onclick={toggleLoop}
@@ -441,11 +435,7 @@
               <Download size={12} />
               {exporting ? m.detail_exporting() : m.detail_exportWav()}
             </button>
-            <button
-              onclick={clearRegion}
-              class="btn btn-ghost btn-xs"
-              title={m.detail_clearSelection()}
-            >
+            <button onclick={clearRegion} class="btn btn-ghost btn-xs" title={m.detail_clearSelection()}>
               <X size={12} />
               {m.common_button_clear()}
             </button>

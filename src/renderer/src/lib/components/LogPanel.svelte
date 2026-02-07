@@ -69,9 +69,9 @@
 </script>
 
 {#if appState.showLogPanel}
-  <div class="flex flex-col border-t border-base-300 bg-base-200" style="height: {collapsed ? 'auto' : '220px'}">
+  <div class="border-base-300 bg-base-200 flex flex-col border-t" style="height: {collapsed ? 'auto' : '220px'}">
     <!-- Header -->
-    <div class="flex items-center gap-2 border-b border-base-300 bg-base-300/50 px-3 py-1.5">
+    <div class="border-base-300 bg-base-300/50 flex items-center gap-2 border-b px-3 py-1.5">
       <button
         class="btn btn-ghost btn-xs btn-square"
         onclick={() => (collapsed = !collapsed)}
@@ -83,23 +83,15 @@
           <ChevronDown size={14} />
         {/if}
       </button>
-      <span class="text-xs font-semibold uppercase text-base-content/60">{m.log_title()}</span>
+      <span class="text-base-content/60 text-xs font-semibold uppercase">{m.log_title()}</span>
       <span class="badge badge-sm badge-ghost tabular-nums">{logState.entries.length}</span>
 
       <div class="flex-1"></div>
 
-      <button
-        class="btn btn-ghost btn-xs btn-square"
-        onclick={copyLog}
-        title={m.log_copyToClipboard()}
-      >
+      <button class="btn btn-ghost btn-xs btn-square" onclick={copyLog} title={m.log_copyToClipboard()}>
         <Copy size={13} />
       </button>
-      <button
-        class="btn btn-ghost btn-xs btn-square"
-        onclick={clearLog}
-        title={m.log_clear()}
-      >
+      <button class="btn btn-ghost btn-xs btn-square" onclick={clearLog} title={m.log_clear()}>
         <Trash2 size={13} />
       </button>
       <button

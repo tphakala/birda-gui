@@ -1,15 +1,29 @@
 <script lang="ts">
   import {
-    AudioLines, Search, X, FileHeadphone, FolderOpen, Play, Square,
-    Calendar, ChevronLeft, ChevronRight, TriangleAlert,
+    AudioLines,
+    Search,
+    X,
+    FileHeadphone,
+    FolderOpen,
+    Play,
+    Square,
+    Calendar,
+    ChevronLeft,
+    ChevronRight,
+    TriangleAlert,
   } from '@lucide/svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import SourceFilesPanel from '$lib/components/SourceFilesPanel.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import {
-    getDetections, openFileDialog, openFolderDialog, listModels,
-    readCoordinates, getLocations, scanSource,
+    getDetections,
+    openFileDialog,
+    openFolderDialog,
+    listModels,
+    readCoordinates,
+    getLocations,
+    scanSource,
   } from '$lib/utils/ipc';
   import { formatNumber, parseRecordingStart } from '$lib/utils/format';
   import type { EnrichedDetection, InstalledModel, Location, SourceScanResult } from '$shared/types';
@@ -62,14 +76,26 @@
   let calMonth = $state(now.getMonth());
 
   const MONTH_NAMES = [
-    m.calendar_month_january(), m.calendar_month_february(), m.calendar_month_march(),
-    m.calendar_month_april(), m.calendar_month_may(), m.calendar_month_june(),
-    m.calendar_month_july(), m.calendar_month_august(), m.calendar_month_september(),
-    m.calendar_month_october(), m.calendar_month_november(), m.calendar_month_december(),
+    m.calendar_month_january(),
+    m.calendar_month_february(),
+    m.calendar_month_march(),
+    m.calendar_month_april(),
+    m.calendar_month_may(),
+    m.calendar_month_june(),
+    m.calendar_month_july(),
+    m.calendar_month_august(),
+    m.calendar_month_september(),
+    m.calendar_month_october(),
+    m.calendar_month_november(),
+    m.calendar_month_december(),
   ];
   const WEEKDAYS = [
-    m.calendar_weekday_mo(), m.calendar_weekday_tu(), m.calendar_weekday_we(),
-    m.calendar_weekday_th(), m.calendar_weekday_fr(), m.calendar_weekday_sa(),
+    m.calendar_weekday_mo(),
+    m.calendar_weekday_tu(),
+    m.calendar_weekday_we(),
+    m.calendar_weekday_th(),
+    m.calendar_weekday_fr(),
+    m.calendar_weekday_sa(),
     m.calendar_weekday_su(),
   ];
 
@@ -112,11 +138,21 @@
   );
 
   function prevMonth() {
-    if (calMonth === 0) { calMonth = 11; calYear--; } else { calMonth--; }
+    if (calMonth === 0) {
+      calMonth = 11;
+      calYear--;
+    } else {
+      calMonth--;
+    }
   }
 
   function nextMonth() {
-    if (calMonth === 11) { calMonth = 0; calYear++; } else { calMonth++; }
+    if (calMonth === 11) {
+      calMonth = 0;
+      calYear++;
+    } else {
+      calMonth++;
+    }
   }
 
   function selectDate(day: number, month: number, year: number) {
@@ -165,7 +201,10 @@
   }
 
   function handleDateInputKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') { e.preventDefault(); applyDateInput(); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyDateInput();
+    }
   }
 
   function openDatePicker() {
@@ -184,7 +223,11 @@
 
   function isSelectedDay(day: number, month: number, year: number): boolean {
     if (!selectedDateObj) return false;
-    return selectedDateObj.getDate() === day && selectedDateObj.getMonth() === month && selectedDateObj.getFullYear() === year;
+    return (
+      selectedDateObj.getDate() === day &&
+      selectedDateObj.getMonth() === month &&
+      selectedDateObj.getFullYear() === year
+    );
   }
 
   function isTodayDay(day: number, month: number, year: number): boolean {
@@ -371,15 +414,21 @@
     <div class="flex flex-1 flex-col items-center justify-center gap-6">
       <h1 class="text-2xl font-semibold">{m.analysis_title()}</h1>
       <div class="grid w-full max-w-md grid-cols-2 gap-4 px-6">
-        <button onclick={handleOpenFile} class="card border border-base-300 bg-base-100 p-5 text-left transition-colors hover:bg-base-200">
-          <FileHeadphone size={28} class="mb-2 text-primary" />
+        <button
+          onclick={handleOpenFile}
+          class="card border-base-300 bg-base-100 hover:bg-base-200 border p-5 text-left transition-colors"
+        >
+          <FileHeadphone size={28} class="text-primary mb-2" />
           <span class="font-medium">{m.analysis_selectFile()}</span>
-          <span class="mt-1 text-sm text-base-content/50">{m.analysis_selectFileDesc()}</span>
+          <span class="text-base-content/50 mt-1 text-sm">{m.analysis_selectFileDesc()}</span>
         </button>
-        <button onclick={handleOpenFolder} class="card border border-base-300 bg-base-100 p-5 text-left transition-colors hover:bg-base-200">
-          <FolderOpen size={28} class="mb-2 text-primary" />
+        <button
+          onclick={handleOpenFolder}
+          class="card border-base-300 bg-base-100 hover:bg-base-200 border p-5 text-left transition-colors"
+        >
+          <FolderOpen size={28} class="text-primary mb-2" />
           <span class="font-medium">{m.analysis_selectFolder()}</span>
-          <span class="mt-1 text-sm text-base-content/50">{m.analysis_selectFolderDesc()}</span>
+          <span class="text-base-content/50 mt-1 text-sm">{m.analysis_selectFolderDesc()}</span>
         </button>
       </div>
     </div>
@@ -387,7 +436,7 @@
     <!-- Source selected: two-column layout -->
     <div class="flex flex-1 overflow-hidden">
       <!-- Left column: Configuration -->
-      <div class="flex w-80 shrink-0 flex-col overflow-y-auto border-r border-base-300 p-4 space-y-4">
+      <div class="border-base-300 flex w-80 shrink-0 flex-col space-y-4 overflow-y-auto border-r p-4">
         <h1 class="text-lg font-semibold">{m.analysis_title()}</h1>
 
         <!-- Compact Open File / Open Folder buttons -->
@@ -403,17 +452,21 @@
         </div>
 
         <!-- Selected source (compact) -->
-        <div class="flex items-center gap-2 rounded-lg border border-base-300 bg-base-200/50 px-3 py-2">
-          <AudioLines size={16} class="shrink-0 text-primary" />
+        <div class="border-base-300 bg-base-200/50 flex items-center gap-2 rounded-lg border px-3 py-2">
+          <AudioLines size={16} class="text-primary shrink-0" />
           <span class="min-w-0 flex-1 truncate text-sm">{appState.sourcePath.split(/[\\/]/).pop()}</span>
-          <button onclick={() => (appState.sourcePath = null)} class="btn btn-ghost btn-xs btn-square" title={m.common_button_clear()}>
+          <button
+            onclick={() => (appState.sourcePath = null)}
+            class="btn btn-ghost btn-xs btn-square"
+            title={m.common_button_clear()}
+          >
             <X size={14} />
           </button>
         </div>
 
         <!-- Model -->
         <label class="block">
-          <span class="text-xs font-medium text-base-content/70">{m.analysis_model()}</span>
+          <span class="text-base-content/70 text-xs font-medium">{m.analysis_model()}</span>
           <select bind:value={appState.selectedModel} class="select select-bordered select-sm mt-1 w-full">
             {#each installedModels as model (model.id)}
               <option value={model.id}>{model.id}</option>
@@ -425,7 +478,7 @@
 
         <!-- Confidence -->
         <label class="block">
-          <span class="text-xs font-medium text-base-content/70">{m.filter_minConfidence()}</span>
+          <span class="text-base-content/70 text-xs font-medium">{m.filter_minConfidence()}</span>
           <div class="mt-1 flex items-center gap-2">
             <input
               type="range"
@@ -440,8 +493,8 @@
         </label>
 
         <!-- Location & Date section -->
-        <div class="space-y-3 rounded-lg border border-base-300 p-3">
-          <h3 class="text-xs font-medium text-base-content/50">{m.analysis_locationDate()}</h3>
+        <div class="border-base-300 space-y-3 rounded-lg border p-3">
+          <h3 class="text-base-content/50 text-xs font-medium">{m.analysis_locationDate()}</h3>
 
           <!-- Previous locations dropdown -->
           {#if previousLocations.length > 0}
@@ -455,7 +508,9 @@
               <option value="-1">{m.analysis_previousLocation()}</option>
               {#each previousLocations as loc, i (loc.id)}
                 <option value={i}>
-                  {loc.name ? `${loc.name} (${loc.latitude.toFixed(2)}, ${loc.longitude.toFixed(2)})` : `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`}
+                  {loc.name
+                    ? `${loc.name} (${loc.latitude.toFixed(2)}, ${loc.longitude.toFixed(2)})`
+                    : `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`}
                 </option>
               {/each}
             </select>
@@ -468,7 +523,9 @@
             <button
               type="button"
               onclick={openDatePicker}
-              class="btn btn-outline btn-sm w-full justify-start gap-2 font-normal {recordingDate ? '' : 'text-base-content/40'}"
+              class="btn btn-outline btn-sm w-full justify-start gap-2 font-normal {recordingDate
+                ? ''
+                : 'text-base-content/40'}"
             >
               <Calendar size={14} />
               {formattedDate || m.analysis_recordingDatePlaceholder()}
@@ -504,20 +561,22 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick={() => (showNoFilterWarning = false)} class="btn btn-sm flex-1">{m.common_button_back()}</button>
+            <button onclick={() => (showNoFilterWarning = false)} class="btn btn-sm flex-1"
+              >{m.common_button_back()}</button
+            >
             <button onclick={doStart} class="btn btn-warning btn-sm flex-1">{m.analysis_startAnyway()}</button>
           </div>
         {:else}
           <!-- Start / Stop button -->
           {#if appState.isAnalysisRunning}
-            <button onclick={onstop} class="btn btn-error w-full gap-2 shadow-lg shadow-error/20">
+            <button onclick={onstop} class="btn btn-error shadow-error/20 w-full gap-2 shadow-lg">
               <Square size={18} />
               {m.analysis_stopAnalysis()}
             </button>
           {:else}
             <button
               onclick={handleStartClick}
-              class="btn btn-primary w-full gap-2 shadow-lg shadow-primary/25 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:brightness-110"
+              class="btn btn-primary shadow-primary/25 hover:shadow-primary/30 w-full gap-2 shadow-lg transition-all duration-200 hover:shadow-xl hover:brightness-110"
             >
               <Play size={18} />
               {m.analysis_startAnalysis()}
@@ -527,17 +586,17 @@
       </div>
 
       <!-- Right column: Source files panel -->
-      <div class="flex flex-1 flex-col overflow-hidden bg-base-100">
+      <div class="bg-base-100 flex flex-1 flex-col overflow-hidden">
         <SourceFilesPanel {scanResult} {scanning} analysisRunning={appState.isAnalysisRunning} />
       </div>
     </div>
   {/if}
 {:else}
   <!-- Results state: compact toolbar -->
-  <div class="flex items-center gap-2 border-b border-base-300 bg-base-200 px-4 py-2">
+  <div class="border-base-300 bg-base-200 flex items-center gap-2 border-b px-4 py-2">
     <h1 class="text-base font-semibold">{m.analysis_title()}</h1>
 
-    <div class="mx-1 h-6 w-px bg-base-300"></div>
+    <div class="bg-base-300 mx-1 h-6 w-px"></div>
 
     <button onclick={handleOpenFile} class="btn btn-ghost btn-sm gap-1.5" title={m.analysis_openFileShortcut()}>
       <FileHeadphone size={16} />
@@ -549,7 +608,7 @@
       {m.analysis_openFolder()}
     </button>
 
-    <div class="mx-1 h-6 w-px bg-base-300"></div>
+    <div class="bg-base-300 mx-1 h-6 w-px"></div>
 
     <label class="flex items-center gap-1.5 text-sm">
       {m.analysis_model()}
@@ -562,7 +621,7 @@
       </select>
     </label>
 
-    <div class="mx-1 h-6 w-px bg-base-300"></div>
+    <div class="bg-base-300 mx-1 h-6 w-px"></div>
 
     {#if appState.isAnalysisRunning}
       <button onclick={onstop} class="btn btn-error btn-sm gap-1.5">
@@ -578,28 +637,32 @@
   </div>
   <div class="flex flex-1 flex-col overflow-hidden">
     <!-- Filter bar -->
-    <div class="flex items-center gap-3 border-b border-base-300 bg-base-200/50 px-4 py-2 text-sm">
-      <AudioLines size={16} class="shrink-0 text-primary" />
+    <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2 text-sm">
+      <AudioLines size={16} class="text-primary shrink-0" />
       <span class="font-medium">{sourceFileName}</span>
       <span class="text-base-content/40">|</span>
-      <span class="text-base-content/60">{total === 1 ? m.pagination_detectionCountSingular({ count: formatNumber(total) }) : m.pagination_detectionCount({ count: formatNumber(total) })}</span>
+      <span class="text-base-content/60"
+        >{total === 1
+          ? m.pagination_detectionCountSingular({ count: formatNumber(total) })
+          : m.pagination_detectionCount({ count: formatNumber(total) })}</span
+      >
 
       <div class="flex-1"></div>
 
       <!-- Species filter -->
       <div class="relative">
-        <Search size={14} class="absolute top-1/2 left-2 -translate-y-1/2 text-base-content/40" />
+        <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
         <input
           type="text"
           placeholder={m.analysis_filterByName()}
           bind:value={speciesQuery}
           oninput={handleSpeciesInput}
-          class="input input-bordered input-sm w-48 pl-7 pr-7 text-xs"
+          class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
         />
         {#if speciesQuery}
           <button
             onclick={clearSpeciesFilter}
-            class="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-base-content/40 hover:text-base-content"
+            class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
           >
             <X size={12} />
           </button>
@@ -607,7 +670,7 @@
       </div>
 
       <!-- Confidence filter -->
-      <label class="flex shrink-0 items-center gap-1.5 text-base-content/60" title={m.filter_minConfidence()}>
+      <label class="text-base-content/60 flex shrink-0 items-center gap-1.5" title={m.filter_minConfidence()}>
         {m.analysis_conf()}
         <input
           type="range"
@@ -663,7 +726,7 @@
       </div>
 
       <!-- Weekday headers -->
-      <div class="mt-2 grid grid-cols-7 text-center text-xs font-medium text-base-content/50">
+      <div class="text-base-content/50 mt-2 grid grid-cols-7 text-center text-xs font-medium">
         {#each WEEKDAYS as wd, i (i)}
           <span class="py-1">{wd}</span>
         {/each}
@@ -676,10 +739,12 @@
           {@const today = isTodayDay(day, month, year)}
           <button
             type="button"
-            onclick={() => { selectDate(day, month, year); }}
+            onclick={() => {
+              selectDate(day, month, year);
+            }}
             class="mx-auto flex h-8 w-8 items-center justify-center rounded-full transition-colors
               {selected ? 'bg-primary text-primary-content' : ''}
-              {!selected && today ? 'border border-primary text-primary' : ''}
+              {!selected && today ? 'border-primary text-primary border' : ''}
               {!selected && !today && current ? 'hover:bg-base-300' : ''}
               {!current ? 'text-base-content/25 hover:bg-base-300/50' : ''}"
           >
@@ -689,7 +754,7 @@
       </div>
 
       <!-- Footer actions -->
-      <div class="mt-3 flex items-center justify-between border-t border-base-300 pt-3">
+      <div class="border-base-300 mt-3 flex items-center justify-between border-t pt-3">
         <button type="button" onclick={clearDate} class="btn btn-ghost btn-xs">{m.common_button_clear()}</button>
         <button type="button" onclick={selectToday} class="btn btn-ghost btn-xs">{m.calendar_today()}</button>
       </div>

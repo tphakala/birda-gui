@@ -54,7 +54,6 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(1);
     })();
   }
-
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {

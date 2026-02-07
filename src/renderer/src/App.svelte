@@ -148,7 +148,7 @@
   });
 </script>
 
-<main class="flex h-screen select-none bg-base-100 text-base-content">
+<main class="bg-base-100 text-base-content flex h-screen select-none">
   <Sidebar />
 
   <div class="flex flex-1 flex-col overflow-hidden">

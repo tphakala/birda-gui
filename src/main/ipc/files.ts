@@ -64,7 +64,7 @@ async function getAudioMetadata(filePath: string): Promise<AudioMeta> {
 
     // Extract comment — music-metadata stores it in common.comment as an array
     const commentArr = metadata.common.comment;
-    const comment = Array.isArray(commentArr) ? commentArr[0]?.text ?? commentArr[0] : undefined;
+    const comment = Array.isArray(commentArr) ? (commentArr[0]?.text ?? commentArr[0]) : undefined;
     const artist = metadata.common.artist ?? metadata.common.albumartist;
 
     return {

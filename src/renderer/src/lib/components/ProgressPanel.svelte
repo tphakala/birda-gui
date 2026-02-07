@@ -10,25 +10,29 @@
 </script>
 
 {#if analysisState.status !== 'idle'}
-  <div class="space-y-2 border-t border-base-300 bg-base-200 p-3">
+  <div class="border-base-300 bg-base-200 space-y-2 border-t p-3">
     <div class="flex items-center justify-between text-sm">
-      <span class="font-medium text-base-content">
+      <span class="text-base-content font-medium">
         {#if analysisState.status === 'running'}
           {m.status_analyzing()}
         {:else if analysisState.status === 'completed'}
-          <span class="flex items-center gap-1 text-success">
+          <span class="text-success flex items-center gap-1">
             <CircleCheckBig size={16} />
             {m.progress_complete()}
           </span>
         {:else if analysisState.status === 'failed'}
-          <span class="flex items-center gap-1 text-error">
+          <span class="text-error flex items-center gap-1">
             <CircleX size={16} />
             {m.progress_failed()}
           </span>
         {/if}
       </span>
       <span class="text-base-content/60">
-        {m.progress_status({ processed: String(analysisState.filesProcessed), total: String(analysisState.totalFiles), detections: formatNumber(analysisState.totalDetections) })}
+        {m.progress_status({
+          processed: String(analysisState.filesProcessed),
+          total: String(analysisState.totalFiles),
+          detections: formatNumber(analysisState.totalDetections),
+        })}
       </span>
     </div>
 
@@ -41,7 +45,7 @@
 
     <!-- Current file progress -->
     {#if analysisState.currentFile}
-      <div class="flex items-center gap-2 text-xs text-base-content/50">
+      <div class="text-base-content/50 flex items-center gap-2 text-xs">
         <FileHeadphone size={14} />
         <span class="flex-1 truncate">{analysisState.currentFile.path}</span>
         <span class="tabular-nums">{analysisState.currentFile.percent.toFixed(0)}%</span>

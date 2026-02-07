@@ -258,11 +258,7 @@
     <!-- Sub-tab bar -->
     <div class="tabs tabs-border">
       {#each subTabs as tab (tab.id)}
-        <button
-          class="tab"
-          class:tab-active={activeSubTab === tab.id}
-          onclick={() => (activeSubTab = tab.id)}
-        >
+        <button class="tab" class:tab-active={activeSubTab === tab.id} onclick={() => (activeSubTab = tab.id)}>
           {tab.label}
         </button>
       {/each}
@@ -279,16 +275,16 @@
       <!-- birda CLI Status -->
       <div class="card bg-base-200">
         <div class="card-body gap-3 p-4">
-          <h3 class="text-sm font-medium text-base-content/70">{m.settings_cli_title()}</h3>
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_cli_title()}</h3>
           {#if birdaStatus === null}
-            <p class="text-sm text-base-content/50">{m.settings_cli_checking()}</p>
+            <p class="text-base-content/50 text-sm">{m.settings_cli_checking()}</p>
           {:else if birdaStatus.available}
-            <div class="flex items-center gap-2 text-sm text-success">
+            <div class="text-success flex items-center gap-2 text-sm">
               <CircleCheckBig size={16} />
               <span>{m.settings_cli_availableAt({ path: birdaStatus.path ?? '' })}</span>
             </div>
           {:else}
-            <div class="flex items-center gap-2 text-sm text-error">
+            <div class="text-error flex items-center gap-2 text-sm">
               <CircleX size={16} />
               <span>{birdaStatus.error}</span>
             </div>
@@ -299,11 +295,11 @@
       <!-- General -->
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
-          <h3 class="text-sm font-medium text-base-content/70">{m.settings_general_title()}</h3>
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_general_title()}</h3>
 
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_general_theme()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_general_theme()}</span>
               <select bind:value={settings.theme} class="select select-bordered mt-1 w-full">
                 {#each themeOptions as opt (opt.value)}
                   <option value={opt.value}>{opt.label}</option>
@@ -312,7 +308,7 @@
             </label>
 
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_general_uiLanguage()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_general_uiLanguage()}</span>
               <select bind:value={settings.ui_language} class="select select-bordered mt-1 w-full">
                 {#each uiLanguages as lang (lang.code)}
                   <option value={lang.code}>{lang.name}</option>
@@ -322,7 +318,7 @@
           </div>
 
           <label class="block">
-            <span class="text-sm font-medium text-base-content/70">{m.settings_general_birdaPath()}</span>
+            <span class="text-base-content/70 text-sm font-medium">{m.settings_general_birdaPath()}</span>
             <div class="mt-1 flex gap-2">
               <input
                 type="text"
@@ -342,11 +338,11 @@
       <!-- Analysis Defaults -->
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
-          <h3 class="text-sm font-medium text-base-content/70">{m.settings_analysis_title()}</h3>
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_analysis_title()}</h3>
 
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_analysis_defaultModel()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_defaultModel()}</span>
               <select bind:value={settings.default_model} class="select select-bordered mt-1 w-full">
                 {#if !modelInList && settings.default_model}
                   <option value={settings.default_model}>{settings.default_model}</option>
@@ -358,7 +354,7 @@
             </label>
 
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_analysis_confidence()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_confidence()}</span>
               <div class="mt-1 flex items-center gap-3">
                 <input
                   type="range"
@@ -368,7 +364,7 @@
                   bind:value={settings.default_confidence}
                   class="range range-primary flex-1"
                 />
-                <span class="w-12 text-sm tabular-nums text-base-content/70"
+                <span class="text-base-content/70 w-12 text-sm tabular-nums"
                   >{(settings.default_confidence * 100).toFixed(0)}%</span
                 >
               </div>
@@ -376,7 +372,7 @@
 
             {#if availableLanguages.length > 0}
               <label class="block">
-                <span class="text-sm font-medium text-base-content/70">{m.settings_general_speciesLanguage()}</span>
+                <span class="text-base-content/70 text-sm font-medium">{m.settings_general_speciesLanguage()}</span>
                 <select bind:value={settings.species_language} class="select select-bordered mt-1 w-full">
                   {#each availableLanguages as lang (lang.code)}
                     <option value={lang.code}>{lang.name} ({lang.code})</option>
@@ -391,11 +387,11 @@
       <!-- Spectrogram -->
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
-          <h3 class="text-sm font-medium text-base-content/70">{m.settings_spectrogram_title()}</h3>
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_spectrogram_title()}</h3>
 
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_spectrogram_maxFreq()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_spectrogram_maxFreq()}</span>
               <select bind:value={settings.default_freq_max} class="select select-bordered mt-1 w-full">
                 {#each freqOptions as opt (opt.value)}
                   <option value={opt.value}>{opt.label}</option>
@@ -404,7 +400,7 @@
             </label>
 
             <label class="block">
-              <span class="text-sm font-medium text-base-content/70">{m.settings_spectrogram_height()}</span>
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_spectrogram_height()}</span>
               <select bind:value={settings.default_spectrogram_height} class="select select-bordered mt-1 w-full">
                 {#each heightOptions as opt (opt.value)}
                   <option value={opt.value}>{opt.label}</option>
@@ -418,16 +414,12 @@
       <!-- Storage Paths -->
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
-          <h3 class="text-sm font-medium text-base-content/70">{m.settings_storage_title()}</h3>
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_storage_title()}</h3>
 
           <label class="block">
-            <span class="text-sm font-medium text-base-content/70">{m.settings_storage_clipDir()}</span>
+            <span class="text-base-content/70 text-sm font-medium">{m.settings_storage_clipDir()}</span>
             <div class="mt-1 flex gap-2">
-              <input
-                type="text"
-                bind:value={settings.clip_output_dir}
-                class="input input-bordered flex-1"
-              />
+              <input type="text" bind:value={settings.clip_output_dir} class="input input-bordered flex-1" />
               <button onclick={browseClipDir} class="btn btn-outline gap-1.5">
                 <FolderOpen size={16} />
                 {m.common_button_browse()}
@@ -436,8 +428,8 @@
           </label>
 
           <div>
-            <span class="text-sm font-medium text-base-content/70">{m.settings_storage_dbLocation()}</span>
-            <p class="mt-1 truncate rounded-lg border border-base-300 bg-base-300/50 p-2 text-sm text-base-content/50">
+            <span class="text-base-content/70 text-sm font-medium">{m.settings_storage_dbLocation()}</span>
+            <p class="border-base-300 bg-base-300/50 text-base-content/50 mt-1 truncate rounded-lg border p-2 text-sm">
               {settings.db_path}
             </p>
           </div>
@@ -455,7 +447,7 @@
           {m.common_button_save()}
         </button>
         {#if saved}
-          <span class="flex items-center gap-1 text-sm text-success">
+          <span class="text-success flex items-center gap-1 text-sm">
             <CircleCheckBig size={14} />
             {m.settings_saved()}
           </span>
@@ -492,7 +484,7 @@
       {#if modelsTab === 'installed'}
         <!-- Installed models grid -->
         {#if installedModels.length === 0}
-          <div class="py-12 text-center text-base-content/50">
+          <div class="text-base-content/50 py-12 text-center">
             <Cpu size={40} class="mx-auto mb-3 opacity-30" />
             <p class="text-sm">{modelsLoading ? m.settings_models_loading() : m.settings_models_noInstalled()}</p>
             <p class="mt-1 text-xs">{m.settings_models_switchToCatalog()}</p>
@@ -501,28 +493,28 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {#each installedModels as model (model.id)}
               {@const info = availableModelsToInstall.find((a) => a.id === model.id)}
-              <div class="card border border-base-300 bg-base-200">
+              <div class="card border-base-300 bg-base-200 border">
                 <div class="card-body gap-3 p-4">
                   <div class="flex items-start gap-3">
-                    <div class="shrink-0 rounded-lg bg-primary/10 p-2.5">
+                    <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
                       <Cpu size={24} class="text-primary" />
                     </div>
                     <div class="min-w-0 flex-1">
                       <h4 class="text-sm font-semibold">{info?.name ?? model.id}</h4>
                       {#if info?.description}
-                        <p class="mt-0.5 line-clamp-2 text-xs text-base-content/50">{info.description}</p>
+                        <p class="text-base-content/50 mt-0.5 line-clamp-2 text-xs">{info.description}</p>
                       {/if}
-                      <p class="mt-1 text-xs text-base-content/40">{info?.vendor ?? ''}</p>
+                      <p class="text-base-content/40 mt-1 text-xs">{info?.vendor ?? ''}</p>
                     </div>
                   </div>
 
-                  <div class="flex items-center justify-between border-t border-base-300 pt-3">
+                  <div class="border-base-300 flex items-center justify-between border-t pt-3">
                     <div class="flex items-center gap-2">
                       {#if info?.version}
-                        <span class="text-xs text-base-content/40">v{info.version}</span>
+                        <span class="text-base-content/40 text-xs">v{info.version}</span>
                         <span class="text-base-content/20">·</span>
                       {/if}
-                      <span class="text-xs text-base-content/40">{model.model_type}</span>
+                      <span class="text-base-content/40 text-xs">{model.model_type}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                       <button
@@ -553,7 +545,7 @@
       {:else}
         <!-- Catalog grid -->
         {#if availableModelsToInstall.length === 0}
-          <div class="py-12 text-center text-base-content/50">
+          <div class="text-base-content/50 py-12 text-center">
             <Download size={40} class="mx-auto mb-3 opacity-30" />
             <p class="text-sm">{modelsLoading ? m.settings_models_loadingCatalog() : m.settings_models_noCatalog()}</p>
           </div>
@@ -561,34 +553,34 @@
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {#each availableModelsToInstall as model (model.id)}
               {@const isInstalled = installedIds.has(model.id)}
-              <div class="card relative overflow-hidden border border-base-300 bg-base-200">
+              <div class="card border-base-300 bg-base-200 relative overflow-hidden border">
                 {#if model.recommended}
-                  <div class="bg-primary px-3 py-1 text-xs font-semibold text-primary-content">
+                  <div class="bg-primary text-primary-content px-3 py-1 text-xs font-semibold">
                     {m.settings_models_recommended()}
                   </div>
                 {/if}
                 <div class="card-body gap-3 p-4">
                   <div class="flex items-start gap-3">
-                    <div class="shrink-0 rounded-lg bg-primary/10 p-2.5">
+                    <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
                       <Cpu size={24} class="text-primary" />
                     </div>
                     <div class="min-w-0 flex-1">
                       <h4 class="text-sm font-semibold">{model.name}</h4>
                       {#if model.description}
-                        <p class="mt-0.5 line-clamp-2 text-xs text-base-content/50">{model.description}</p>
+                        <p class="text-base-content/50 mt-0.5 line-clamp-2 text-xs">{model.description}</p>
                       {/if}
-                      <p class="mt-1 text-xs text-base-content/40">{model.vendor}</p>
+                      <p class="text-base-content/40 mt-1 text-xs">{model.vendor}</p>
                     </div>
                   </div>
 
-                  <div class="flex items-center justify-between border-t border-base-300 pt-3">
+                  <div class="border-base-300 flex items-center justify-between border-t pt-3">
                     <div class="flex items-center gap-2">
-                      <span class="text-xs text-base-content/40">v{model.version}</span>
+                      <span class="text-base-content/40 text-xs">v{model.version}</span>
                       <span class="text-base-content/20">·</span>
-                      <span class="text-xs text-base-content/40">{model.model_type}</span>
+                      <span class="text-base-content/40 text-xs">{model.model_type}</span>
                       {#if !model.commercial_use}
                         <span class="text-base-content/20">·</span>
-                        <span class="text-xs text-warning">{m.settings_models_nonCommercial()}</span>
+                        <span class="text-warning text-xs">{m.settings_models_nonCommercial()}</span>
                       {/if}
                     </div>
                     {#if isInstalled}
@@ -598,7 +590,9 @@
                       </span>
                     {:else}
                       <button
-                        onclick={() => { promptLicense(model); }}
+                        onclick={() => {
+                          promptLicense(model);
+                        }}
                         disabled={installing !== null}
                         class="btn btn-primary btn-xs gap-1"
                       >
@@ -625,10 +619,10 @@
         <div class="card-body gap-4 p-4">
           <div class="flex items-center gap-2">
             <Database size={16} class="text-base-content/50" />
-            <h3 class="text-sm font-medium text-base-content/70">{m.settings_data_dbContent()}</h3>
+            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dbContent()}</h3>
           </div>
 
-          <div class="flex items-center gap-6 text-sm text-base-content/70">
+          <div class="text-base-content/70 flex items-center gap-6 text-sm">
             <span>{m.settings_data_detections({ count: appState.catalogStats.total_detections })}</span>
             <span>{m.settings_data_species({ count: appState.catalogStats.total_species })}</span>
             <span>{m.settings_data_locations({ count: appState.catalogStats.total_locations })}</span>
@@ -644,7 +638,7 @@
               {m.settings_data_clearAll()}
             </button>
             {#if clearResult}
-              <span class="text-sm text-success">
+              <span class="text-success text-sm">
                 {m.settings_data_cleared({
                   detections: clearResult.detections,
                   runs: clearResult.runs,
@@ -661,10 +655,10 @@
           <div class="card-body gap-2 p-4">
             <div class="flex items-center gap-2">
               <FileCode size={16} class="text-base-content/50" />
-              <h3 class="text-sm font-medium text-base-content/70">{m.settings_data_birdaConfig()}</h3>
+              <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_birdaConfig()}</h3>
             </div>
             <pre
-              class="max-h-64 overflow-auto rounded-lg border border-base-300 bg-base-300/50 p-3 text-xs text-base-content/50">{JSON.stringify(
+              class="border-base-300 bg-base-300/50 text-base-content/50 max-h-64 overflow-auto rounded-lg border p-3 text-xs">{JSON.stringify(
                 birdaConfig,
                 null,
                 2,
@@ -680,14 +674,14 @@
 {#if showClearConfirm}
   <dialog class="modal modal-open">
     <div class="modal-box">
-      <div class="flex items-center gap-3 text-error">
+      <div class="text-error flex items-center gap-3">
         <TriangleAlert size={24} />
         <h3 class="text-lg font-semibold">{m.settings_clearModal_title()}</h3>
       </div>
-      <p class="mt-3 text-sm text-base-content/70">
+      <p class="text-base-content/70 mt-3 text-sm">
         {m.settings_clearModal_warning()}
       </p>
-      <div class="mt-2 rounded-lg border border-base-300 bg-base-200 p-3 text-sm">
+      <div class="border-base-300 bg-base-200 mt-2 rounded-lg border p-3 text-sm">
         <p>{m.settings_clearModal_detectionsRemoved({ count: appState.catalogStats.total_detections })}</p>
         <p>{m.settings_clearModal_locationsRemoved({ count: appState.catalogStats.total_locations })}</p>
       </div>
@@ -723,10 +717,10 @@
       <div class="mt-4 space-y-4">
         <div>
           <p class="text-sm font-medium">{licenseModel.name}</p>
-          <p class="text-xs text-base-content/50">{licenseModel.vendor}</p>
+          <p class="text-base-content/50 text-xs">{licenseModel.vendor}</p>
         </div>
 
-        <div class="space-y-2 rounded-lg border border-base-300 bg-base-200 p-3 text-sm">
+        <div class="border-base-300 bg-base-200 space-y-2 rounded-lg border p-3 text-sm">
           <div class="flex items-center justify-between">
             <span class="text-base-content/70">{m.settings_licenseModal_license()}</span>
             {#if LICENSE_URLS[licenseModel.license]}
@@ -751,7 +745,7 @@
           </div>
         </div>
 
-        <p class="text-xs text-base-content/50">
+        <p class="text-base-content/50 text-xs">
           {m.settings_licenseModal_agree({ license: licenseModel.license })}
         </p>
       </div>
