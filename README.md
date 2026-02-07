@@ -1,5 +1,10 @@
 # Birda GUI
 
+[![CI](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Electron](https://img.shields.io/badge/Electron-40-47848F.svg)](https://www.electronjs.org/)
+[![Sponsor](https://img.shields.io/badge/sponsor-GitHub-pink.svg)](https://github.com/sponsors/tphakala)
+
 Desktop GUI for [birda](https://github.com/tphakala/birda), a bird species detection CLI powered by BirdNET.
 
 Built with Electron, Svelte 5, and Tailwind CSS.
@@ -45,4 +50,4 @@ npm run dist:mac     # macOS (dmg)
 
 ## License
 
-ISC
+[MIT](LICENSE)

@@ -27,7 +27,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "build": {
     "compression": "store",
     "appId": "com.birda.gui",
