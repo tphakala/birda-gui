@@ -16,7 +16,6 @@
     type BirdaEventEnvelope,
   } from '$lib/stores/analysis.svelte';
   import { addLog, type LogEntry } from '$lib/stores/log.svelte';
-  import { loadDetections } from '$lib/stores/catalog.svelte';
   import {
     getCatalogStats,
     getSettings,
@@ -93,9 +92,9 @@
       analysisState.status = 'completed';
       appState.lastRunId = result.runId;
       appState.lastSourceFile = appState.sourcePath;
-      appState.activeTab = 'analysis';
+      appState.selectedRunId = result.runId;
+      appState.activeTab = 'detections';
       appState.catalogStats = await getCatalogStats();
-      await loadDetections();
     } catch (err) {
       analysisState.status = 'failed';
       analysisState.error = (err as Error).message;

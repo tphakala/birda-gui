@@ -19,6 +19,7 @@ export const appState = $state({
   showLogPanel: false,
   lastRunId: null as number | null,
   lastSourceFile: null as string | null,
+  selectedRunId: null as number | null,
   theme: 'system' as 'system' | 'light' | 'dark',
   settingsHasUnsavedChanges: false,
 });

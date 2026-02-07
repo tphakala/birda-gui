@@ -1,5 +1,5 @@
 import { getDb } from './database';
-import type { AnalysisRun } from '$shared/types';
+import type { AnalysisRun, RunWithStats } from '$shared/types';
 
 export function createRun(
   sourcePath: string,
@@ -46,4 +46,31 @@ export function deleteRun(id: number): void {
     db.prepare('DELETE FROM detections WHERE run_id = ?').run(id);
     db.prepare('DELETE FROM analysis_runs WHERE id = ?').run(id);
   })();
+}
+
+/** Mark any runs left in 'running' state as 'failed' — they are stale from a previous session. */
+export function markStaleRunsAsFailed(): number {
+  const db = getDb();
+  const result = db
+    .prepare("UPDATE analysis_runs SET status = 'failed', completed_at = datetime('now') WHERE status = 'running'")
+    .run();
+  return result.changes;
+}
+
+export function getRunsWithStats(): RunWithStats[] {
+  const db = getDb();
+  return db
+    .prepare(
+      `SELECT
+        r.*,
+        COALESCE(d.cnt, 0) AS detection_count,
+        l.name AS location_name
+      FROM analysis_runs r
+      LEFT JOIN (
+        SELECT run_id, COUNT(*) AS cnt FROM detections GROUP BY run_id
+      ) d ON d.run_id = r.id
+      LEFT JOIN locations l ON l.id = r.location_id
+      ORDER BY r.started_at DESC`,
+    )
+    .all() as RunWithStats[];
 }
