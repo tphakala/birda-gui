@@ -236,5 +236,34 @@
   "calendar_weekday_th": "Th",
   "calendar_weekday_fr": "Fr",
   "calendar_weekday_sa": "Sa",
-  "calendar_weekday_su": "Su"
+  "calendar_weekday_su": "Su",
+
+  "wizard_welcome_title": "Welcome to Birda GUI",
+  "wizard_welcome_subtitle": "Let's get you set up in a few quick steps.",
+  "wizard_welcome_getStarted": "Get Started",
+  "wizard_welcome_skip": "Skip setup",
+
+  "wizard_cli_title": "birda CLI",
+  "wizard_cli_subtitle": "Birda GUI needs the birda command-line tool to analyze audio files.",
+  "wizard_cli_checking": "Checking for birda...",
+  "wizard_cli_found": "birda found at {path}",
+  "wizard_cli_notFound": "birda was not found on your system.",
+  "wizard_cli_notFoundHint": "birda should have been installed automatically. You can set the path manually or download it.",
+  "wizard_cli_download": "Download birda",
+  "wizard_cli_setPath": "Set path manually",
+
+  "wizard_model_title": "Install a Model",
+  "wizard_model_subtitle": "You need at least one model to analyze bird sounds. Choose one to install.",
+  "wizard_model_installing": "Installing {name}...",
+  "wizard_model_installed": "installed",
+  "wizard_model_hasModels": "You have {count} model(s) installed. You can install more later from Settings.",
+  "wizard_model_noCli": "birda CLI is not available. Go back to the previous step to set up the CLI before installing models.",
+
+  "wizard_language_title": "Species Language",
+  "wizard_language_subtitle": "Choose the language for bird species names shown in detection results.",
+
+  "wizard_finish": "Finish Setup",
+  "wizard_next": "Next",
+  "wizard_back": "Back",
+  "wizard_stepOf": "Step {current} of {total}"
 }

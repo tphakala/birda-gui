@@ -10,8 +10,13 @@ export function registerModelHandlers(): void {
     return listAvailable();
   });
 
-  ipcMain.handle('birda:models-install', async (_event, name: string) => {
-    return installModel(name);
+  ipcMain.handle('birda:models-install', async (event, name: string) => {
+    const sender = event.sender;
+    return installModel(name, (line) => {
+      if (!sender.isDestroyed()) {
+        sender.send('birda:models-install-progress', line);
+      }
+    });
   });
 
   ipcMain.handle('birda:models-info', async (_event, name: string) => {

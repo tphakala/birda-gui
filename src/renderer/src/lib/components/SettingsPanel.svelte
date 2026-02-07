@@ -70,6 +70,7 @@
     species_language: 'en',
     ui_language: 'en',
     theme: 'system',
+    setup_completed: true,
   });
 
   const freqOptions = [

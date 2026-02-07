@@ -118,6 +118,11 @@ function createMenu() {
       label: 'Help',
       submenu: [
         {
+          label: 'Setup Wizard...',
+          click: () => mainWindow?.webContents.send('menu:setup-wizard'),
+        },
+        { type: 'separator' },
+        {
           label: 'About Birda GUI',
           click: () => {
             void electronDialog.showMessageBox({
