@@ -9,6 +9,7 @@ import type {
   AppSettings,
   CatalogStats,
   SourceScanResult,
+  RunWithStats,
 } from '$shared/types';
 
 declare global {
@@ -39,6 +40,10 @@ export function offAnalysisProgress(): void {
 }
 
 // Catalog
+export function getRuns(): Promise<RunWithStats[]> {
+  return window.birda.invoke('catalog:get-runs') as Promise<RunWithStats[]>;
+}
+
 export function getDetections(filter: DetectionFilter): Promise<{ detections: EnrichedDetection[]; total: number }> {
   return window.birda.invoke('catalog:get-detections', filter) as Promise<{
     detections: EnrichedDetection[];

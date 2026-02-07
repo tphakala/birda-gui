@@ -188,6 +188,18 @@
 
   "map_unknownLocation": "Unknown Location",
 
+  "runs_title": "Runs",
+  "runs_empty": "No analysis runs yet",
+  "runs_emptyHint": "Go to the Analysis tab to start your first analysis.",
+  "runs_detectionCount": "{count} detections",
+  "runs_detectionCountSingular": "{count} detection",
+  "runs_noDetections": "No detections",
+  "runs_selectRun": "Select a run from the list to view its detections.",
+  "runs_status_running": "Running",
+  "runs_status_completed": "Completed",
+  "runs_status_failed": "Failed",
+  "runs_status_pending": "Pending",
+
   "analysis_title": "Analysis",
   "analysis_selectFile": "Select File",
   "analysis_selectFileDesc": "Select an audio file to analyze",

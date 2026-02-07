@@ -26,10 +26,6 @@ export function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export function formatTimeRange(start: number, end: number): string {
-  return `${formatTime(start)} - ${formatTime(end)}`;
-}
-
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });

@@ -49,6 +49,11 @@ export interface AnalysisRun {
   completed_at: string | null;
 }
 
+export interface RunWithStats extends AnalysisRun {
+  detection_count: number;
+  location_name: string | null;
+}
+
 export interface Detection {
   id: number;
   run_id: number;

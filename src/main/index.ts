@@ -12,6 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
 import { closeDb } from './db/database';
+import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
 
@@ -189,6 +190,12 @@ void app.whenReady().then(async () => {
 
   registerBirdaMediaProtocol();
   await registerHandlers();
+
+  // Mark any runs stuck in 'running' from a previous session as failed
+  const staleCount = markStaleRunsAsFailed();
+  if (staleCount > 0) {
+    console.log(`[startup] Marked ${staleCount} stale running run(s) as failed`);
+  }
 
   // Initialize label service from default model's labels with saved language preference
   try {
