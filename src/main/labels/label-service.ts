@@ -10,16 +10,8 @@ export interface LabelProvider {
 
 let activeProvider: LabelProvider | null = null;
 
-export function setLabelProvider(provider: LabelProvider): void {
+function setLabelProvider(provider: LabelProvider): void {
   activeProvider = provider;
-}
-
-export function getLabelProvider(): LabelProvider | null {
-  return activeProvider;
-}
-
-export function getCommonName(scientificName: string): string | null {
-  return activeProvider?.getCommonName(scientificName) ?? null;
 }
 
 export function searchByCommonName(query: string): string[] {

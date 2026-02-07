@@ -50,10 +50,6 @@ export function searchSpecies(query: string): Promise<EnrichedSpeciesSummary[]> 
   return window.birda.invoke('catalog:search-species', query) as Promise<EnrichedSpeciesSummary[]>;
 }
 
-export function getSpeciesSummary(): Promise<EnrichedSpeciesSummary[]> {
-  return window.birda.invoke('catalog:get-species-summary') as Promise<EnrichedSpeciesSummary[]>;
-}
-
 export function getSpeciesLocations(
   scientificName: string,
 ): Promise<
@@ -62,10 +58,6 @@ export function getSpeciesLocations(
   return window.birda.invoke('catalog:species-locations', scientificName) as Promise<
     { location_id: number; latitude: number; longitude: number; name: string | null; detection_count: number }[]
   >;
-}
-
-export function getLocationSpecies(locationId: number): Promise<EnrichedSpeciesSummary[]> {
-  return window.birda.invoke('catalog:location-species', locationId) as Promise<EnrichedSpeciesSummary[]>;
 }
 
 export function getLocations(): Promise<Location[]> {
@@ -104,10 +96,6 @@ export function installModel(name: string): Promise<string> {
   return window.birda.invoke('birda:models-install', name) as Promise<string>;
 }
 
-export function getModelInfo(name: string): Promise<unknown> {
-  return window.birda.invoke('birda:models-info', name);
-}
-
 // Settings
 export function getSettings(): Promise<AppSettings> {
   return window.birda.invoke('app:get-settings') as Promise<AppSettings>;
@@ -123,10 +111,6 @@ export function checkBirda(): Promise<{ available: boolean; path?: string; error
 
 export function getBirdaConfig(): Promise<Record<string, unknown>> {
   return window.birda.invoke('birda:config-show') as Promise<Record<string, unknown>>;
-}
-
-export function getBirdaConfigPath(): Promise<string> {
-  return window.birda.invoke('birda:config-path') as Promise<string>;
 }
 
 // File system
@@ -151,10 +135,6 @@ export function readCoordinates(folderPath: string): Promise<{ latitude: number;
     latitude: number;
     longitude: number;
   } | null>;
-}
-
-export function getStderrLog(): Promise<string> {
-  return window.birda.invoke('app:get-log') as Promise<string>;
 }
 
 // Log
@@ -185,14 +165,6 @@ export function extractClip(
 }
 
 // Labels
-export function resolveCommonNames(scientificNames: string[]): Promise<Record<string, string>> {
-  return window.birda.invoke('labels:resolve-all', scientificNames) as Promise<Record<string, string>>;
-}
-
-export function searchByCommonName(query: string): Promise<string[]> {
-  return window.birda.invoke('labels:search-by-common-name', query) as Promise<string[]>;
-}
-
 export function getAvailableLanguages(): Promise<{ code: string; name: string }[]> {
   return window.birda.invoke('labels:available-languages') as Promise<{ code: string; name: string }[]>;
 }
@@ -214,6 +186,3 @@ export function saveSpectrogram(clipPath: string, freqMax: number, height: numbe
   return window.birda.invoke('clip:save-spectrogram', clipPath, freqMax, height, dataUrl) as Promise<string>;
 }
 
-export function getSpectrogramCache(clipPath: string, freqMax: number, height: number): Promise<string | null> {
-  return window.birda.invoke('clip:get-spectrogram', clipPath, freqMax, height) as Promise<string | null>;
-}

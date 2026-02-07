@@ -1,11 +1,17 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["src/main/index.ts", "src/preload/index.ts", "src/renderer/src/main.ts", "shared/types.ts"],
+  "entry": [
+    "src/main/index.ts",
+    "src/preload/index.ts",
+    "src/renderer/src/main.ts",
+    "shared/types.ts",
+    "electron.vite.config.ts"
+  ],
   "project": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/renderer/**/*.{ts,svelte}", "shared/**/*.ts"],
   "paths": {
     "$shared/*": ["./shared/*"],
     "$lib/*": ["./src/renderer/src/lib/*"],
     "$paraglide/*": ["./src/renderer/src/paraglide/*"]
   },
-  "ignoreDependencies": ["tailwindcss"]
+  "ignoreDependencies": ["tailwindcss", "daisyui"]
 }

@@ -9,14 +9,14 @@ import type {
 // Re-export event types for renderer use
 export type { BirdaEventEnvelope };
 
-export interface FileProgress {
+interface FileProgress {
   path: string;
   segmentsDone: number;
   segmentsTotal: number;
   percent: number;
 }
 
-export interface AnalysisProgress {
+interface AnalysisProgress {
   totalFiles: number;
   filesProcessed: number;
   filesFailed: number;

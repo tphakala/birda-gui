@@ -25,7 +25,7 @@ interface Registry {
   models: RegistryModel[];
 }
 
-export async function readRegistry(): Promise<Registry> {
+async function readRegistry(): Promise<Registry> {
   const configPath = await getConfigPath();
   const configDir = path.dirname(configPath);
   const registryPath = path.join(configDir, 'registry.json');

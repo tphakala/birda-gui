@@ -177,12 +177,3 @@ export function updateDetectionClipPath(id: number, clipPath: string): void {
   db.prepare('UPDATE detections SET clip_path = ? WHERE id = ?').run(clipPath, id);
 }
 
-export function deleteDetection(id: number): void {
-  const db = getDb();
-  db.prepare('DELETE FROM detections WHERE id = ?').run(id);
-}
-
-export function deleteDetectionsByRun(runId: number): void {
-  const db = getDb();
-  db.prepare('DELETE FROM detections WHERE run_id = ?').run(runId);
-}

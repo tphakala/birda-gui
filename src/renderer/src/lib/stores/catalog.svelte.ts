@@ -8,7 +8,7 @@ export type SortColumn =
   | 'start_time'
   | 'source_file'
   | 'detected_at';
-export type SortDir = 'asc' | 'desc';
+type SortDir = 'asc' | 'desc';
 
 export const catalogState = $state({
   detections: [] as EnrichedDetection[],

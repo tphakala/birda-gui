@@ -26,12 +26,7 @@ export function updateRunStatus(id: number, status: AnalysisRun['status']): void
   }
 }
 
-export function getRuns(): AnalysisRun[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM analysis_runs ORDER BY started_at DESC').all() as AnalysisRun[];
-}
-
-export function getRunById(id: number): AnalysisRun | undefined {
+function getRunById(id: number): AnalysisRun | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
 }

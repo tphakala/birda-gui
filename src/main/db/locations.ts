@@ -18,7 +18,7 @@ export function getLocations(): Location[] {
   return db.prepare('SELECT * FROM locations ORDER BY created_at DESC').all() as Location[];
 }
 
-export function getLocationById(id: number): Location | undefined {
+function getLocationById(id: number): Location | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM locations WHERE id = ?').get(id) as Location | undefined;
 }
@@ -35,30 +35,6 @@ export function findLocationByCoords(latitude: number, longitude: number): Locat
   `,
     )
     .get(latitude, longitude) as Location | undefined;
-}
-
-export function updateLocation(id: number, updates: Partial<Pick<Location, 'name' | 'description'>>): void {
-  const db = getDb();
-  const sets: string[] = [];
-  const values: unknown[] = [];
-
-  if (updates.name !== undefined) {
-    sets.push('name = ?');
-    values.push(updates.name);
-  }
-  if (updates.description !== undefined) {
-    sets.push('description = ?');
-    values.push(updates.description);
-  }
-
-  if (sets.length === 0) return;
-  values.push(id);
-  db.prepare(`UPDATE locations SET ${sets.join(', ')} WHERE id = ?`).run(...values);
-}
-
-export function deleteLocation(id: number): void {
-  const db = getDb();
-  db.prepare('DELETE FROM locations WHERE id = ?').run(id);
 }
 
 export function getLocationsWithCounts(): (Location & { detection_count: number; species_count: number })[] {

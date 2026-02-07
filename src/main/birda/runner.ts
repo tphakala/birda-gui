@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import type { BirdaEventEnvelope } from './types';
 
-export interface AnalysisOptions {
+interface AnalysisOptions {
   model: string;
   minConfidence: number;
   latitude?: number | undefined;
