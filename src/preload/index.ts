@@ -39,12 +39,14 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([
   'birda:analysis-progress',
+  'birda:models-install-progress',
   'app:log',
   'menu:open-file',
   'menu:open-folder',
   'menu:switch-tab',
   'menu:focus-search',
   'menu:toggle-log',
+  'menu:setup-wizard',
 ]);
 
 contextBridge.exposeInMainWorld('birda', {

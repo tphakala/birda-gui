@@ -26,6 +26,7 @@ async function loadSettings(): Promise<AppSettings> {
     species_language: 'en',
     ui_language: 'en',
     theme: 'system',
+    setup_completed: false,
   };
 
   try {

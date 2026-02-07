@@ -3,6 +3,7 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
   import ProgressPanel from '$lib/components/ProgressPanel.svelte';
   import LogPanel from '$lib/components/LogPanel.svelte';
+  import SetupWizard from '$lib/components/SetupWizard.svelte';
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
   import MapPage from './pages/MapPage.svelte';
@@ -25,11 +26,18 @@
     offAnalysisProgress,
     onLog,
     offLog,
+    onSetupWizard,
+    offSetupWizard,
   } from '$lib/utils/ipc';
   import { setupMenuListeners } from '$lib/utils/shortcuts';
   import { onMount, onDestroy } from 'svelte';
 
   let cleanupMenu: (() => void) | null = null;
+  let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
+
+  function handleWizardComplete() {
+    showWizard = false;
+  }
 
   async function handleStop() {
     try {
@@ -103,8 +111,10 @@
         if (settings.default_model) {
           appState.selectedModel = settings.default_model;
         }
+        showWizard = !settings.setup_completed;
       } catch {
-        // Failed to load settings
+        // Failed to load settings — show wizard as fallback
+        showWizard = true;
       }
 
       try {
@@ -113,6 +123,10 @@
         // DB not ready yet
       }
     })();
+
+    onSetupWizard(() => {
+      showWizard = true;
+    });
 
     cleanupMenu = setupMenuListeners({
       onOpenFile: (path: string) => {
@@ -144,28 +158,38 @@
   onDestroy(() => {
     offAnalysisProgress();
     offLog();
+    offSetupWizard();
     cleanupMenu?.();
   });
 </script>
 
-<main class="bg-base-100 text-base-content flex h-screen select-none">
-  <Sidebar />
+{#if showWizard === null}
+  <!-- Loading settings, show nothing -->
+  <main class="bg-base-100 flex h-screen select-none"></main>
+{:else if showWizard}
+  <main class="bg-base-100 text-base-content h-screen select-none">
+    <SetupWizard oncomplete={handleWizardComplete} />
+  </main>
+{:else}
+  <main class="bg-base-100 text-base-content flex h-screen select-none">
+    <Sidebar />
 
-  <div class="flex flex-1 flex-col overflow-hidden">
     <div class="flex flex-1 flex-col overflow-hidden">
-      {#if appState.activeTab === 'analysis'}
-        <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
-      {:else if appState.activeTab === 'detections'}
-        <DetectionsPage />
-      {:else if appState.activeTab === 'map'}
-        <MapPage />
-      {:else if appState.activeTab === 'settings'}
-        <SettingsPage />
-      {/if}
-    </div>
+      <div class="flex flex-1 flex-col overflow-hidden">
+        {#if appState.activeTab === 'analysis'}
+          <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
+        {:else if appState.activeTab === 'detections'}
+          <DetectionsPage />
+        {:else if appState.activeTab === 'map'}
+          <MapPage />
+        {:else if appState.activeTab === 'settings'}
+          <SettingsPage />
+        {/if}
+      </div>
 
-    <ProgressPanel />
-    <LogPanel />
-    <StatusBar />
-  </div>
-</main>
+      <ProgressPanel />
+      <LogPanel />
+      <StatusBar />
+    </div>
+  </main>
+{/if}

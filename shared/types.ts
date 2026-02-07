@@ -140,6 +140,7 @@ export interface AppSettings {
   species_language: string;
   ui_language: string;
   theme: 'system' | 'light' | 'dark';
+  setup_completed: boolean;
 }
 
 // === Catalog Stats ===

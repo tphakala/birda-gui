@@ -38,7 +38,7 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-export async function installModel(name: string): Promise<string> {
+export async function installModel(name: string, onProgress?: (line: string) => void): Promise<string> {
   const birdaPath = await findBirda();
   return new Promise((resolve, reject) => {
     const proc = spawn(birdaPath, ['models', 'install', name], {
@@ -49,11 +49,25 @@ export async function installModel(name: string): Promise<string> {
     let stderr = '';
 
     proc.stdout.on('data', (data: Buffer) => {
-      stdout += data.toString();
+      const text = data.toString();
+      stdout += text;
+      if (onProgress) {
+        for (const line of text.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed) onProgress(trimmed);
+        }
+      }
     });
 
     proc.stderr.on('data', (data: Buffer) => {
-      stderr += data.toString();
+      const text = data.toString();
+      stderr += text;
+      if (onProgress) {
+        for (const line of text.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed) onProgress(trimmed);
+        }
+      }
     });
 
     // Auto-accept the license prompt; the GUI shows its own acceptance dialog

@@ -173,6 +173,24 @@ export function getAvailableLanguages(): Promise<{ code: string; name: string }[
   return window.birda.invoke('labels:available-languages') as Promise<{ code: string; name: string }[]>;
 }
 
+// Model install progress
+export function onModelInstallProgress(callback: (line: string) => void): void {
+  window.birda.on('birda:models-install-progress', callback as (...args: unknown[]) => void);
+}
+
+export function offModelInstallProgress(): void {
+  window.birda.removeAllListeners('birda:models-install-progress');
+}
+
+// Menu events
+export function onSetupWizard(callback: () => void): void {
+  window.birda.on('menu:setup-wizard', callback as (...args: unknown[]) => void);
+}
+
+export function offSetupWizard(): void {
+  window.birda.removeAllListeners('menu:setup-wizard');
+}
+
 // Region export
 export function exportRegionAsWav(wavBytes: Uint8Array, defaultName?: string): Promise<string | null> {
   // Chunked base64 encoding to avoid stack overflow on large arrays
