@@ -213,8 +213,9 @@
   "analysis_openFolderShortcut": "Open Folder (Ctrl+Shift+O)",
   "analysis_stop": "Stop",
   "analysis_analyze": "Analyze",
-  "analysis_filterByName": "Filter by name...",
+  "analysis_filterByName": "Filter by species...",
   "analysis_conf": "Conf",
+  "analysis_allConfidences": "All",
 
   "calendar_datePlaceholder": "DD/MM/YYYY",
   "calendar_today": "Today",

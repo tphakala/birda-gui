@@ -59,6 +59,7 @@
   let offset = $state(0);
   const limit = 200;
   let speciesQuery = $state('');
+  let ignoreConfidence = $state(false);
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // --- Analysis configuration state ---
@@ -322,7 +323,7 @@
     try {
       const result = await getDetections({
         run_id: appState.lastRunId,
-        min_confidence: appState.minConfidence,
+        min_confidence: ignoreConfidence && speciesQuery ? undefined : appState.minConfidence,
         species: speciesQuery || undefined,
         sort_column: sortColumn,
         sort_dir: sortDir,
@@ -588,7 +589,7 @@
         {:else}
           <!-- Start / Stop button -->
           {#if appState.isAnalysisRunning}
-            <button onclick={onstop} class="btn btn-error shadow-error/20 w-full gap-2 shadow-lg">
+            <button onclick={onstop} class="btn btn-error w-full gap-2">
               <Square size={18} />
               {m.analysis_stopAnalysis()}
             </button>
@@ -668,10 +669,8 @@
           : m.pagination_detectionCount({ count: formatNumber(total) })}</span
       >
 
-      <div class="flex-1"></div>
-
       <!-- Species filter -->
-      <div class="relative">
+      <div class="relative ml-3">
         <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
         <input
           type="text"
@@ -689,6 +688,25 @@
           </button>
         {/if}
       </div>
+
+      <!-- Ignore confidence checkbox -->
+      <label
+        class="text-base-content/60 flex shrink-0 cursor-pointer items-center gap-1 text-xs select-none"
+        title={m.analysis_allConfidences()}
+      >
+        <input
+          type="checkbox"
+          bind:checked={ignoreConfidence}
+          onchange={() => {
+            offset = 0;
+            void load();
+          }}
+          class="checkbox checkbox-xs checkbox-primary"
+        />
+        {m.analysis_allConfidences()}
+      </label>
+
+      <div class="flex-1"></div>
 
       <!-- Confidence filter -->
       <label class="text-base-content/60 flex shrink-0 items-center gap-1.5" title={m.filter_minConfidence()}>
