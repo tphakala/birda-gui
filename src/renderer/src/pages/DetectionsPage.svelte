@@ -24,6 +24,7 @@
   let speciesQuery = $state('');
   let ignoreConfidence = $state(false);
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+  let confidenceTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
@@ -113,23 +114,23 @@
     }
   });
 
-  // React to confidence changes
-  let prevConfidence: number | null = null;
+  // React to confidence changes (debounced for slider dragging)
+  let prevConfidence = appState.minConfidence;
   $effect(() => {
     if (appState.minConfidence !== prevConfidence) {
       prevConfidence = appState.minConfidence;
       if (appState.selectedRunId) {
-        offset = 0;
-        void loadRunDetections();
+        if (confidenceTimeout) clearTimeout(confidenceTimeout);
+        confidenceTimeout = setTimeout(() => {
+          offset = 0;
+          void loadRunDetections();
+        }, 200);
       }
     }
   });
 
   onMount(() => {
     void refreshRuns();
-    if (appState.selectedRunId) {
-      void loadRunDetections();
-    }
   });
 </script>
 
