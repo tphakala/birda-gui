@@ -17,6 +17,7 @@
   } from '@lucide/svelte';
   import logoBirdnet from '../../assets/logo-birdnet.png';
   import logoGoogle from '../../assets/logo-google.png';
+  import logoJyu from '../../assets/logo-jyu.jpeg';
   import {
     getSettings,
     setSettings,
@@ -130,6 +131,7 @@
   const MODEL_LOGOS: Record<string, string> = {
     birdnet: logoBirdnet,
     perch: logoGoogle,
+    bsg: logoJyu,
   };
 
   function getModelLogo(id: string): string | null {
