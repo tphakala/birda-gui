@@ -23,7 +23,6 @@
   const limit = 200;
   let speciesQuery = $state('');
   let ignoreConfidence = $state(false);
-  let minConfidence = $state(0.5);
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // --- Derived from selected run ---
@@ -47,7 +46,7 @@
     try {
       const result = await getDetections({
         run_id: appState.selectedRunId,
-        min_confidence: ignoreConfidence && speciesQuery ? undefined : minConfidence,
+        min_confidence: ignoreConfidence ? undefined : appState.minConfidence,
         species: speciesQuery || undefined,
         sort_column: sortColumn,
         sort_dir: sortDir,
@@ -107,16 +106,18 @@
       speciesQuery = '';
       ignoreConfidence = false;
       void loadRunDetections();
-      // Refresh runs list when navigating here (e.g. after analysis completes)
-      void refreshRuns();
+      // Refresh runs list only if the selected run is not already in our list
+      if (appState.selectedRunId && !runs.some((r) => r.id === appState.selectedRunId)) {
+        void refreshRuns();
+      }
     }
   });
 
   // React to confidence changes
   let prevConfidence: number | null = null;
   $effect(() => {
-    if (minConfidence !== prevConfidence) {
-      prevConfidence = minConfidence;
+    if (appState.minConfidence !== prevConfidence) {
+      prevConfidence = appState.minConfidence;
       if (appState.selectedRunId) {
         offset = 0;
         void loadRunDetections();
@@ -195,10 +196,10 @@
             min="0"
             max="1"
             step="0.05"
-            bind:value={minConfidence}
+            bind:value={appState.minConfidence}
             class="range range-primary range-xs w-24"
           />
-          <span class="w-10 text-xs tabular-nums">{(minConfidence * 100).toFixed(0)}%</span>
+          <span class="w-10 text-xs tabular-nums">{(appState.minConfidence * 100).toFixed(0)}%</span>
         </label>
       </div>
 
