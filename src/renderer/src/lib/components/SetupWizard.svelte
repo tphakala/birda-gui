@@ -57,18 +57,26 @@
 
   async function checkCli() {
     birdaStatus = null;
-    if (birdaPath) {
-      await setSettings({ birda_path: birdaPath });
+    try {
+      if (birdaPath) {
+        await setSettings({ birda_path: birdaPath });
+      }
+      birdaStatus = await checkBirda();
+    } catch (e) {
+      birdaStatus = { available: false, error: (e as Error).message };
     }
-    birdaStatus = await checkBirda();
   }
 
   async function browseBirdaPath() {
     const path = await openExecutableDialog();
     if (path) {
       birdaPath = path;
-      await setSettings({ birda_path: path });
-      birdaStatus = await checkBirda();
+      try {
+        await setSettings({ birda_path: path });
+        birdaStatus = await checkBirda();
+      } catch (e) {
+        birdaStatus = { available: false, error: (e as Error).message };
+      }
     }
   }
 
