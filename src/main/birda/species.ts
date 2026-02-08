@@ -6,7 +6,7 @@ interface BirdaJsonEnvelope {
   spec_version: string;
   timestamp: string;
   event: string;
-  payload: Record<string, unknown>;
+  payload?: Record<string, unknown>;
 }
 
 export async function fetchSpecies(
@@ -40,7 +40,7 @@ export async function fetchSpecies(
       try {
         const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
         const payload = envelope.payload;
-        if (!('species' in payload)) {
+        if (!payload || typeof payload !== 'object' || !('species' in payload)) {
           reject(new Error('Unexpected payload format from birda species command'));
           return;
         }

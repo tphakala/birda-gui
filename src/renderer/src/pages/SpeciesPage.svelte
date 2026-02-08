@@ -50,6 +50,7 @@
   let showCustomModal = $state(false);
   let customName = $state('');
   let customDescription = $state('');
+  let customError = $state<string | null>(null);
   let customSearchQuery = $state('');
   let customSearchResults = $state<{ scientific_name: string; common_name: string }[]>([]);
   const customSelected = new SvelteMap<string, string>(); // scientific_name -> common_name
@@ -161,6 +162,7 @@
   function openCustomModal() {
     customName = '';
     customDescription = '';
+    customError = null;
     customSearchQuery = '';
     customSearchResults = [];
     customSelected.clear();
@@ -201,6 +203,7 @@
 
   async function handleCreateCustomList() {
     if (!customName.trim() || customSelected.size === 0) return;
+    customError = null;
     try {
       const saved = await createCustomSpeciesList(
         customName.trim(),
@@ -212,7 +215,7 @@
       appState.selectedSpeciesListId = saved.id;
       void loadEntries(saved.id);
     } catch (err) {
-      console.error('Failed to create custom list', err);
+      customError = (err as Error).message;
     }
   }
 
@@ -621,6 +624,10 @@
               {/each}
             </div>
           </div>
+        {/if}
+
+        {#if customError}
+          <div class="text-error text-sm">{customError}</div>
         {/if}
 
         <button
