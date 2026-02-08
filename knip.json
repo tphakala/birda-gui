@@ -13,5 +13,6 @@
     "$lib/*": ["./src/renderer/src/lib/*"],
     "$paraglide/*": ["./src/renderer/src/paraglide/*"]
   },
-  "ignoreDependencies": ["tailwindcss", "daisyui"]
+  "ignoreDependencies": ["tailwindcss", "daisyui"],
+  "ignoreBinaries": ["generate-license-file"]
 }
