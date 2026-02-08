@@ -11,6 +11,7 @@ interface AnalysisOptions {
   longitude?: number | undefined;
   month?: number | undefined;
   day?: number | undefined;
+  dayOfYear?: number | undefined;
   quiet?: boolean | undefined;
 }
 
@@ -93,6 +94,9 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       }
       if (options.day !== undefined) {
         args.push('--day', String(options.day));
+      }
+      if (options.dayOfYear !== undefined) {
+        args.push('--day-of-year', String(options.dayOfYear));
       }
       if (options.quiet !== false) {
         args.push('-q');

@@ -76,6 +76,17 @@ export function registerAnalysisHandlers(): void {
       }
     }
 
+    // Compute day-of-year from month/day for BSG SDM support.
+    // BSG models use --day-of-year (1-366) instead of --month/--day.
+    // We pass both so BirdNET gets month/day and BSG gets day-of-year.
+    let dayOfYear: number | undefined;
+    if (month !== undefined && day !== undefined) {
+      const d = new Date(2024, month - 1, day); // leap year to handle Feb 29
+      const start = new Date(2024, 0, 0);
+      dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
+    }
+
     // Start analysis
     const handle = runAnalysis(request.source_path, {
       model: request.model,
@@ -84,6 +95,7 @@ export function registerAnalysisHandlers(): void {
       longitude: request.longitude,
       month,
       day,
+      dayOfYear,
     });
     currentAnalysis = handle;
 
