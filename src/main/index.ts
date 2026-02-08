@@ -89,13 +89,18 @@ function createMenu() {
           click: () => mainWindow?.webContents.send('menu:switch-tab', 'map'),
         },
         {
-          label: 'Models',
+          label: 'Species',
           accelerator: 'CmdOrCtrl+3',
+          click: () => mainWindow?.webContents.send('menu:switch-tab', 'species'),
+        },
+        {
+          label: 'Models',
+          accelerator: 'CmdOrCtrl+4',
           click: () => mainWindow?.webContents.send('menu:switch-tab', 'models'),
         },
         {
           label: 'Settings',
-          accelerator: 'CmdOrCtrl+4',
+          accelerator: 'CmdOrCtrl+5',
           click: () => mainWindow?.webContents.send('menu:switch-tab', 'settings'),
         },
         { type: 'separator' },

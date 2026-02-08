@@ -10,6 +10,10 @@ import type {
   CatalogStats,
   SourceScanResult,
   RunWithStats,
+  SpeciesList,
+  EnrichedSpeciesListEntry,
+  SpeciesFetchRequest,
+  BirdaSpeciesResponse,
 } from '$shared/types';
 
 declare global {
@@ -182,6 +186,14 @@ export function getAvailableLanguages(): Promise<{ code: string; name: string }[
   return window.birda.invoke('labels:available-languages') as Promise<{ code: string; name: string }[]>;
 }
 
+export function searchByCommonName(query: string): Promise<string[]> {
+  return window.birda.invoke('labels:search-by-common-name', query) as Promise<string[]>;
+}
+
+export function resolveAllLabels(scientificNames: string[]): Promise<Record<string, string>> {
+  return window.birda.invoke('labels:resolve-all', scientificNames) as Promise<Record<string, string>>;
+}
+
 // Model install progress
 export function onModelInstallProgress(callback: (line: string) => void): void {
   window.birda.on('birda:models-install-progress', callback as (...args: unknown[]) => void);
@@ -223,6 +235,35 @@ export function onShowLicenses(callback: () => void): void {
 
 export function offShowLicenses(): void {
   window.birda.removeAllListeners('menu:show-licenses');
+}
+
+// Species Lists
+export function fetchSpeciesList(request: SpeciesFetchRequest): Promise<BirdaSpeciesResponse> {
+  return window.birda.invoke('species:fetch', request) as Promise<BirdaSpeciesResponse>;
+}
+
+export function saveSpeciesList(name: string, response: BirdaSpeciesResponse): Promise<SpeciesList> {
+  return window.birda.invoke('species:save-list', name, response) as Promise<SpeciesList>;
+}
+
+export function createCustomSpeciesList(
+  name: string,
+  scientificNames: string[],
+  description?: string,
+): Promise<SpeciesList> {
+  return window.birda.invoke('species:create-custom-list', name, scientificNames, description) as Promise<SpeciesList>;
+}
+
+export function getSpeciesLists(): Promise<SpeciesList[]> {
+  return window.birda.invoke('species:get-lists') as Promise<SpeciesList[]>;
+}
+
+export function getSpeciesListEntries(listId: number): Promise<EnrichedSpeciesListEntry[]> {
+  return window.birda.invoke('species:get-entries', listId) as Promise<EnrichedSpeciesListEntry[]>;
+}
+
+export function deleteSpeciesListById(id: number): Promise<void> {
+  return window.birda.invoke('species:delete-list', id) as Promise<void>;
 }
 
 // Spectrogram cache

@@ -60,6 +60,10 @@ export function getDetections(filter: DetectionFilter): { detections: Detection[
     conditions.push('run_id = ?');
     params.push(filter.run_id);
   }
+  if (filter.species_list_id) {
+    conditions.push('scientific_name IN (SELECT scientific_name FROM species_list_entries WHERE list_id = ?)');
+    params.push(filter.species_list_id);
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = filter.limit ?? 100;

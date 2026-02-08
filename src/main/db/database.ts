@@ -54,6 +54,39 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(1);
     })();
   }
+
+  // Migration 2: Species lists
+  if (!applied.has(2)) {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS species_lists (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          name            TEXT NOT NULL,
+          description     TEXT,
+          source          TEXT NOT NULL CHECK (source IN ('fetched','custom')),
+          latitude        REAL,
+          longitude       REAL,
+          week            INTEGER,
+          threshold       REAL,
+          species_count   INTEGER NOT NULL DEFAULT 0,
+          created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS species_list_entries (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          list_id         INTEGER NOT NULL REFERENCES species_lists(id) ON DELETE CASCADE,
+          scientific_name TEXT NOT NULL,
+          common_name     TEXT,
+          frequency       REAL,
+          UNIQUE(list_id, scientific_name)
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_sle_list ON species_list_entries(list_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_sle_species ON species_list_entries(scientific_name)');
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(2);
+    })();
+  }
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {
@@ -62,6 +95,8 @@ export function clearDatabase(): { detections: number; runs: number; locations: 
     const detections = (d.prepare('SELECT COUNT(*) as c FROM detections').get() as { c: number }).c;
     const runs = (d.prepare('SELECT COUNT(*) as c FROM analysis_runs').get() as { c: number }).c;
     const locations = (d.prepare('SELECT COUNT(*) as c FROM locations').get() as { c: number }).c;
+    d.exec('DELETE FROM species_list_entries');
+    d.exec('DELETE FROM species_lists');
     d.exec('DELETE FROM detections');
     d.exec('DELETE FROM analysis_runs');
     d.exec('DELETE FROM locations');

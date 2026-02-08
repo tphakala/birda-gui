@@ -105,6 +105,7 @@ export interface DetectionFilter {
   location_id?: number | undefined;
   min_confidence?: number | undefined;
   run_id?: number | undefined;
+  species_list_id?: number | undefined;
   limit?: number | undefined;
   offset?: number | undefined;
   sort_column?: string | undefined;
@@ -206,4 +207,59 @@ export interface DetectionsPayload {
     start_time: number;
     end_time: number;
   }[];
+}
+
+// === Species Lists ===
+
+/** A species list stored in the database */
+export interface SpeciesList {
+  id: number;
+  name: string;
+  description: string | null;
+  source: 'fetched' | 'custom';
+  latitude: number | null;
+  longitude: number | null;
+  week: number | null;
+  threshold: number | null;
+  species_count: number;
+  created_at: string;
+}
+
+/** An entry within a species list */
+export interface SpeciesListEntry {
+  id: number;
+  list_id: number;
+  scientific_name: string;
+  common_name: string | null;
+  frequency: number | null;
+}
+
+/** Entry enriched with resolved common name from label service */
+export interface EnrichedSpeciesListEntry extends SpeciesListEntry {
+  resolved_common_name: string;
+}
+
+/** Request to fetch species from birda CLI */
+export interface SpeciesFetchRequest {
+  latitude: number;
+  longitude: number;
+  week: number;
+  threshold?: number;
+}
+
+/** A single species returned from birda CLI species command */
+export interface BirdaSpeciesResult {
+  scientific_name: string;
+  common_name: string;
+  frequency: number;
+}
+
+/** Full result payload from birda CLI species command */
+export interface BirdaSpeciesResponse {
+  lat: number;
+  lon: number;
+  week: number;
+  threshold: number;
+  species_count: number;
+  species: BirdaSpeciesResult[];
 }

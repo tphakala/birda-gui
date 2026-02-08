@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AudioLines, List, Map, Settings, TriangleAlert } from '@lucide/svelte';
+  import { AudioLines, Bird, List, Map, Settings, TriangleAlert } from '@lucide/svelte';
   import { appState, type Tab } from '$lib/stores/app.svelte';
   import * as m from '$paraglide/messages';
 
@@ -7,6 +7,7 @@
     { id: 'analysis', label: m.sidebar_analysis(), icon: AudioLines },
     { id: 'detections', label: m.sidebar_detections(), icon: List },
     { id: 'map', label: m.sidebar_map(), icon: Map },
+    { id: 'species', label: m.sidebar_species(), icon: Bird },
     { id: 'settings', label: m.sidebar_settings(), icon: Settings },
   ];
 
