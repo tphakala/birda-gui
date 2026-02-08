@@ -52,7 +52,10 @@
             onselect(run.id);
           }}
           onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') onselect(run.id);
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (e.target === e.currentTarget) onselect(run.id);
+            }
           }}
           role="button"
           tabindex="0"

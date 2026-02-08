@@ -76,8 +76,8 @@
         appState.selectedRunId = null;
       }
       appState.catalogStats = await getCatalogStats();
-    } catch {
-      // silently ignore — run may already be gone
+    } catch (error) {
+      console.error('Failed to delete run', runId, error);
     }
   }
 
