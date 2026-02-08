@@ -40,7 +40,9 @@ export function createSpeciesList(
       stmt.run(listId, s.scientific_name, s.common_name, s.frequency);
     }
 
-    return getSpeciesListById(listId)!;
+    const created = getSpeciesListById(listId);
+    if (!created) throw new Error(`Failed to retrieve species list ${listId} after creation`);
+    return created;
   })();
 }
 
@@ -49,7 +51,7 @@ export function getSpeciesLists(): SpeciesList[] {
   return db.prepare('SELECT * FROM species_lists ORDER BY created_at DESC').all() as SpeciesList[];
 }
 
-export function getSpeciesListById(id: number): SpeciesList | undefined {
+function getSpeciesListById(id: number): SpeciesList | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM species_lists WHERE id = ?').get(id) as SpeciesList | undefined;
 }
@@ -68,14 +70,6 @@ export function getSpeciesListEntries(listId: number): SpeciesListEntry[] {
 export function deleteSpeciesList(id: number): void {
   const db = getDb();
   db.prepare('DELETE FROM species_lists WHERE id = ?').run(id);
-}
-
-export function getSpeciesListScientificNames(listId: number): string[] {
-  const db = getDb();
-  const rows = db.prepare('SELECT scientific_name FROM species_list_entries WHERE list_id = ?').all(listId) as {
-    scientific_name: string;
-  }[];
-  return rows.map((r) => r.scientific_name);
 }
 
 export function createCustomSpeciesList(name: string, scientificNames: string[], description?: string): SpeciesList {
@@ -97,6 +91,8 @@ export function createCustomSpeciesList(name: string, scientificNames: string[],
       stmt.run(listId, sn);
     }
 
-    return getSpeciesListById(listId)!;
+    const created = getSpeciesListById(listId);
+    if (!created) throw new Error(`Failed to retrieve custom species list ${listId} after creation`);
+    return created;
   })();
 }

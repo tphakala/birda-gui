@@ -39,9 +39,15 @@ export async function fetchSpecies(
       }
       try {
         const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
-        resolve(envelope.payload as unknown as BirdaSpeciesResponse);
-      } catch {
-        reject(new Error(`Failed to parse birda species output: ${stdout.slice(0, 200)}`));
+        const payload = envelope.payload;
+        if (!('species' in payload)) {
+          reject(new Error('Unexpected payload format from birda species command'));
+          return;
+        }
+        resolve(payload as BirdaSpeciesResponse);
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e);
+        reject(new Error(`Failed to parse birda species output: ${detail}. Output: ${stdout.slice(0, 200)}`));
       }
     });
   });

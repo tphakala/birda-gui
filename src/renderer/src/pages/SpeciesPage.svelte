@@ -9,6 +9,8 @@
     getSpeciesListEntries,
     deleteSpeciesListById,
     createCustomSpeciesList,
+    searchByCommonName,
+    resolveAllLabels,
   } from '$lib/utils/ipc';
   import type { SpeciesList, EnrichedSpeciesListEntry, BirdaSpeciesResponse } from '$shared/types';
   import { onMount } from 'svelte';
@@ -25,7 +27,7 @@
   let entryFilter = $state('');
 
   const selectedList = $derived(lists.find((l) => l.id === appState.selectedSpeciesListId) ?? null);
-  const filteredEntries = $derived(() => {
+  const filteredEntries = $derived.by(() => {
     if (!entryFilter) return entries;
     const q = entryFilter.toLowerCase();
     return entries.filter(
@@ -95,10 +97,10 @@
 
   function handleUseAsFilter() {
     if (!selectedList) return;
-    appState.activeTab = 'detections';
-    // The DetectionsPage will pick up the species_list_id from the filter
-    // We store the intent in a way that DetectionsPage can consume
+    // Reset to null first so re-setting the same id triggers the effect
+    appState.selectedSpeciesListId = null;
     appState.selectedSpeciesListId = selectedList.id;
+    appState.activeTab = 'detections';
   }
 
   // --- Fetch modal ---
@@ -116,11 +118,11 @@
 
   async function handleFetch() {
     if (fetchWeek === undefined || fetchWeek < 1 || fetchWeek > 48) {
-      fetchError = 'Week must be between 1 and 48';
+      fetchError = m.species_fetch_weekError();
       return;
     }
     if (fetchLat === 0 && fetchLon === 0) {
-      fetchError = 'Please set coordinates';
+      fetchError = m.species_fetch_coordsError();
       return;
     }
 
@@ -171,13 +173,8 @@
       return;
     }
     try {
-      // Use the labels:search-by-common-name IPC to find species
-      const scientificNames = (await window.birda.invoke(
-        'labels:search-by-common-name',
-        customSearchQuery,
-      )) as string[];
-      // Resolve common names
-      const nameMap = (await window.birda.invoke('labels:resolve-all', scientificNames)) as Record<string, string>;
+      const scientificNames = await searchByCommonName(customSearchQuery);
+      const nameMap = await resolveAllLabels(scientificNames);
       customSearchResults = scientificNames.slice(0, 50).map((sn) => ({
         scientific_name: sn,
         common_name: nameMap[sn] ?? sn,
@@ -264,7 +261,7 @@
     <!-- Species lists -->
     <div class="flex-1 overflow-y-auto">
       {#if listsLoading}
-        <div class="text-base-content/40 p-4 text-center text-sm">Loading...</div>
+        <div class="text-base-content/40 p-4 text-center text-sm">{m.species_loading()}</div>
       {:else if lists.length === 0}
         <div class="flex flex-col items-center gap-2 p-6 text-center">
           <Bird size={32} class="text-base-content/15" />
@@ -377,7 +374,7 @@
       <!-- Species table -->
       <div class="flex-1 overflow-y-auto">
         {#if entriesLoading}
-          <div class="text-base-content/40 p-8 text-center text-sm">Loading...</div>
+          <div class="text-base-content/40 p-8 text-center text-sm">{m.species_loading()}</div>
         {:else}
           <table class="table-sm table">
             <thead class="bg-base-200/50">
@@ -388,7 +385,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each filteredEntries() as entry (entry.id)}
+              {#each filteredEntries as entry (entry.id)}
                 <tr class="hover:bg-base-200/30">
                   <td class="text-sm">{entry.resolved_common_name}</td>
                   <td class="text-base-content/60 text-sm italic">{entry.scientific_name}</td>
@@ -496,7 +493,7 @@
               {/each}
               {#if fetchResult.species.length > 20}
                 <div class="text-base-content/40 mt-1 text-xs">
-                  ...and {fetchResult.species.length - 20} more
+                  {m.species_fetch_moreSpecies({ count: String(fetchResult.species.length - 20) })}
                 </div>
               {/if}
             </div>

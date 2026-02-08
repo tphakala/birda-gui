@@ -159,16 +159,15 @@
   });
 
   // React to species list from Species page (selectedSpeciesListId used as cross-tab intent)
-  let prevSpeciesListIntent: number | null = null;
   $effect(() => {
-    if (
-      appState.activeTab === 'detections' &&
-      appState.selectedSpeciesListId !== null &&
-      appState.selectedSpeciesListId !== prevSpeciesListIntent
-    ) {
-      prevSpeciesListIntent = appState.selectedSpeciesListId;
+    if (appState.activeTab === 'detections' && appState.selectedSpeciesListId !== null) {
       speciesListFilterId = appState.selectedSpeciesListId;
+      appState.selectedSpeciesListId = null;
       offset = 0;
+      // Refresh lists so the dropdown includes any newly created list
+      getSpeciesLists()
+        .then((l) => (speciesLists = l))
+        .catch(() => {});
       void loadRunDetections();
     }
   });

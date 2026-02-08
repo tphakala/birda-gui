@@ -186,6 +186,14 @@ export function getAvailableLanguages(): Promise<{ code: string; name: string }[
   return window.birda.invoke('labels:available-languages') as Promise<{ code: string; name: string }[]>;
 }
 
+export function searchByCommonName(query: string): Promise<string[]> {
+  return window.birda.invoke('labels:search-by-common-name', query) as Promise<string[]>;
+}
+
+export function resolveAllLabels(scientificNames: string[]): Promise<Record<string, string>> {
+  return window.birda.invoke('labels:resolve-all', scientificNames) as Promise<Record<string, string>>;
+}
+
 // Model install progress
 export function onModelInstallProgress(callback: (line: string) => void): void {
   window.birda.on('birda:models-install-progress', callback as (...args: unknown[]) => void);

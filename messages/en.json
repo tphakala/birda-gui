@@ -330,5 +330,10 @@
 
   "species_detail_location": "Location",
   "species_detail_week": "Week {week}",
-  "species_detail_threshold": "Threshold: {threshold}%"
+  "species_detail_threshold": "Threshold: {threshold}%",
+
+  "species_fetch_weekError": "Week must be between 1 and 48",
+  "species_fetch_coordsError": "Please set coordinates",
+  "species_fetch_moreSpecies": "...and {count} more",
+  "species_loading": "Loading..."
 }
