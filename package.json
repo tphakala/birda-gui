@@ -32,7 +32,7 @@
   },
   "keywords": [],
   "author": "Tomi P. Hakala",
-  "license": "MIT",
+  "license": "CC-BY-NC-SA-4.0",
   "build": {
     "compression": "store",
     "appId": "com.birda.gui",
