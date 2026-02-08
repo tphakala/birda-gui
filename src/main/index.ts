@@ -124,6 +124,11 @@ function createMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Third Party Licenses',
+          click: () => mainWindow?.webContents.send('menu:show-licenses'),
+        },
+        { type: 'separator' },
+        {
           label: 'About Birda GUI',
           click: () => {
             void electronDialog.showMessageBox({

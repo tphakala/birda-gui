@@ -212,6 +212,19 @@ export function exportRegionAsWav(wavBytes: Uint8Array, defaultName?: string): P
   return window.birda.invoke('clip:export-region', base64, defaultName) as Promise<string | null>;
 }
 
+// Licenses
+export function getLicenses(): Promise<string | null> {
+  return window.birda.invoke('app:get-licenses') as Promise<string | null>;
+}
+
+export function onShowLicenses(callback: () => void): void {
+  window.birda.on('menu:show-licenses', callback as (...args: unknown[]) => void);
+}
+
+export function offShowLicenses(): void {
+  window.birda.removeAllListeners('menu:show-licenses');
+}
+
 // Spectrogram cache
 export function saveSpectrogram(clipPath: string, freqMax: number, height: number, dataUrl: string): Promise<string> {
   return window.birda.invoke('clip:save-spectrogram', clipPath, freqMax, height, dataUrl) as Promise<string>;

@@ -37,6 +37,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'fs:read-coordinates',
   'fs:scan-source',
   'fs:open-in-explorer',
+  'app:get-licenses',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([
@@ -49,6 +50,7 @@ const ALLOWED_RECEIVE_CHANNELS = new Set([
   'menu:focus-search',
   'menu:toggle-log',
   'menu:setup-wizard',
+  'menu:show-licenses',
 ]);
 
 contextBridge.exposeInMainWorld('birda', {
