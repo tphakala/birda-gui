@@ -44,7 +44,7 @@ export async function fetchSpecies(
           reject(new Error('Unexpected payload format from birda species command'));
           return;
         }
-        resolve(payload as BirdaSpeciesResponse);
+        resolve(payload as unknown as BirdaSpeciesResponse);
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         reject(new Error(`Failed to parse birda species output: ${detail}. Output: ${stdout.slice(0, 200)}`));
