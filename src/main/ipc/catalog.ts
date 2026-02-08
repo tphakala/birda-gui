@@ -9,7 +9,7 @@ import {
 } from '../db/detections';
 import { clearDatabase } from '../db/database';
 import { getLocations, getLocationsWithCounts } from '../db/locations';
-import { getRunsWithStats } from '../db/runs';
+import { getRunsWithStats, deleteRun } from '../db/runs';
 import { resolveAll, searchByCommonName } from '../labels/label-service';
 import type {
   Detection,
@@ -40,6 +40,10 @@ function enrichSpeciesSummaries(summaries: SpeciesSummary[]): EnrichedSpeciesSum
 export function registerCatalogHandlers(): void {
   ipcMain.handle('catalog:get-runs', () => {
     return getRunsWithStats();
+  });
+
+  ipcMain.handle('catalog:delete-run', (_event, id: number) => {
+    deleteRun(id);
   });
 
   ipcMain.handle('catalog:get-detections', (_event, filter: DetectionFilter) => {

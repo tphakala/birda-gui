@@ -3,7 +3,7 @@
   import RunList from '$lib/components/RunList.svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import { appState } from '$lib/stores/app.svelte';
-  import { getRuns, getDetections } from '$lib/utils/ipc';
+  import { getRuns, getDetections, deleteRun, getCatalogStats } from '$lib/utils/ipc';
   import { formatNumber, parseRecordingStart } from '$lib/utils/format';
   import type { EnrichedDetection, RunWithStats } from '$shared/types';
   import { onMount } from 'svelte';
@@ -66,6 +66,19 @@
 
   function handleRunSelect(runId: number) {
     appState.selectedRunId = runId;
+  }
+
+  async function handleRunDelete(runId: number) {
+    try {
+      await deleteRun(runId);
+      runs = runs.filter((r) => r.id !== runId);
+      if (appState.selectedRunId === runId) {
+        appState.selectedRunId = null;
+      }
+      appState.catalogStats = await getCatalogStats();
+    } catch {
+      // silently ignore — run may already be gone
+    }
   }
 
   function handleSort(column: string) {
@@ -135,7 +148,13 @@
 </script>
 
 <div class="flex flex-1 overflow-hidden">
-  <RunList {runs} selectedRunId={appState.selectedRunId} onselect={handleRunSelect} loading={runsLoading} />
+  <RunList
+    {runs}
+    selectedRunId={appState.selectedRunId}
+    onselect={handleRunSelect}
+    ondelete={handleRunDelete}
+    loading={runsLoading}
+  />
 
   {#if appState.selectedRunId && selectedRun}
     <div class="flex flex-1 flex-col overflow-hidden">

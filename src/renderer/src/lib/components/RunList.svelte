@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AudioLines, CircleAlert, Loader } from '@lucide/svelte';
+  import { AudioLines, CircleAlert, Loader, X } from '@lucide/svelte';
   import { formatDate } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
@@ -8,11 +8,13 @@
     runs,
     selectedRunId,
     onselect,
+    ondelete,
     loading = false,
   }: {
     runs: RunWithStats[];
     selectedRunId: number | null;
     onselect: (runId: number) => void;
+    ondelete?: (runId: number) => void;
     loading?: boolean;
   } = $props();
 
@@ -45,13 +47,30 @@
       </div>
     {:else}
       {#each runs as run (run.id)}
-        <button
+        <div
           onclick={() => {
             onselect(run.id);
           }}
-          class="border-base-300 w-full border-b px-3 py-2.5 text-left transition-colors
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onselect(run.id);
+          }}
+          role="button"
+          tabindex="0"
+          class="border-base-300 relative w-full cursor-pointer border-b px-3 py-2.5 text-left transition-colors
             {selectedRunId === run.id ? 'bg-primary/10 border-l-primary border-l-2' : 'hover:bg-base-300/50'}"
         >
+          {#if run.status === 'failed' && ondelete}
+            <button
+              onclick={(e) => {
+                e.stopPropagation();
+                ondelete(run.id);
+              }}
+              class="text-base-content/30 hover:text-error absolute top-1.5 right-1.5 rounded p-0.5 transition-colors"
+              title={m.runs_deleteRun()}
+            >
+              <X size={14} />
+            </button>
+          {/if}
           <div class="truncate text-sm font-medium">{sourceName(run.source_path)}</div>
           <div class="text-base-content/50 mt-0.5 flex items-center gap-1.5 text-xs">
             <span class="truncate">{run.model}</span>
@@ -75,7 +94,7 @@
               </span>
             {/if}
           </div>
-        </button>
+        </div>
       {/each}
     {/if}
   </div>

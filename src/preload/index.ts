@@ -18,6 +18,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'clip:get-spectrogram',
   'clip:export-region',
   'catalog:get-runs',
+  'catalog:delete-run',
   'catalog:get-detections',
   'catalog:search-species',
   'catalog:get-species-summary',
