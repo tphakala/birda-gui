@@ -31,7 +31,7 @@
     "url": "https://github.com/tphakala/birda-gui.git"
   },
   "keywords": [],
-  "author": "Tomi P. Hakala",
+  "author": "Tomi P. Hakala <tphakala@users.noreply.github.com>",
   "license": "CC-BY-NC-SA-4.0",
   "build": {
     "compression": "store",
