@@ -1,6 +1,6 @@
 import type { CatalogStats } from '$shared/types';
 
-export type Tab = 'analysis' | 'detections' | 'map' | 'settings';
+export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
 export const appState = $state({
   activeTab: 'analysis' as Tab,
@@ -22,4 +22,5 @@ export const appState = $state({
   selectedRunId: null as number | null,
   theme: 'system' as 'system' | 'light' | 'dark',
   settingsHasUnsavedChanges: false,
+  selectedSpeciesListId: null as number | null,
 });

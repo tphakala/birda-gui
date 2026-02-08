@@ -22,6 +22,16 @@
     latitude = Math.round(e.lngLat.lat * 10000) / 10000;
     longitude = Math.round(e.lngLat.lng * 10000) / 10000;
   }
+
+  // Portal action: moves element to document.body so nested dialogs escape parent stacking contexts
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        node.remove();
+      },
+    };
+  }
 </script>
 
 <div class="space-y-2">
@@ -71,7 +81,7 @@
 </div>
 
 {#if showMapModal}
-  <dialog class="modal modal-open" style="z-index: 1000;">
+  <dialog class="modal modal-open" style="z-index: 1000;" use:portal>
     <div class="modal-box max-w-2xl p-0">
       <div class="flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-2">

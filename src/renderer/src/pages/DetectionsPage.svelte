@@ -3,9 +3,9 @@
   import RunList from '$lib/components/RunList.svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import { appState } from '$lib/stores/app.svelte';
-  import { getRuns, getDetections, deleteRun, getCatalogStats } from '$lib/utils/ipc';
+  import { getRuns, getDetections, deleteRun, getCatalogStats, getSpeciesLists } from '$lib/utils/ipc';
   import { formatNumber, parseRecordingStart } from '$lib/utils/format';
-  import type { EnrichedDetection, RunWithStats } from '$shared/types';
+  import type { EnrichedDetection, RunWithStats, SpeciesList } from '$shared/types';
   import { onMount } from 'svelte';
   import * as m from '$paraglide/messages';
 
@@ -25,6 +25,10 @@
   let ignoreConfidence = $state(false);
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let confidenceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // --- Species list filter state ---
+  let speciesLists = $state<SpeciesList[]>([]);
+  let speciesListFilterId = $state(0);
 
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
@@ -49,6 +53,7 @@
         run_id: appState.selectedRunId,
         min_confidence: ignoreConfidence ? undefined : appState.minConfidence,
         species: speciesQuery || undefined,
+        species_list_id: speciesListFilterId || undefined,
         sort_column: sortColumn,
         sort_dir: sortDir,
         limit,
@@ -144,6 +149,28 @@
 
   onMount(() => {
     void refreshRuns();
+    void (async () => {
+      try {
+        speciesLists = await getSpeciesLists();
+      } catch {
+        // no lists yet
+      }
+    })();
+  });
+
+  // React to species list from Species page (selectedSpeciesListId used as cross-tab intent)
+  let prevSpeciesListIntent: number | null = null;
+  $effect(() => {
+    if (
+      appState.activeTab === 'detections' &&
+      appState.selectedSpeciesListId !== null &&
+      appState.selectedSpeciesListId !== prevSpeciesListIntent
+    ) {
+      prevSpeciesListIntent = appState.selectedSpeciesListId;
+      speciesListFilterId = appState.selectedSpeciesListId;
+      offset = 0;
+      void loadRunDetections();
+    }
   });
 </script>
 
@@ -205,6 +232,23 @@
           />
           {m.analysis_allConfidences()}
         </label>
+
+        <!-- Species list filter -->
+        {#if speciesLists.length > 0}
+          <select
+            bind:value={speciesListFilterId}
+            onchange={() => {
+              offset = 0;
+              void loadRunDetections();
+            }}
+            class="select select-bordered select-sm text-xs"
+          >
+            <option value={0}>{m.species_allSpecies()}</option>
+            {#each speciesLists as list (list.id)}
+              <option value={list.id}>{list.name} ({list.species_count})</option>
+            {/each}
+          </select>
+        {/if}
 
         <div class="flex-1"></div>
 

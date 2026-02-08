@@ -8,6 +8,7 @@
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
   import MapPage from './pages/MapPage.svelte';
+  import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import {
@@ -205,6 +206,8 @@
           <DetectionsPage />
         {:else if appState.activeTab === 'map'}
           <MapPage />
+        {:else if appState.activeTab === 'species'}
+          <SpeciesPage />
         {:else if appState.activeTab === 'settings'}
           <SettingsPage />
         {/if}
