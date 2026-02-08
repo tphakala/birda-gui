@@ -21,5 +21,5 @@
   <span>{m.status_locations({ count: formatNumber(appState.catalogStats.total_locations) })}</span>
 
   <div class="flex-1"></div>
-  <span>v0.1.0</span>
+  <span>v1.0.0</span>
 </div>
