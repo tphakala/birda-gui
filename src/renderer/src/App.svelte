@@ -4,6 +4,7 @@
   import ProgressPanel from '$lib/components/ProgressPanel.svelte';
   import LogPanel from '$lib/components/LogPanel.svelte';
   import SetupWizard from '$lib/components/SetupWizard.svelte';
+  import LicenseViewer from '$lib/components/LicenseViewer.svelte';
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
   import MapPage from './pages/MapPage.svelte';
@@ -27,12 +28,15 @@
     offLog,
     onSetupWizard,
     offSetupWizard,
+    onShowLicenses,
+    offShowLicenses,
   } from '$lib/utils/ipc';
   import { setupMenuListeners } from '$lib/utils/shortcuts';
   import { onMount, onDestroy } from 'svelte';
 
   let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
+  let showLicenses = $state(false);
 
   async function handleWizardComplete() {
     try {
@@ -142,6 +146,10 @@
       showWizard = true;
     });
 
+    onShowLicenses(() => {
+      showLicenses = true;
+    });
+
     cleanupMenu = setupMenuListeners({
       onOpenFile: (path: string) => {
         appState.sourcePath = path;
@@ -173,6 +181,7 @@
     offAnalysisProgress();
     offLog();
     offSetupWizard();
+    offShowLicenses();
     cleanupMenu?.();
   });
 </script>
@@ -207,3 +216,5 @@
     </div>
   </main>
 {/if}
+
+<LicenseViewer bind:open={showLicenses} />

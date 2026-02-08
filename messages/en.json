@@ -90,6 +90,11 @@
   "settings_licenseModal_agree": "By installing this model, you agree to the terms of the {license} license.",
   "settings_licenseModal_acceptInstall": "Accept & Install",
 
+  "licenses_title": "Third Party Licenses",
+  "licenses_notFound": "License information is not available.",
+
+  "common_button_close": "Close",
+
   "sidebar_analysis": "Analysis",
   "sidebar_detections": "Detections",
   "sidebar_map": "Map",
