@@ -236,6 +236,10 @@
       ignoreConfidence = false;
       speciesData = [];
       gridData = [];
+      // Fall back from grid view if the new run has no recording timestamp
+      if (activeView === 'grid' && !recordingStart) {
+        activeView = 'table';
+      }
       loadActiveView();
       // Refresh runs list only if the selected run is not already in our list
       if (appState.selectedRunId && !runs.some((r) => r.id === appState.selectedRunId)) {
@@ -329,16 +333,19 @@
             <LayoutGrid size={14} />
             <span class="hidden sm:inline">{m.view_species()}</span>
           </button>
-          <button
-            class="btn btn-sm join-item {activeView === 'grid' ? 'btn-active' : ''}"
-            onclick={() => {
-              switchView('grid');
-            }}
-            title={m.view_grid()}
-          >
-            <Grid3x3 size={14} />
-            <span class="hidden sm:inline">{m.view_grid()}</span>
-          </button>
+          <div class="tooltip tooltip-left" data-tip={!recordingStart ? m.grid_noTimestamp() : ''}>
+            <button
+              class="btn btn-sm join-item {activeView === 'grid' ? 'btn-active' : ''}"
+              disabled={!recordingStart}
+              onclick={() => {
+                switchView('grid');
+              }}
+              title={recordingStart ? m.view_grid() : undefined}
+            >
+              <Grid3x3 size={14} class={!recordingStart ? 'opacity-40' : ''} />
+              <span class="hidden sm:inline {!recordingStart ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
+            </button>
+          </div>
         </div>
       </div>
 

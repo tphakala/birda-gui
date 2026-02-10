@@ -353,6 +353,7 @@
   "species_card_sortConfidence": "Confidence",
 
   "grid_noResults": "No data for heatmap",
+  "grid_noTimestamp": "Hourly grid requires a timestamped recording (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detections",
   "grid_detectionCountSingular": "{count} detection",
   "grid_less": "Less",
