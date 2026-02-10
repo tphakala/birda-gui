@@ -87,6 +87,17 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(2);
     })();
   }
+
+  // Migration 3: Add timezone_offset_min to analysis_runs
+  if (!applied.has(3)) {
+    db.transaction(() => {
+      const columns = db.prepare('PRAGMA table_info(analysis_runs)').all() as { name: string }[];
+      if (!columns.some((c) => c.name === 'timezone_offset_min')) {
+        db.exec('ALTER TABLE analysis_runs ADD COLUMN timezone_offset_min INTEGER');
+      }
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(3);
+    })();
+  }
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {

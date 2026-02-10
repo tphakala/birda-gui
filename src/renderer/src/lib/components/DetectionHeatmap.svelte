@@ -12,12 +12,14 @@
     latitude,
     longitude,
     recordingDate,
+    timezoneOffsetMin,
   }: {
     cells: HourlyDetectionCell[];
     loading: boolean;
     latitude: number | null;
     longitude: number | null;
     recordingDate: Date | null;
+    timezoneOffsetMin: number | null;
   } = $props();
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -144,7 +146,7 @@
 
   const sunPhases = $derived.by(() => {
     if (latitude === null || longitude === null || recordingDate === null) return null;
-    return computeHourlySunPhases(recordingDate, latitude, longitude);
+    return computeHourlySunPhases(recordingDate, latitude, longitude, timezoneOffsetMin ?? 0);
   });
 
   const sunColors = $derived(isDark ? sunPhaseColorsDark : sunPhaseColorsLight);
@@ -157,14 +159,17 @@
   const sunsetGradientLight = ['#fb7185', '#a855f7']; // rose-400 → purple-500
   const sunsetGradientDark = ['#fda4af', '#c084fc']; // rose-300 → purple-400
 
+  /** Half-width (in percentage points) of the gradient transition band around sunrise/sunset. */
+  const GRADIENT_BAND_HALFWIDTH_PCT = 15;
+
   function sunCellBackground(phase: SunPhase, gradient: SunPhaseGradient | undefined): string {
     if (!gradient) return sunColors[phase];
 
     const from = sunColors[gradient.fromPhase];
     const to = sunColors[gradient.toPhase];
     const pct = Math.round(gradient.at * 100);
-    const lo = Math.max(0, pct - 15);
-    const hi = Math.min(100, pct + 15);
+    const lo = Math.max(0, pct - GRADIENT_BAND_HALFWIDTH_PCT);
+    const hi = Math.min(100, pct + GRADIENT_BAND_HALFWIDTH_PCT);
 
     // Sunrise: twilight → daylight — use warm orange→amber accent
     const isSunrise = gradient.fromPhase === 'twilight' && gradient.toPhase === 'daylight';
@@ -173,11 +178,11 @@
 
     if (isSunrise) {
       const [a, b] = isDark ? sunriseGradientDark : sunriseGradientLight;
-      return `linear-gradient(to right, ${from} ${lo}%, ${a} ${pct}%, ${b} ${hi}%)`;
+      return `linear-gradient(to right, ${from} ${lo}%, ${a} ${pct}%, ${b} ${hi}%, ${to})`;
     }
     if (isSunset) {
       const [a, b] = isDark ? sunsetGradientDark : sunsetGradientLight;
-      return `linear-gradient(to right, ${a} ${lo}%, ${b} ${pct}%, ${to} ${hi}%)`;
+      return `linear-gradient(to right, ${from}, ${a} ${lo}%, ${b} ${pct}%, ${to} ${hi}%)`;
     }
 
     // night ↔ twilight: simple smooth blend

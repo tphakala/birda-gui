@@ -30,31 +30,50 @@ function classifyAltitude(altDeg: number): SunPhase {
 }
 
 /**
- * Compute the dominant sun phase for each UTC hour of a given date and location.
- * Uses the midpoint of each hour (e.g., 06:30 UTC for the 06 column) to determine phase.
+ * Compute the dominant sun phase for each hour of a given date and location.
+ * Uses the midpoint of each hour (e.g., 06:30 for the 06 column) to determine phase.
  *
  * For hours where the sun phase changes (sunrise/sunset transitions), a `gradient`
  * field is included with the from/to phases and the fractional position of the transition.
  *
- * Hours are UTC to match the heatmap data produced by computeDetectionHour() in catalog.ts.
+ * Hours match the heatmap columns produced by computeDetectionHour() in catalog.ts,
+ * which are in the recording's timezone (whatever timezone the filename uses).
+ *
+ * @param date            Recording start Date (from parseRecordingStart — local JS Date).
+ * @param latitude        Recording location latitude.
+ * @param longitude       Recording location longitude.
+ * @param timezoneOffsetMin  UTC offset in minutes of the recording's timezone (e.g., 180 for UTC+3).
+ *                           Defaults to 0 (UTC) when unknown. This converts heatmap "filename hours"
+ *                           to real UTC times for accurate sun position calculation.
  */
-export function computeHourlySunPhases(date: Date, latitude: number, longitude: number): HourlySunPhase[] {
-  const y = date.getUTCFullYear();
-  const m = date.getUTCMonth();
-  const d = date.getUTCDate();
+export function computeHourlySunPhases(
+  date: Date,
+  latitude: number,
+  longitude: number,
+  timezoneOffsetMin = 0,
+): HourlySunPhase[] {
+  // Use local accessors to extract the date components that match the original filename,
+  // since parseRecordingStart() creates dates via `new Date(y, m, d, h, mi, s)` (local time).
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+
+  // Offset in milliseconds: subtract from Date.UTC values to convert
+  // "recording timezone time" → "actual UTC time" for suncalc.
+  const offsetMs = timezoneOffsetMin * 60_000;
 
   const result: HourlySunPhase[] = [];
   for (let h = 0; h < 24; h++) {
-    // Midpoint of the hour in UTC — determines the dominant phase
-    const midpoint = new Date(Date.UTC(y, m, d, h, 30, 0));
-    const midAlt = altitudeDeg(midpoint, latitude, longitude);
+    // Midpoint of the hour in the recording's timezone, converted to UTC for suncalc
+    const midpointUtc = Date.UTC(y, m, d, h, 30, 0) - offsetMs;
+    const midAlt = altitudeDeg(new Date(midpointUtc), latitude, longitude);
     const phase = classifyAltitude(midAlt);
 
     // Check start and end of hour to detect transitions
-    const startTime = Date.UTC(y, m, d, h, 0, 0);
-    const endTime = Date.UTC(y, m, d, h, 59, 59);
-    const startPhase = classifyAltitude(altitudeDeg(new Date(startTime), latitude, longitude));
-    const endPhase = classifyAltitude(altitudeDeg(new Date(endTime), latitude, longitude));
+    const startUtc = Date.UTC(y, m, d, h, 0, 0) - offsetMs;
+    const endUtc = Date.UTC(y, m, d, h, 59, 59) - offsetMs;
+    const startPhase = classifyAltitude(altitudeDeg(new Date(startUtc), latitude, longitude));
+    const endPhase = classifyAltitude(altitudeDeg(new Date(endUtc), latitude, longitude));
 
     let gradient: SunPhaseGradient | undefined;
 
@@ -64,7 +83,7 @@ export function computeHourlySunPhases(date: Date, latitude: number, longitude: 
       let hi = 59;
       while (hi - lo > 1) {
         const mid = Math.floor((lo + hi) / 2);
-        const t = new Date(startTime + mid * 60_000);
+        const t = new Date(startUtc + mid * 60_000);
         const p = classifyAltitude(altitudeDeg(t, latitude, longitude));
         if (p === startPhase) {
           lo = mid;

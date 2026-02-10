@@ -73,6 +73,7 @@
     longitude: number;
     month?: number | undefined;
     day?: number | undefined;
+    timezoneOffsetMin?: number | undefined;
   }) {
     if (!appState.sourcePath) return;
 
@@ -93,6 +94,7 @@
         location_name: opts.locationName || undefined,
         month: opts.month,
         day: opts.day,
+        timezone_offset_min: opts.timezoneOffsetMin,
       });
       analysisState.status = 'completed';
       appState.lastRunId = result.runId;

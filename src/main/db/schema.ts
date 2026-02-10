@@ -9,16 +9,17 @@ CREATE TABLE IF NOT EXISTS locations (
 );
 
 CREATE TABLE IF NOT EXISTS analysis_runs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    location_id     INTEGER REFERENCES locations(id),
-    source_path     TEXT NOT NULL,
-    model           TEXT NOT NULL,
-    min_confidence  REAL NOT NULL DEFAULT 0.1,
-    settings_json   TEXT,
-    status          TEXT NOT NULL DEFAULT 'pending'
-                    CHECK (status IN ('pending','running','completed','failed')),
-    started_at      TEXT,
-    completed_at    TEXT
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    location_id         INTEGER REFERENCES locations(id),
+    source_path         TEXT NOT NULL,
+    model               TEXT NOT NULL,
+    min_confidence      REAL NOT NULL DEFAULT 0.1,
+    settings_json       TEXT,
+    status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending','running','completed','failed')),
+    started_at          TEXT,
+    completed_at        TEXT,
+    timezone_offset_min INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS detections (
