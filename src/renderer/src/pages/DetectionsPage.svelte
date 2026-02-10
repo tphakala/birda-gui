@@ -155,16 +155,33 @@
   }
 
   function loadActiveView() {
-    void loadRunDetections();
-    if (activeView === 'species') void loadSpeciesView();
-    if (activeView === 'grid') void loadGridView();
+    switch (activeView) {
+      case 'table':
+        void loadRunDetections();
+        break;
+      case 'species':
+        void loadSpeciesView();
+        break;
+      case 'grid':
+        void loadGridView();
+        break;
+    }
   }
 
   function switchView(view: DetectionView) {
     if (view === activeView) return;
     activeView = view;
-    if (view === 'species' && speciesData.length === 0) void loadSpeciesView();
-    if (view === 'grid' && gridData.length === 0) void loadGridView();
+    switch (view) {
+      case 'table':
+        void loadRunDetections();
+        break;
+      case 'species':
+        void loadSpeciesView();
+        break;
+      case 'grid':
+        void loadGridView();
+        break;
+    }
   }
 
   function handleRunSelect(runId: number) {
