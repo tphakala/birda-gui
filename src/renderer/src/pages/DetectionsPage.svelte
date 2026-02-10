@@ -171,17 +171,7 @@
   function switchView(view: DetectionView) {
     if (view === activeView) return;
     activeView = view;
-    switch (view) {
-      case 'table':
-        void loadRunDetections();
-        break;
-      case 'species':
-        void loadSpeciesView();
-        break;
-      case 'grid':
-        void loadGridView();
-        break;
-    }
+    loadActiveView();
   }
 
   function handleRunSelect(runId: number) {

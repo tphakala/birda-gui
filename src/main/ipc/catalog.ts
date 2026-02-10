@@ -45,6 +45,10 @@ function computeDetectionHour(sourceFile: string, startTime: number): number {
   if (match) {
     const [, y, mo, d, h, mi, s] = match;
     const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+    // Validate parsed date wasn't silently corrected (e.g. month 13 → next year)
+    if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +mo - 1 || date.getUTCDate() !== +d) {
+      return Math.floor(startTime / 3600) % 24;
+    }
     const actual = new Date(date.getTime() + startTime * 1000);
     return actual.getUTCHours();
   }
