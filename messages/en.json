@@ -353,6 +353,10 @@
   "species_card_sortConfidence": "Confidence",
 
   "grid_noResults": "No data for heatmap",
+  "grid_daylight": "Daylight",
+  "grid_phase_night": "Night",
+  "grid_phase_twilight": "Twilight",
+  "grid_phase_daylight": "Daylight",
   "grid_noTimestamp": "Hourly grid requires a timestamped recording (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detections",
   "grid_detectionCountSingular": "{count} detection",
