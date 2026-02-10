@@ -126,7 +126,7 @@
   {:else}
     <!-- Grid -->
     <div class="flex-1 overflow-auto px-4 pt-2 pb-4">
-      <div class="grid" style="grid-template-columns: minmax(180px, max-content) repeat(24, 32px); gap: 2px;">
+      <div class="grid w-fit" style="grid-template-columns: minmax(180px, max-content) repeat(24, 32px); gap: 2px;">
         <!-- Header row: empty corner + hour labels -->
         <div class="bg-base-100 sticky left-0 z-10"></div>
         {#each hours as h (h)}
@@ -149,7 +149,11 @@
           {#each hours as h (h)}
             {@const count = cellMap.get(`${sp.scientific_name}:${h}`) ?? 0}
             <div
-              class="tooltip tooltip-top flex h-7 items-center justify-center rounded-[3px] text-[10px] font-medium"
+              class="tooltip {h <= 4
+                ? 'tooltip-right'
+                : h >= 19
+                  ? 'tooltip-left'
+                  : 'tooltip-top'} flex h-7 items-center justify-center rounded-[3px] text-[10px] font-medium hover:z-20"
               style="background-color: {cellColor(count)}; color: {textColor(count)};"
               data-tip={cellTooltip(sp.common_name, h, count)}
             >
