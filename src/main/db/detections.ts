@@ -2,6 +2,21 @@ import { getDb } from './database';
 import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
 
+interface RawRunSpeciesAggregation {
+  scientific_name: string;
+  detection_count: number;
+  avg_confidence: number;
+  max_confidence: number;
+  first_detected: string;
+  last_detected: string;
+}
+
+interface RawGridDetection {
+  scientific_name: string;
+  start_time: number;
+  source_file: string;
+}
+
 function escapeLike(str: string): string {
   return str.replace(/[%_\\]/g, '\\$&');
 }
@@ -27,16 +42,13 @@ export function insertDetections(
   insertMany(detections);
 }
 
-export function getDetections(filter: DetectionFilter): { detections: Detection[]; total: number } {
-  const db = getDb();
+function buildWhereClause(filter: DetectionFilter): { where: string; params: unknown[] } {
   const conditions: string[] = [];
   const params: unknown[] = [];
 
   if (filter.scientific_names && filter.scientific_names.length > 0) {
-    // Pre-resolved scientific names (e.g. from label service common name search)
     const placeholders = filter.scientific_names.map(() => '?').join(', ');
     if (filter.species) {
-      // Also match scientific_name by LIKE in case the query is a partial scientific name
       conditions.push(`(scientific_name IN (${placeholders}) OR scientific_name LIKE ? ESCAPE '\\')`);
       params.push(...filter.scientific_names, `%${escapeLike(filter.species)}%`);
     } else {
@@ -66,6 +78,12 @@ export function getDetections(filter: DetectionFilter): { detections: Detection[
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { where, params };
+}
+
+export function getDetections(filter: DetectionFilter): { detections: Detection[]; total: number } {
+  const db = getDb();
+  const { where, params } = buildWhereClause(filter);
   const limit = filter.limit ?? 100;
   const offset = filter.offset ?? 0;
 
@@ -81,6 +99,46 @@ export function getDetections(filter: DetectionFilter): { detections: Detection[
     .all(...params, limit, offset) as Detection[];
 
   return { detections, total };
+}
+
+export function getRunSpeciesAggregation(filter: DetectionFilter): RawRunSpeciesAggregation[] {
+  const db = getDb();
+  const { where, params } = buildWhereClause(filter);
+
+  const allowedSortColumns = new Set([
+    'scientific_name',
+    'detection_count',
+    'avg_confidence',
+    'max_confidence',
+    'first_detected',
+    'last_detected',
+  ]);
+  const sortCol =
+    filter.sort_column && allowedSortColumns.has(filter.sort_column) ? filter.sort_column : 'detection_count';
+  const sortDir = filter.sort_dir === 'asc' ? 'ASC' : 'DESC';
+
+  return db
+    .prepare(
+      `SELECT scientific_name,
+              COUNT(*) AS detection_count,
+              AVG(confidence) AS avg_confidence,
+              MAX(confidence) AS max_confidence,
+              MIN(detected_at) AS first_detected,
+              MAX(detected_at) AS last_detected
+       FROM detections ${where}
+       GROUP BY scientific_name
+       ORDER BY ${sortCol} ${sortDir}`,
+    )
+    .all(...params) as RawRunSpeciesAggregation[];
+}
+
+export function getDetectionsForGrid(filter: DetectionFilter): RawGridDetection[] {
+  const db = getDb();
+  const { where, params } = buildWhereClause(filter);
+
+  return db
+    .prepare(`SELECT scientific_name, start_time, source_file FROM detections ${where}`)
+    .all(...params) as RawGridDetection[];
 }
 
 export function searchSpecies(query: string, scientificNames?: string[]): SpeciesSummary[] {

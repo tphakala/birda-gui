@@ -335,5 +335,28 @@
   "species_fetch_weekError": "Week must be between 1 and 48",
   "species_fetch_coordsError": "Please set coordinates",
   "species_fetch_moreSpecies": "...and {count} more",
-  "species_loading": "Loading..."
+  "species_loading": "Loading...",
+
+  "view_table": "Table",
+  "view_species": "Species",
+  "view_grid": "Grid",
+
+  "species_card_detections": "{count} detections",
+  "species_card_detectionsSingular": "{count} detection",
+  "species_card_avgConfidence": "Avg {value}",
+  "species_card_maxConfidence": "Max {value}",
+  "species_card_firstSeen": "First",
+  "species_card_lastSeen": "Last",
+  "species_card_noResults": "No species found",
+  "species_card_sortCount": "Count",
+  "species_card_sortName": "Name",
+  "species_card_sortConfidence": "Confidence",
+
+  "grid_noResults": "No data for heatmap",
+  "grid_detectionCount": "{count} detections",
+  "grid_detectionCountSingular": "{count} detection",
+  "grid_less": "Less",
+  "grid_more": "More",
+
+  "pagination_speciesCount": "{count} species"
 }

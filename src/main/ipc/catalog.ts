@@ -1,6 +1,8 @@
 import { ipcMain } from 'electron';
 import {
   getDetections,
+  getRunSpeciesAggregation,
+  getDetectionsForGrid,
   searchSpecies,
   getSpeciesSummary,
   getSpeciesLocations,
@@ -17,6 +19,8 @@ import type {
   SpeciesSummary,
   EnrichedDetection,
   EnrichedSpeciesSummary,
+  RunSpeciesAggregation,
+  HourlyDetectionCell,
 } from '$shared/types';
 
 function enrichDetections(detections: Detection[]): EnrichedDetection[] {
@@ -26,6 +30,25 @@ function enrichDetections(detections: Detection[]): EnrichedDetection[] {
     ...d,
     common_name: nameMap.get(d.scientific_name) ?? d.scientific_name,
   }));
+}
+
+/**
+ * Compute the wall-clock hour (0-23) of a detection by parsing
+ * the AudioMoth-style filename (YYYYMMDD_HHMMSS) and adding start_time offset.
+ * Falls back to the hour derived from start_time offset when the filename
+ * doesn't match the expected pattern.
+ */
+function computeDetectionHour(sourceFile: string, startTime: number): number {
+  const base = sourceFile.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
+  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
+  if (match) {
+    const [, y, mo, d, h, mi, s] = match;
+    const date = new Date(+y, +mo - 1, +d, +h, +mi, +s);
+    const actual = new Date(date.getTime() + startTime * 1000);
+    return actual.getHours();
+  }
+  // Fallback: treat start_time as offset from midnight (hour within recording)
+  return Math.floor(startTime / 3600) % 24;
 }
 
 function enrichSpeciesSummaries(summaries: SpeciesSummary[]): EnrichedSpeciesSummary[] {
@@ -57,6 +80,56 @@ export function registerCatalogHandlers(): void {
 
     const result = getDetections(filter);
     return { detections: enrichDetections(result.detections), total: result.total };
+  });
+
+  ipcMain.handle('catalog:get-run-species', (_event, filter: DetectionFilter): RunSpeciesAggregation[] => {
+    if (filter.species) {
+      const matchingScientific = searchByCommonName(filter.species);
+      if (matchingScientific.length > 0) {
+        filter = { ...filter, scientific_names: matchingScientific };
+      }
+    }
+    const rows = getRunSpeciesAggregation(filter);
+    const scientificNames = rows.map((r) => r.scientific_name);
+    const nameMap = resolveAll(scientificNames);
+    return rows.map((r) => ({
+      ...r,
+      common_name: nameMap.get(r.scientific_name) ?? r.scientific_name,
+    }));
+  });
+
+  ipcMain.handle('catalog:get-hourly-detections', (_event, filter: DetectionFilter): HourlyDetectionCell[] => {
+    if (filter.species) {
+      const matchingScientific = searchByCommonName(filter.species);
+      if (matchingScientific.length > 0) {
+        filter = { ...filter, scientific_names: matchingScientific };
+      }
+    }
+
+    // Fetch raw detections and compute actual wall-clock hour from filename + offset
+    const rows = getDetectionsForGrid(filter);
+    const counters = new Map<string, number>();
+    const speciesNames = new Set<string>();
+
+    for (const row of rows) {
+      const hour = computeDetectionHour(row.source_file, row.start_time);
+      const key = `${row.scientific_name}\0${hour}`;
+      counters.set(key, (counters.get(key) ?? 0) + 1);
+      speciesNames.add(row.scientific_name);
+    }
+
+    const nameMap = resolveAll([...speciesNames]);
+    const result: HourlyDetectionCell[] = [];
+    for (const [key, count] of counters) {
+      const [sci, hourStr] = key.split('\0');
+      result.push({
+        scientific_name: sci,
+        common_name: nameMap.get(sci) ?? sci,
+        hour: parseInt(hourStr),
+        detection_count: count,
+      });
+    }
+    return result;
   });
 
   ipcMain.handle('catalog:search-species', (_event, query: string) => {

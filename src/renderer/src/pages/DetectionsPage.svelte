@@ -1,11 +1,27 @@
 <script lang="ts">
-  import { Search, X, AudioLines, List } from '@lucide/svelte';
+  import { Search, X, AudioLines, List, Table2, LayoutGrid, Grid3x3 } from '@lucide/svelte';
   import RunList from '$lib/components/RunList.svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
+  import SpeciesCards from '$lib/components/SpeciesCards.svelte';
+  import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
   import { appState } from '$lib/stores/app.svelte';
-  import { getRuns, getDetections, deleteRun, getCatalogStats, getSpeciesLists } from '$lib/utils/ipc';
+  import {
+    getRuns,
+    getDetections,
+    getRunSpecies,
+    getHourlyDetections,
+    deleteRun,
+    getCatalogStats,
+    getSpeciesLists,
+  } from '$lib/utils/ipc';
   import { formatNumber, parseRecordingStart } from '$lib/utils/format';
-  import type { EnrichedDetection, RunWithStats, SpeciesList } from '$shared/types';
+  import type {
+    EnrichedDetection,
+    RunWithStats,
+    SpeciesList,
+    RunSpeciesAggregation,
+    HourlyDetectionCell,
+  } from '$shared/types';
   import { onMount } from 'svelte';
   import * as m from '$paraglide/messages';
 
@@ -13,7 +29,11 @@
   let runs = $state<RunWithStats[]>([]);
   let runsLoading = $state(true);
 
-  // --- Detection results state ---
+  // --- View state ---
+  type DetectionView = 'table' | 'species' | 'grid';
+  let activeView = $state<DetectionView>('table');
+
+  // --- Detection results state (table view) ---
   let detections = $state<EnrichedDetection[]>([]);
   let total = $state(0);
   let loading = $state(false);
@@ -26,6 +46,15 @@
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   let confidenceTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  // --- Species view state ---
+  let speciesData = $state<RunSpeciesAggregation[]>([]);
+  let speciesLoading = $state(false);
+  let speciesSortBy = $state<'count' | 'name' | 'confidence'>('count');
+
+  // --- Grid view state ---
+  let gridData = $state<HourlyDetectionCell[]>([]);
+  let gridLoading = $state(false);
+
   // --- Species list filter state ---
   let speciesLists = $state<SpeciesList[]>([]);
   let speciesListFilterId = $state(0);
@@ -34,6 +63,32 @@
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
   const sourceFileName = $derived(selectedRun ? (selectedRun.source_path.split(/[\\/]/).pop() ?? '') : '');
   const recordingStart = $derived(sourceFileName ? parseRecordingStart(sourceFileName) : null);
+
+  // --- Contextual header count ---
+  const headerCount = $derived.by(() => {
+    switch (activeView) {
+      case 'table':
+        return total === 1
+          ? m.pagination_detectionCountSingular({ count: formatNumber(total) })
+          : m.pagination_detectionCount({ count: formatNumber(total) });
+      case 'species':
+        return m.pagination_speciesCount({ count: formatNumber(speciesData.length) });
+      case 'grid': {
+        const uniqueSpecies = new Set(gridData.map((c) => c.scientific_name)).size;
+        return m.pagination_speciesCount({ count: formatNumber(uniqueSpecies) });
+      }
+    }
+  });
+
+  // --- Shared filter builder ---
+  function buildBaseFilter() {
+    return {
+      run_id: appState.selectedRunId ?? 0,
+      min_confidence: ignoreConfidence ? undefined : appState.minConfidence,
+      species: speciesQuery || undefined,
+      species_list_id: speciesListFilterId || undefined,
+    };
+  }
 
   async function refreshRuns() {
     try {
@@ -50,10 +105,7 @@
     loading = true;
     try {
       const result = await getDetections({
-        run_id: appState.selectedRunId,
-        min_confidence: ignoreConfidence ? undefined : appState.minConfidence,
-        species: speciesQuery || undefined,
-        species_list_id: speciesListFilterId || undefined,
+        ...buildBaseFilter(),
         sort_column: sortColumn,
         sort_dir: sortDir,
         limit,
@@ -67,6 +119,52 @@
     } finally {
       loading = false;
     }
+  }
+
+  async function loadSpeciesView() {
+    if (!appState.selectedRunId) return;
+    speciesLoading = true;
+    try {
+      speciesData = await getRunSpecies({
+        ...buildBaseFilter(),
+        sort_column:
+          speciesSortBy === 'count'
+            ? 'detection_count'
+            : speciesSortBy === 'name'
+              ? 'scientific_name'
+              : 'avg_confidence',
+        sort_dir: speciesSortBy === 'name' ? 'asc' : 'desc',
+      });
+    } catch {
+      speciesData = [];
+    } finally {
+      speciesLoading = false;
+    }
+  }
+
+  async function loadGridView() {
+    if (!appState.selectedRunId) return;
+    gridLoading = true;
+    try {
+      gridData = await getHourlyDetections(buildBaseFilter());
+    } catch {
+      gridData = [];
+    } finally {
+      gridLoading = false;
+    }
+  }
+
+  function loadActiveView() {
+    void loadRunDetections();
+    if (activeView === 'species') void loadSpeciesView();
+    if (activeView === 'grid') void loadGridView();
+  }
+
+  function switchView(view: DetectionView) {
+    if (view === activeView) return;
+    activeView = view;
+    if (view === 'species' && speciesData.length === 0) void loadSpeciesView();
+    if (view === 'grid' && gridData.length === 0) void loadGridView();
   }
 
   function handleRunSelect(runId: number) {
@@ -106,14 +204,19 @@
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       offset = 0;
-      void loadRunDetections();
+      loadActiveView();
     }, 250);
   }
 
   function clearSpeciesFilter() {
     speciesQuery = '';
     offset = 0;
-    void loadRunDetections();
+    loadActiveView();
+  }
+
+  function handleSpeciesSortChange(sort: 'count' | 'name' | 'confidence') {
+    speciesSortBy = sort;
+    void loadSpeciesView();
   }
 
   // React to selectedRunId changes
@@ -124,7 +227,9 @@
       offset = 0;
       speciesQuery = '';
       ignoreConfidence = false;
-      void loadRunDetections();
+      speciesData = [];
+      gridData = [];
+      loadActiveView();
       // Refresh runs list only if the selected run is not already in our list
       if (appState.selectedRunId && !runs.some((r) => r.id === appState.selectedRunId)) {
         void refreshRuns();
@@ -141,7 +246,7 @@
         if (confidenceTimeout) clearTimeout(confidenceTimeout);
         confidenceTimeout = setTimeout(() => {
           offset = 0;
-          void loadRunDetections();
+          loadActiveView();
         }, 200);
       }
     }
@@ -167,8 +272,10 @@
       // Refresh lists so the dropdown includes any newly created list
       getSpeciesLists()
         .then((l) => (speciesLists = l))
-        .catch(() => {});
-      void loadRunDetections();
+        .catch(() => {
+          /* ignore */
+        });
+      loadActiveView();
     }
   });
 </script>
@@ -184,19 +291,54 @@
 
   {#if appState.selectedRunId && selectedRun}
     <div class="flex flex-1 flex-col overflow-hidden">
-      <!-- Filter bar -->
+      <!-- Header row -->
       <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2 text-sm">
         <AudioLines size={16} class="text-primary shrink-0" />
         <span class="font-medium">{sourceFileName}</span>
         <span class="text-base-content/40">|</span>
-        <span class="text-base-content/60"
-          >{total === 1
-            ? m.pagination_detectionCountSingular({ count: formatNumber(total) })
-            : m.pagination_detectionCount({ count: formatNumber(total) })}</span
-        >
+        <span class="text-base-content/60">{headerCount}</span>
 
+        <div class="flex-1"></div>
+
+        <!-- View toggle -->
+        <div class="join">
+          <button
+            class="btn btn-sm join-item {activeView === 'table' ? 'btn-active' : ''}"
+            onclick={() => {
+              switchView('table');
+            }}
+            title={m.view_table()}
+          >
+            <Table2 size={14} />
+            <span class="hidden sm:inline">{m.view_table()}</span>
+          </button>
+          <button
+            class="btn btn-sm join-item {activeView === 'species' ? 'btn-active' : ''}"
+            onclick={() => {
+              switchView('species');
+            }}
+            title={m.view_species()}
+          >
+            <LayoutGrid size={14} />
+            <span class="hidden sm:inline">{m.view_species()}</span>
+          </button>
+          <button
+            class="btn btn-sm join-item {activeView === 'grid' ? 'btn-active' : ''}"
+            onclick={() => {
+              switchView('grid');
+            }}
+            title={m.view_grid()}
+          >
+            <Grid3x3 size={14} />
+            <span class="hidden sm:inline">{m.view_grid()}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter row -->
+      <div class="border-base-300 bg-base-200/30 flex items-center gap-3 border-b px-4 py-1.5 text-sm">
         <!-- Species filter -->
-        <div class="relative ml-3">
+        <div class="relative">
           <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
           <input
             type="text"
@@ -225,7 +367,7 @@
             bind:checked={ignoreConfidence}
             onchange={() => {
               offset = 0;
-              void loadRunDetections();
+              loadActiveView();
             }}
             class="checkbox checkbox-xs checkbox-primary"
           />
@@ -238,7 +380,7 @@
             bind:value={speciesListFilterId}
             onchange={() => {
               offset = 0;
-              void loadRunDetections();
+              loadActiveView();
             }}
             class="select select-bordered select-sm text-xs"
           >
@@ -266,19 +408,31 @@
         </label>
       </div>
 
-      <AnalysisTable
-        {detections}
-        {total}
-        {loading}
-        sourceFile={selectedRun.source_path}
-        {recordingStart}
-        {sortColumn}
-        {sortDir}
-        {offset}
-        {limit}
-        onsort={handleSort}
-        onpage={handlePage}
-      />
+      <!-- View content -->
+      {#if activeView === 'table'}
+        <AnalysisTable
+          {detections}
+          {total}
+          {loading}
+          sourceFile={selectedRun.source_path}
+          {recordingStart}
+          {sortColumn}
+          {sortDir}
+          {offset}
+          {limit}
+          onsort={handleSort}
+          onpage={handlePage}
+        />
+      {:else if activeView === 'species'}
+        <SpeciesCards
+          species={speciesData}
+          loading={speciesLoading}
+          sortBy={speciesSortBy}
+          onsortchange={handleSpeciesSortChange}
+        />
+      {:else}
+        <DetectionHeatmap cells={gridData} loading={gridLoading} />
+      {/if}
     </div>
   {:else}
     <!-- No run selected -->

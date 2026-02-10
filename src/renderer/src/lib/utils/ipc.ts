@@ -3,6 +3,8 @@ import type {
   EnrichedDetection,
   DetectionFilter,
   EnrichedSpeciesSummary,
+  RunSpeciesAggregation,
+  HourlyDetectionCell,
   Location,
   InstalledModel,
   AvailableModel,
@@ -57,6 +59,14 @@ export function getDetections(filter: DetectionFilter): Promise<{ detections: En
     detections: EnrichedDetection[];
     total: number;
   }>;
+}
+
+export function getRunSpecies(filter: DetectionFilter): Promise<RunSpeciesAggregation[]> {
+  return window.birda.invoke('catalog:get-run-species', filter) as Promise<RunSpeciesAggregation[]>;
+}
+
+export function getHourlyDetections(filter: DetectionFilter): Promise<HourlyDetectionCell[]> {
+  return window.birda.invoke('catalog:get-hourly-detections', filter) as Promise<HourlyDetectionCell[]>;
 }
 
 export function searchSpecies(query: string): Promise<EnrichedSpeciesSummary[]> {
