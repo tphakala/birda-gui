@@ -20,6 +20,8 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'catalog:get-runs',
   'catalog:delete-run',
   'catalog:get-detections',
+  'catalog:get-run-species',
+  'catalog:get-hourly-detections',
   'catalog:search-species',
   'catalog:get-species-summary',
   'catalog:species-locations',

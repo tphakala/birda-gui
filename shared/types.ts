@@ -85,6 +85,25 @@ export interface EnrichedSpeciesSummary extends SpeciesSummary {
   common_name: string;
 }
 
+/** Per-species aggregation for a filtered run, used by the Species cards view */
+export interface RunSpeciesAggregation {
+  scientific_name: string;
+  common_name: string;
+  detection_count: number;
+  avg_confidence: number;
+  max_confidence: number;
+  first_detected: string;
+  last_detected: string;
+}
+
+/** Single cell in the hourly detection heatmap */
+export interface HourlyDetectionCell {
+  scientific_name: string;
+  common_name: string;
+  hour: number; // 0-23
+  detection_count: number;
+}
+
 // === Analysis ===
 
 export interface AnalysisRequest {
