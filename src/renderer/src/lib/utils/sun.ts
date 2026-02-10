@@ -9,7 +9,7 @@ export interface SunPhaseGradient {
   at: number;
 }
 
-export interface HourlySunPhase {
+interface HourlySunPhase {
   hour: number;
   phase: SunPhase;
   /** Present when a phase transition occurs within this hour */
