@@ -445,7 +445,13 @@
           onsortchange={handleSpeciesSortChange}
         />
       {:else}
-        <DetectionHeatmap cells={gridData} loading={gridLoading} />
+        <DetectionHeatmap
+          cells={gridData}
+          loading={gridLoading}
+          latitude={selectedRun.latitude}
+          longitude={selectedRun.longitude}
+          recordingDate={recordingStart}
+        />
       {/if}
     </div>
   {:else}

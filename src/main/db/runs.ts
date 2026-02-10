@@ -64,7 +64,9 @@ export function getRunsWithStats(): RunWithStats[] {
       `SELECT
         r.*,
         COALESCE(d.cnt, 0) AS detection_count,
-        l.name AS location_name
+        l.name AS location_name,
+        l.latitude,
+        l.longitude
       FROM analysis_runs r
       LEFT JOIN (
         SELECT run_id, COUNT(*) AS cnt FROM detections GROUP BY run_id

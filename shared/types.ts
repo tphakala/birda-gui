@@ -52,6 +52,8 @@ export interface AnalysisRun {
 export interface RunWithStats extends AnalysisRun {
   detection_count: number;
   location_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Detection {
