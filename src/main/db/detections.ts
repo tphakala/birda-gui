@@ -259,12 +259,13 @@ interface BirdaJsonOutput {
     model: string;
     min_confidence: number;
   };
-  detections: Array<{
+  detections: {
     start_time: number;
     end_time: number;
     scientific_name: string;
+    common_name: string;
     confidence: number;
-  }>;
+  }[];
 }
 
 export async function importDetectionsFromJson(
@@ -288,7 +289,7 @@ export async function importDetectionsFromJson(
     scientific_name: d.scientific_name,
     confidence: d.confidence,
     species: d.scientific_name, // Use scientific_name as species identifier
-    common_name: '', // JSON output doesn't include common names
+    common_name: d.common_name, // Preserve common_name from JSON output
   }));
 
   // Import detections using existing transaction-based function
