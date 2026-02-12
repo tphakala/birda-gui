@@ -200,6 +200,11 @@ export interface PipelineStartedPayload {
   min_confidence: number;
 }
 
+export interface FileStartedPayload {
+  file: string;
+  samples: number;
+}
+
 export interface ProgressPayload {
   file: {
     path: string;

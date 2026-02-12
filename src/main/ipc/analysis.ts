@@ -207,7 +207,7 @@ export function registerAnalysisHandlers(): void {
             if (isDirectory && outputDir) {
               if (envelope.event === 'pipeline_started') {
                 const payload = envelope.payload as PipelineStartedPayload;
-                totalFiles = payload.files_total;
+                totalFiles = payload.total_files;
                 sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
               } else if (envelope.event === 'file_started') {
                 const payload = envelope.payload as FileStartedPayload;
