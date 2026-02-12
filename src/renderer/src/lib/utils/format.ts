@@ -52,24 +52,6 @@ export function parseRecordingStart(filename: string): Date | null {
 }
 
 /**
- * Compute actual wall-clock time by adding offset seconds to recording start.
- * Handles day boundary crossover via Date arithmetic.
- */
-export function formatClockTime(startTime: Date, offsetSeconds: number): string {
-  const actual = new Date(startTime.getTime() + offsetSeconds * 1000);
-  const h = actual.getHours().toString().padStart(2, '0');
-  const m = actual.getMinutes().toString().padStart(2, '0');
-  const s = actual.getSeconds().toString().padStart(2, '0');
-  // Show date prefix if it rolled past the start date
-  if (actual.toDateString() !== startTime.toDateString()) {
-    const mo = (actual.getMonth() + 1).toString().padStart(2, '0');
-    const d = actual.getDate().toString().padStart(2, '0');
-    return `${mo}-${d} ${h}:${m}:${s}`;
-  }
-  return `${h}:${m}:${s}`;
-}
-
-/**
  * Format detection date from recording_start + offset
  * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */

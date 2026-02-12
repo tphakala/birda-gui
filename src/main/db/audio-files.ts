@@ -44,27 +44,3 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
 
   return result.lastInsertRowid as number;
 }
-
-/**
- * Get audio file by ID
- */
-export function getAudioFile(id: number): AudioFile | null {
-  const db = getDb();
-  return (db.prepare('SELECT * FROM audio_files WHERE id = ?').get(id) as AudioFile | undefined) ?? null;
-}
-
-/**
- * Get all audio files for a run
- */
-export function getRunAudioFiles(runId: number): AudioFile[] {
-  const db = getDb();
-  return db.prepare('SELECT * FROM audio_files WHERE run_id = ? ORDER BY file_name ASC').all(runId) as AudioFile[];
-}
-
-/**
- * Delete audio files for a run (cascades to detections via FK)
- */
-export function deleteAudioFiles(runId: number): void {
-  const db = getDb();
-  db.prepare('DELETE FROM audio_files WHERE run_id = ?').run(runId);
-}
