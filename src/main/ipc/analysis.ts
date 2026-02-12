@@ -374,12 +374,7 @@ export function registerAnalysisHandlers(): void {
         // Cleanup temp directory on success, preserve on failure for debugging
         if (outputDir) {
           if (finalStatus === 'failed') {
-            sendLog(
-              win,
-              'warn',
-              'analysis',
-              `Preserving temp directory for debugging: ${outputDir}`,
-            );
+            sendLog(win, 'warn', 'analysis', `Preserving temp directory for debugging: ${outputDir}`);
           } else {
             await cleanupTempDir(outputDir);
             sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
