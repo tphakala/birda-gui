@@ -2,7 +2,6 @@ import { getDb } from './database';
 import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
-import path from 'path';
 
 interface RawRunSpeciesAggregation {
   scientific_name: string;
