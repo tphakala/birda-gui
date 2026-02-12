@@ -27,7 +27,7 @@ export function createRun(
 
 export function updateRunStatus(id: number, status: AnalysisRun['status']): void {
   const db = getDb();
-  if (status === 'completed' || status === 'failed') {
+  if (status === 'completed' || status === 'failed' || status === 'completed_with_errors') {
     db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
   } else {
     db.prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, id);
@@ -39,11 +39,11 @@ function getRunById(id: number): AnalysisRun | undefined {
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
 }
 
-export function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
+function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
   const db = getDb();
   return db
     .prepare(
-      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status = 'completed' ORDER BY completed_at DESC",
+      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status IN ('completed', 'completed_with_errors') ORDER BY completed_at DESC",
     )
     .all(sourcePath, model) as AnalysisRun[];
 }
@@ -83,4 +83,16 @@ export function getRunsWithStats(): RunWithStats[] {
       ORDER BY r.started_at DESC`,
     )
     .all() as RunWithStats[];
+}
+
+export function deleteCompletedRunsForSource(sourcePath: string, model: string): number {
+  const db = getDb();
+
+  return db.transaction(() => {
+    const runs = findCompletedRuns(sourcePath, model);
+    for (const run of runs) {
+      deleteRun(run.id);
+    }
+    return runs.length;
+  })();
 }

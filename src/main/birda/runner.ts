@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import type { BirdaEventEnvelope } from './types';
 
+const MAX_STDERR_LINES = 500;
+
 interface AnalysisOptions {
   model: string;
   minConfidence: number;
@@ -13,6 +15,7 @@ interface AnalysisOptions {
   day?: number | undefined;
   dayOfYear?: number | undefined;
   quiet?: boolean | undefined;
+  outputDir?: string | undefined;
 }
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
@@ -85,7 +88,20 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         return;
       }
 
-      const args = ['--stdout', '--force', '--model', options.model, '-c', String(options.minConfidence)];
+      const args: string[] = [];
+
+      // Conditional output mode
+      if (options.outputDir) {
+        args.push('--output-dir', options.outputDir);
+        args.push('--output-mode', 'ndjson');
+        args.push('--format', 'json'); // Write JSON files to disk (not CSV)
+      } else {
+        args.push('--stdout');
+      }
+
+      // Existing args
+      args.push('--force', '--model', options.model, '-c', String(options.minConfidence));
+
       if (options.latitude !== undefined && options.longitude !== undefined) {
         args.push('--lat', String(options.latitude), '--lon', String(options.longitude));
       }
@@ -121,7 +137,6 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         }
       });
 
-      const MAX_STDERR_LINES = 500;
       child.stderr!.on('data', (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
         if (stderrLines.length < MAX_STDERR_LINES) {

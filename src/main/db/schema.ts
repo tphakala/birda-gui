@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
     min_confidence      REAL NOT NULL DEFAULT 0.1,
     settings_json       TEXT,
     status              TEXT NOT NULL DEFAULT 'pending'
-                        CHECK (status IN ('pending','running','completed','failed')),
+                        CHECK (status IN ('pending','running','completed','failed','completed_with_errors')),
     started_at          TEXT,
     completed_at        TEXT,
     timezone_offset_min INTEGER

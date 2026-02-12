@@ -47,7 +47,7 @@ export interface AnalysisRun {
   model: string;
   min_confidence: number;
   settings_json: string | null;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'completed_with_errors';
   started_at: string | null;
   completed_at: string | null;
   /** UTC offset in minutes of the recording's timezone (0 = UTC, null = unknown). */
@@ -198,6 +198,11 @@ export interface PipelineStartedPayload {
   total_files: number;
   model: string;
   min_confidence: number;
+}
+
+export interface FileStartedPayload {
+  file: string;
+  samples: number;
 }
 
 export interface ProgressPayload {

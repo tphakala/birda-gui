@@ -1,6 +1,11 @@
 import { getDb } from './database';
 import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
+import fs from 'fs';
+import { z } from 'zod';
+
+const JSON_READ_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 100;
 
 interface RawRunSpeciesAggregation {
   scientific_name: string;
@@ -237,4 +242,83 @@ export function getCatalogStats(): CatalogStats {
 export function updateDetectionClipPath(id: number, clipPath: string): void {
   const db = getDb();
   db.prepare('UPDATE detections SET clip_path = ? WHERE id = ?').run(clipPath, id);
+}
+
+async function readJsonWithRetry(jsonPath: string, maxRetries = JSON_READ_RETRIES): Promise<string> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fs.promises.readFile(jsonPath, 'utf-8');
+    } catch (err) {
+      if (i === maxRetries - 1) throw err;
+      // Exponential backoff for Windows file locking
+      await new Promise((resolve) => setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, i)));
+    }
+  }
+  throw new Error('Unreachable'); // TypeScript flow analysis
+}
+
+const BirdaDetectionSchema = z.object({
+  start_time: z.number(),
+  end_time: z.number(),
+  scientific_name: z.string(),
+  common_name: z.string(),
+  confidence: z.number(),
+});
+
+const BirdaJsonSettingsSchema = z.object({
+  min_confidence: z.number(),
+  overlap: z.number(),
+  lat: z.number().optional(),
+  lon: z.number().optional(),
+  week: z.number().optional(),
+});
+
+const BirdaJsonSummarySchema = z.object({
+  total_detections: z.number(),
+  unique_species: z.number(),
+  audio_duration_seconds: z.number(),
+});
+
+const BirdaJsonOutputSchema = z.object({
+  source_file: z.string(),
+  analysis_date: z.string(),
+  model: z.string(),
+  settings: BirdaJsonSettingsSchema,
+  detections: z.array(BirdaDetectionSchema),
+  summary: BirdaJsonSummarySchema,
+});
+
+export async function importDetectionsFromJson(
+  runId: number,
+  locationId: number | null,
+  jsonPath: string,
+): Promise<{ detections: number; sourceFile: string }> {
+  // Read with retry logic for Windows file locking
+  const content = await readJsonWithRetry(jsonPath);
+
+  // Parse and validate JSON with Zod
+  const data = BirdaJsonOutputSchema.parse(JSON.parse(content));
+
+  // Extract source file from top-level field
+  const sourceFile = data.source_file;
+
+  // Convert to BirdaDetection format (add missing fields)
+  const birdaDetections: BirdaDetection[] = data.detections.map((d) => ({
+    start_time: d.start_time,
+    end_time: d.end_time,
+    scientific_name: d.scientific_name,
+    confidence: d.confidence,
+    species: d.scientific_name, // Use scientific_name as species identifier
+    common_name: d.common_name, // Preserve common_name from JSON output
+  }));
+
+  // Import detections using existing transaction-based function
+  if (birdaDetections.length > 0) {
+    insertDetections(runId, locationId, sourceFile, birdaDetections);
+  }
+
+  return {
+    detections: birdaDetections.length,
+    sourceFile,
+  };
 }
