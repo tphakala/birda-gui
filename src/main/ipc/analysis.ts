@@ -58,6 +58,25 @@ function sendLog(win: BrowserWindow, level: LogLevel, source: string, message: s
   }
 }
 
+// Helper to track files with overflow warning
+// Returns true if overflow warning was just triggered
+function trackFileWithOverflow(
+  win: BrowserWindow,
+  fileArray: string[],
+  file: string,
+  alreadyOverflowed: boolean,
+  context: string,
+): boolean {
+  if (fileArray.length < MAX_TRACKED_FILES) {
+    fileArray.push(file);
+    return false;
+  } else if (!alreadyOverflowed) {
+    sendLog(win, 'warn', 'analysis', `Truncated ${context} files list at ${MAX_TRACKED_FILES} entries`);
+    return true;
+  }
+  return false;
+}
+
 async function createTempOutputDir(): Promise<string> {
   // Use mkdtemp for atomic unique directory creation
   return fs.promises.mkdtemp(path.join(tmpdir(), 'birda-'));
@@ -263,32 +282,23 @@ export function registerAnalysisHandlers(): void {
                   } catch (err) {
                     sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
                     failedFileCount++;
-                    if (failedFiles.length < MAX_TRACKED_FILES) {
-                      failedFiles.push(payload.file);
-                    } else if (!failedFilesOverflow) {
+                    if (trackFileWithOverflow(win, failedFiles, payload.file, failedFilesOverflow, 'failed')) {
                       failedFilesOverflow = true;
-                      sendLog(win, 'warn', 'analysis', `Truncated failed files list at ${MAX_TRACKED_FILES} entries`);
                     }
                   } finally {
                     importSemaphore.release();
                   }
                 } else if (payload.status === 'skipped') {
                   skippedFileCount++;
-                  if (skippedFiles.length < MAX_TRACKED_FILES) {
-                    skippedFiles.push(payload.file);
-                  } else if (!skippedFilesOverflow) {
+                  if (trackFileWithOverflow(win, skippedFiles, payload.file, skippedFilesOverflow, 'skipped')) {
                     skippedFilesOverflow = true;
-                    sendLog(win, 'warn', 'analysis', `Truncated skipped files list at ${MAX_TRACKED_FILES} entries`);
                   }
                   sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
                 } else {
                   // Must be 'failed' - only remaining case
                   failedFileCount++;
-                  if (failedFiles.length < MAX_TRACKED_FILES) {
-                    failedFiles.push(payload.file);
-                  } else if (!failedFilesOverflow) {
+                  if (trackFileWithOverflow(win, failedFiles, payload.file, failedFilesOverflow, 'failed')) {
                     failedFilesOverflow = true;
-                    sendLog(win, 'warn', 'analysis', `Truncated failed files list at ${MAX_TRACKED_FILES} entries`);
                   }
                   sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
                 }
