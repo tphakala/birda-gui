@@ -29,7 +29,7 @@
     onpage: (newOffset: number) => void;
   } = $props();
 
-  type SortableColumn = 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
+  type SortableColumn = 'file_name' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
   type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
   // Derive whether any detection has timestamp metadata
@@ -43,7 +43,7 @@
       key: 'file_name',
       label: m.table_columnSourceFile(),
       class: 'max-w-xs truncate',
-      sortable: false,
+      sortable: true,
       visible: isDirectory,
     },
     {
