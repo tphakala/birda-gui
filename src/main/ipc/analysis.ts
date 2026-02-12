@@ -112,7 +112,7 @@ const AnalysisRequestSchema = z.object({
 
 /**
  * Parse audio file metadata for storage in audio_files table
- * Priority: AudioMoth metadata > filename parsing + run timezone
+ * Priority: AudioMoth metadata > filename parsing (defaults to UTC if no timezone set)
  */
 async function parseFileMetadata(filePath: string, runTimezoneOffset: number | null): Promise<AudioFileMetadata> {
   const meta = await getAudioMetadata(filePath);
@@ -125,12 +125,17 @@ async function parseFileMetadata(filePath: string, runTimezoneOffset: number | n
     recordingStart = meta.audiomoth.recordedAt;
     timezoneOffset = meta.audiomoth.timezoneOffsetMin;
   }
-  // Priority 2: Filename parsing + run timezone
+  // Priority 2: Filename parsing (default to UTC if no timezone set)
   else {
     const basename = filePath.replace(/^.*[\\/]/, '');
     const parsed = parseRecordingStart(basename);
-    if (parsed && timezoneOffset !== null) {
-      recordingStart = formatIsoTimestamp(parsed, timezoneOffset);
+    if (parsed) {
+      // Default to UTC (offset 0) if no timezone specified
+      const offset = timezoneOffset ?? 0;
+      recordingStart = formatIsoTimestamp(parsed, offset);
+      if (timezoneOffset === null) {
+        timezoneOffset = 0;
+      }
     }
   }
 
