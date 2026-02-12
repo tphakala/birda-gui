@@ -164,7 +164,7 @@ export function getDetections(filter: DetectionFilter): {
     af_audiomoth_battery_v: number | null;
     af_audiomoth_temperature_c: number | null;
     af_created_at: string | null;
-  }>;
+  }[];
 
   // Transform flat rows into Detection objects with audio_file data
   const detections = rows.map((row) => ({
