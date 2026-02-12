@@ -26,6 +26,7 @@ Desktop GUI for the **birda** bird species detection CLI. Built with Electron + 
 ✅ **CORRECT:** `leann ask birda-gui "How does the Electron IPC architecture work?"` → Get comprehensive answer with file references → Read specific files if needed for implementation details
 
 **LEANN provides:**
+
 - Semantic understanding (not just keyword matching)
 - Architectural context and patterns
 - Accurate file and module references
