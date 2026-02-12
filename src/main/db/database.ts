@@ -247,6 +247,9 @@ function runMigrations(db: Database.Database): void {
 
         console.log('Audio files migration completed');
 
+        // Drop views that depend on detections table
+        db.exec('DROP VIEW IF EXISTS species_summary');
+
         // Recreate detections table with audio_file_id instead of source_file
         db.exec(`
           CREATE TABLE detections_new (
@@ -284,6 +287,19 @@ function runMigrations(db: Database.Database): void {
           CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
         `);
 
+        // Recreate species_summary view
+        db.exec(`
+          CREATE VIEW IF NOT EXISTS species_summary AS
+          SELECT
+            scientific_name,
+            COUNT(DISTINCT location_id) AS location_count,
+            COUNT(*) AS detection_count,
+            MAX(detected_at) AS last_detected,
+            AVG(confidence) AS avg_confidence
+          FROM detections
+          GROUP BY scientific_name
+        `);
+
         // Clean up temp table
         db.exec('DROP TABLE audio_file_mapping');
 
@@ -310,6 +326,9 @@ function runMigrations(db: Database.Database): void {
 
       try {
         db.transaction(() => {
+          // Drop views that depend on detections table
+          db.exec('DROP VIEW IF EXISTS species_summary');
+
           // Recreate detections table without source_file
           db.exec(`
             CREATE TABLE detections_new (
@@ -344,6 +363,19 @@ function runMigrations(db: Database.Database): void {
             CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
             CREATE INDEX IF NOT EXISTS idx_detections_confidence ON detections(confidence);
             CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
+          `);
+
+          // Recreate species_summary view
+          db.exec(`
+            CREATE VIEW IF NOT EXISTS species_summary AS
+            SELECT
+              scientific_name,
+              COUNT(DISTINCT location_id) AS location_count,
+              COUNT(*) AS detection_count,
+              MAX(detected_at) AS last_detected,
+              AVG(confidence) AS avg_confidence
+            FROM detections
+            GROUP BY scientific_name
           `);
 
           console.log('Detections table fixed');
