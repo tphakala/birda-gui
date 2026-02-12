@@ -183,6 +183,8 @@ export function registerAnalysisHandlers(): void {
       let totalDetections = 0;
       const failedFiles: string[] = [];
       const skippedFiles: string[] = [];
+      let failedFileCount = 0;
+      let skippedFileCount = 0;
       let totalFiles = 0;
       const pendingImports: Promise<void>[] = [];
       let failedFilesOverflow = false;
@@ -228,6 +230,7 @@ export function registerAnalysisHandlers(): void {
                     );
                   } catch (err) {
                     sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
+                    failedFileCount++;
                     if (failedFiles.length < MAX_TRACKED_FILES) {
                       failedFiles.push(payload.file);
                     } else if (!failedFilesOverflow) {
@@ -236,6 +239,7 @@ export function registerAnalysisHandlers(): void {
                     }
                   }
                 } else if (payload.status === 'skipped') {
+                  skippedFileCount++;
                   if (skippedFiles.length < MAX_TRACKED_FILES) {
                     skippedFiles.push(payload.file);
                   } else if (!skippedFilesOverflow) {
@@ -245,6 +249,7 @@ export function registerAnalysisHandlers(): void {
                   sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
                 } else {
                   // Must be 'failed' - only remaining case
+                  failedFileCount++;
                   if (failedFiles.length < MAX_TRACKED_FILES) {
                     failedFiles.push(payload.file);
                   } else if (!failedFilesOverflow) {
@@ -291,9 +296,9 @@ export function registerAnalysisHandlers(): void {
         let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
 
         if (isDirectory) {
-          const processedCount = totalFiles - skippedFiles.length - failedFiles.length;
+          const processedCount = totalFiles - skippedFileCount - failedFileCount;
 
-          if (failedFiles.length > 0) {
+          if (failedFileCount > 0) {
             finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
           }
 
@@ -301,7 +306,7 @@ export function registerAnalysisHandlers(): void {
             win,
             'info',
             'analysis',
-            `Directory analysis complete: ${processedCount} processed, ${skippedFiles.length} skipped, ${failedFiles.length} failed`,
+            `Directory analysis complete: ${processedCount} processed, ${skippedFileCount} skipped, ${failedFileCount} failed`,
           );
         }
 
