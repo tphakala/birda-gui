@@ -20,7 +20,7 @@ Desktop GUI for the **birda** bird species detection CLI. Built with Electron + 
 
 ## Project Structure
 
-```
+```text
 src/
   main/              # Electron main process (Node.js)
     index.ts          # Entry point, window creation, menu, protocol registration
@@ -231,6 +231,7 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 #### When to Use LEANN
 
 **Prefer LEANN for:**
+
 - Semantic/exploratory searches: "How does IPC communication work?"
 - Architecture questions: "What Svelte 5 stores are available?"
 - Pattern discovery: "How are database operations structured?"
@@ -238,6 +239,7 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 - Finding code without knowing exact file names or keywords
 
 **Use direct tools (Grep/Glob/Read) for:**
+
 - Exact file path reads when you know the location
 - Specific symbol searches when you know the name (component names, function names)
 - Single file content searches
@@ -246,6 +248,7 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 #### Effective Query Examples
 
 **Good queries:**
+
 - "How does the Electron IPC architecture work?"
 - "What Svelte 5 stores are available and what state do they manage?"
 - "How is the birda CLI process spawned and how is NDJSON parsed?"
@@ -253,6 +256,7 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 - "What is the i18n setup with Paraglide?"
 
 **Less effective:**
+
 - Very specific line-level questions (use Read tool instead)
 - Queries about code you've already read in the current session
 - File existence checks (use Glob instead)
