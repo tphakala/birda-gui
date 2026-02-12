@@ -29,56 +29,57 @@ function escapeLike(str: string): string {
 export function insertDetections(
   runId: number,
   locationId: number | null,
-  sourceFile: string,
+  audioFileId: number,
   detections: BirdaDetection[],
 ): void {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO detections (run_id, location_id, source_file, start_time, end_time, scientific_name, confidence)
+    INSERT INTO detections (run_id, location_id, audio_file_id, start_time, end_time, scientific_name, confidence)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMany = db.transaction((dets: BirdaDetection[]) => {
     for (const d of dets) {
-      stmt.run(runId, locationId, sourceFile, d.start_time, d.end_time, d.scientific_name, d.confidence);
+      stmt.run(runId, locationId, audioFileId, d.start_time, d.end_time, d.scientific_name, d.confidence);
     }
   });
 
   insertMany(detections);
 }
 
-function buildWhereClause(filter: DetectionFilter): { where: string; params: unknown[] } {
+function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where: string; params: unknown[] } {
   const conditions: string[] = [];
   const params: unknown[] = [];
+  const prefix = tableAlias ? `${tableAlias}.` : '';
 
   if (filter.scientific_names && filter.scientific_names.length > 0) {
     const placeholders = filter.scientific_names.map(() => '?').join(', ');
     if (filter.species) {
-      conditions.push(`(scientific_name IN (${placeholders}) OR scientific_name LIKE ? ESCAPE '\\')`);
+      conditions.push(`(${prefix}scientific_name IN (${placeholders}) OR ${prefix}scientific_name LIKE ? ESCAPE '\\')`);
       params.push(...filter.scientific_names, `%${escapeLike(filter.species)}%`);
     } else {
-      conditions.push(`scientific_name IN (${placeholders})`);
+      conditions.push(`${prefix}scientific_name IN (${placeholders})`);
       params.push(...filter.scientific_names);
     }
   } else if (filter.species) {
-    conditions.push("scientific_name LIKE ? ESCAPE '\\'");
+    conditions.push(`${prefix}scientific_name LIKE ? ESCAPE '\\'`);
     const escaped = escapeLike(filter.species);
     params.push(`%${escaped}%`);
   }
   if (filter.location_id) {
-    conditions.push('location_id = ?');
+    conditions.push(`${prefix}location_id = ?`);
     params.push(filter.location_id);
   }
   if (filter.min_confidence) {
-    conditions.push('confidence >= ?');
+    conditions.push(`${prefix}confidence >= ?`);
     params.push(filter.min_confidence);
   }
   if (filter.run_id) {
-    conditions.push('run_id = ?');
+    conditions.push(`${prefix}run_id = ?`);
     params.push(filter.run_id);
   }
   if (filter.species_list_id) {
-    conditions.push('scientific_name IN (SELECT scientific_name FROM species_list_entries WHERE list_id = ?)');
+    conditions.push(`${prefix}scientific_name IN (SELECT scientific_name FROM species_list_entries WHERE list_id = ?)`);
     params.push(filter.species_list_id);
   }
 
@@ -88,20 +89,82 @@ function buildWhereClause(filter: DetectionFilter): { where: string; params: unk
 
 export function getDetections(filter: DetectionFilter): { detections: Detection[]; total: number } {
   const db = getDb();
-  const { where, params } = buildWhereClause(filter);
+  const { where, params } = buildWhereClause(filter, 'd');
   const limit = filter.limit ?? 100;
   const offset = filter.offset ?? 0;
 
   // Whitelist allowed sort columns to prevent SQL injection
-  const allowedSortColumns = new Set(['scientific_name', 'confidence', 'start_time', 'source_file', 'detected_at']);
-  const sortCol = filter.sort_column && allowedSortColumns.has(filter.sort_column) ? filter.sort_column : 'detected_at';
+  const allowedSortColumns = new Set(['scientific_name', 'confidence', 'start_time', 'file_name', 'recording_start', 'detected_at']);
+  let sortCol = filter.sort_column && allowedSortColumns.has(filter.sort_column) ? filter.sort_column : 'detected_at';
+
+  // Map sort columns to qualified names for JOIN
+  if (sortCol === 'file_name') sortCol = 'af.file_name';
+  else if (sortCol === 'recording_start') sortCol = 'af.recording_start';
+  else sortCol = `d.${sortCol}`;
+
   const sortDir = filter.sort_dir === 'asc' ? 'ASC' : 'DESC';
 
-  const total = (db.prepare(`SELECT COUNT(*) as count FROM detections ${where}`).get(...params) as { count: number })
+  const total = (db.prepare(`SELECT COUNT(*) as count FROM detections d ${where}`).get(...params) as { count: number })
     .count;
-  const detections = db
-    .prepare(`SELECT * FROM detections ${where} ORDER BY ${sortCol} ${sortDir} LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as Detection[];
+
+  const rows = db
+    .prepare(`
+      SELECT
+        d.id, d.run_id, d.location_id, d.audio_file_id, d.start_time, d.end_time,
+        d.scientific_name, d.confidence, d.clip_path, d.detected_at,
+        af.id as af_id, af.file_path as af_file_path, af.file_name as af_file_name,
+        af.recording_start as af_recording_start, af.timezone_offset_min as af_timezone_offset_min,
+        af.duration_sec as af_duration_sec, af.sample_rate as af_sample_rate, af.channels as af_channels,
+        af.audiomoth_device_id as af_audiomoth_device_id, af.audiomoth_gain as af_audiomoth_gain,
+        af.audiomoth_battery_v as af_audiomoth_battery_v, af.audiomoth_temperature_c as af_audiomoth_temperature_c,
+        af.created_at as af_created_at
+      FROM detections d
+      LEFT JOIN audio_files af ON d.audio_file_id = af.id
+      ${where}
+      ORDER BY ${sortCol} ${sortDir}
+      LIMIT ? OFFSET ?
+    `)
+    .all(...params, limit, offset) as Array<{
+      id: number;
+      run_id: number;
+      location_id: number | null;
+      audio_file_id: number;
+      start_time: number;
+      end_time: number;
+      scientific_name: string;
+      confidence: number;
+      clip_path: string | null;
+      detected_at: string;
+      af_id: number | null;
+      af_file_path: string | null;
+      af_file_name: string | null;
+      af_recording_start: string | null;
+      af_timezone_offset_min: number | null;
+      af_duration_sec: number | null;
+      af_sample_rate: number | null;
+      af_channels: number | null;
+      af_audiomoth_device_id: string | null;
+      af_audiomoth_gain: string | null;
+      af_audiomoth_battery_v: number | null;
+      af_audiomoth_temperature_c: number | null;
+      af_created_at: string | null;
+    }>;
+
+  // Transform flat rows into Detection objects
+  // Since Detection interface still has audio_file_id but not nested audio_file,
+  // we just return the detection fields
+  const detections: Detection[] = rows.map(row => ({
+    id: row.id,
+    run_id: row.run_id,
+    location_id: row.location_id,
+    audio_file_id: row.audio_file_id,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    scientific_name: row.scientific_name,
+    confidence: row.confidence,
+    clip_path: row.clip_path,
+    detected_at: row.detected_at,
+  }));
 
   return { detections, total };
 }
@@ -291,6 +354,7 @@ const BirdaJsonOutputSchema = z.object({
 export async function importDetectionsFromJson(
   runId: number,
   locationId: number | null,
+  audioFileId: number,
   jsonPath: string,
 ): Promise<{ detections: number; sourceFile: string }> {
   // Read with retry logic for Windows file locking
@@ -314,7 +378,7 @@ export async function importDetectionsFromJson(
 
   // Import detections using existing transaction-based function
   if (birdaDetections.length > 0) {
-    insertDetections(runId, locationId, sourceFile, birdaDetections);
+    insertDetections(runId, locationId, audioFileId, birdaDetections);
   }
 
   return {
