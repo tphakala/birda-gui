@@ -265,13 +265,27 @@ const BirdaDetectionSchema = z.object({
   confidence: z.number(),
 });
 
+const BirdaJsonSettingsSchema = z.object({
+  min_confidence: z.number(),
+  overlap: z.number(),
+  lat: z.number().optional(),
+  lon: z.number().optional(),
+  week: z.number().optional(),
+});
+
+const BirdaJsonSummarySchema = z.object({
+  total_detections: z.number(),
+  unique_species: z.number(),
+  audio_duration_seconds: z.number(),
+});
+
 const BirdaJsonOutputSchema = z.object({
-  metadata: z.object({
-    file: z.string(),
-    model: z.string(),
-    min_confidence: z.number(),
-  }),
+  source_file: z.string(),
+  analysis_date: z.string(),
+  model: z.string(),
+  settings: BirdaJsonSettingsSchema,
   detections: z.array(BirdaDetectionSchema),
+  summary: BirdaJsonSummarySchema,
 });
 
 export async function importDetectionsFromJson(
@@ -285,8 +299,8 @@ export async function importDetectionsFromJson(
   // Parse and validate JSON with Zod
   const data = BirdaJsonOutputSchema.parse(JSON.parse(content));
 
-  // Extract source file from metadata
-  const sourceFile = data.metadata.file;
+  // Extract source file from top-level field
+  const sourceFile = data.source_file;
 
   // Convert to BirdaDetection format (add missing fields)
   const birdaDetections: BirdaDetection[] = data.detections.map((d) => ({
