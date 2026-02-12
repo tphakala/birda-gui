@@ -59,10 +59,8 @@ function sendLog(win: BrowserWindow, level: LogLevel, source: string, message: s
 }
 
 async function createTempOutputDir(): Promise<string> {
-  const timestamp = Date.now();
-  const tempDir = path.join(tmpdir(), `birda-${timestamp}`);
-  await fs.promises.mkdir(tempDir, { recursive: true });
-  return tempDir;
+  // Use mkdtemp for atomic unique directory creation
+  return fs.promises.mkdtemp(path.join(tmpdir(), 'birda-'));
 }
 
 async function cleanupTempDir(tempDir: string): Promise<void> {
