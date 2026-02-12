@@ -39,7 +39,7 @@ function getRunById(id: number): AnalysisRun | undefined {
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
 }
 
-export function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
+function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
   const db = getDb();
   return db
     .prepare(

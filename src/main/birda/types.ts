@@ -27,21 +27,11 @@ export interface FileStartedPayload {
   samples: number;
 }
 
-export interface ProgressPayload {
-  percent: number;
-  current_time: number;
-}
-
 export interface FileCompletedPayload {
   file: string;
   status: 'processed' | 'failed' | 'skipped';
   detections: number;
   duration_ms: number;
-}
-
-export interface PipelineCompletedPayload {
-  status: 'success' | 'failed';
-  files_processed: number;
 }
 
 export interface BirdaDetection {

@@ -8,7 +8,13 @@ import { runAnalysis, findBirda, type AnalysisHandle, type LogLevel } from '../b
 import { createRun, updateRunStatus, deleteCompletedRunsForSource } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
-import type { BirdaEventEnvelope } from '../birda/types';
+import type {
+  BirdaEventEnvelope,
+  PipelineStartedPayload,
+  FileStartedPayload,
+  FileCompletedPayload,
+  DetectionsPayload,
+} from '../birda/types';
 
 const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
 const MAX_TRACKED_FILES = 100;
@@ -200,14 +206,14 @@ export function registerAnalysisHandlers(): void {
             // Directory mode events
             if (isDirectory && outputDir) {
               if (envelope.event === 'pipeline_started') {
-                const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
+                const payload = envelope.payload as PipelineStartedPayload;
                 totalFiles = payload.files_total;
                 sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
               } else if (envelope.event === 'file_started') {
-                const payload = envelope.payload as import('../birda/types').FileStartedPayload;
+                const payload = envelope.payload as FileStartedPayload;
                 sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
               } else if (envelope.event === 'file_completed') {
-                const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
+                const payload = envelope.payload as FileCompletedPayload;
 
                 if (payload.status === 'processed') {
                   try {
@@ -251,7 +257,7 @@ export function registerAnalysisHandlers(): void {
             }
             // Single file mode events (existing behavior)
             else if (envelope.event === 'detections') {
-              const payload = envelope.payload as import('../birda/types').DetectionsPayload;
+              const payload = envelope.payload as DetectionsPayload;
               if (payload.detections.length > 0) {
                 try {
                   insertDetections(run.id, locationId, payload.file, payload.detections);
