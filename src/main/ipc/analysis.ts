@@ -110,7 +110,12 @@ export function registerAnalysisHandlers(): void {
         } else {
           const loc = createLocation(request.latitude, request.longitude, request.location_name);
           locationId = loc.id;
-          sendLog(win, 'info', 'analysis', `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`);
+          sendLog(
+            win,
+            'info',
+            'analysis',
+            `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`,
+          );
         }
       }
 
@@ -251,7 +256,12 @@ export function registerAnalysisHandlers(): void {
                 try {
                   insertDetections(run.id, locationId, payload.file, payload.detections);
                   totalDetections += payload.detections.length;
-                  sendLog(win, 'info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
+                  sendLog(
+                    win,
+                    'info',
+                    'analysis',
+                    `Inserted ${payload.detections.length} detection(s) from ${payload.file}`,
+                  );
                 } catch (err) {
                   sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
                 }
