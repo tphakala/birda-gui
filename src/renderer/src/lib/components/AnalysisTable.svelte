@@ -174,9 +174,6 @@
                 <DetectionDetail
                   {detection}
                   sourceFile={detection.audio_file.file_path}
-                  recordingStart={detection.audio_file.recording_start
-                    ? new Date(detection.audio_file.recording_start)
-                    : null}
                 />
               </td>
             </tr>
