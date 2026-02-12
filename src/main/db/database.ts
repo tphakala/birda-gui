@@ -217,11 +217,11 @@ function runMigrations(db: Database.Database): void {
 
         for (const { run_id, source_file } of uniqueFiles) {
           // Extract file name from path
-          const fileName = source_file.split('/').pop() || source_file;
+          const fileName = source_file.split('/').pop() ?? source_file;
 
           // Try to parse AudioMoth timestamp from filename (YYYYMMDD_HHMMSS)
           let recordingStart: string | null = null;
-          const audioMothMatch = fileName.match(/(\d{8})_(\d{6})/);
+          const audioMothMatch = /(\d{8})_(\d{6})/.exec(fileName);
           if (audioMothMatch) {
             const [, dateStr, timeStr] = audioMothMatch;
             // Parse: YYYYMMDD -> YYYY-MM-DD, HHMMSS -> HH:MM:SS

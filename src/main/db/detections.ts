@@ -140,7 +140,7 @@ export function getDetections(filter: DetectionFilter): {
       LIMIT ? OFFSET ?
     `,
     )
-    .all(...params, limit, offset) as Array<{
+    .all(...params, limit, offset) as {
     id: number;
     run_id: number;
     location_id: number | null;

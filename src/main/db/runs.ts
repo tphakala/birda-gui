@@ -85,7 +85,7 @@ export function getRunsWithStats(): RunWithStats[] {
     ORDER BY ar.started_at DESC
   `,
     )
-    .all() as Array<RunWithStats & { file_count: number }>;
+    .all() as (RunWithStats & { file_count: number })[];
 
   // Derive is_directory from file_count
   return rows.map((row) => ({

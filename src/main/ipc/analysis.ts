@@ -133,9 +133,7 @@ async function parseFileMetadata(filePath: string, runTimezoneOffset: number | n
       // Default to UTC (offset 0) if no timezone specified
       const offset = timezoneOffset ?? 0;
       recordingStart = formatIsoTimestamp(parsed, offset);
-      if (timezoneOffset === null) {
-        timezoneOffset = 0;
-      }
+      timezoneOffset ??= 0;
     }
   }
 

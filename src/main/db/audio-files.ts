@@ -50,7 +50,7 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
  */
 export function getAudioFile(id: number): AudioFile | null {
   const db = getDb();
-  return (db.prepare('SELECT * FROM audio_files WHERE id = ?').get(id) as AudioFile) ?? null;
+  return (db.prepare('SELECT * FROM audio_files WHERE id = ?').get(id) as AudioFile | undefined) ?? null;
 }
 
 /**
