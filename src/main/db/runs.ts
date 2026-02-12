@@ -27,7 +27,7 @@ export function createRun(
 
 export function updateRunStatus(id: number, status: AnalysisRun['status']): void {
   const db = getDb();
-  if (status === 'completed' || status === 'failed') {
+  if (status === 'completed' || status === 'failed' || status === 'completed_with_errors') {
     db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
   } else {
     db.prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, id);
