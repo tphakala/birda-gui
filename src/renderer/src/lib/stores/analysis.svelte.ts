@@ -52,10 +52,17 @@ export function resetAnalysis(): void {
 const MAX_EVENTS = 500;
 
 export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
-  if (analysisState.events.length >= MAX_EVENTS) {
-    analysisState.events.splice(0, analysisState.events.length - MAX_EVENTS + 1);
-  }
   analysisState.events.push(envelope);
+
+  // Trim only progress events when limit reached - keep file_completed events for UI state
+  if (analysisState.events.length > MAX_EVENTS) {
+    const criticalEvents = analysisState.events.filter((e) => e.event !== 'progress');
+    const progressEvents = analysisState.events.filter((e) => e.event === 'progress');
+
+    // Keep all critical events + recent progress events
+    const trimmedProgress = progressEvents.slice(-Math.max(0, MAX_EVENTS - criticalEvents.length));
+    analysisState.events = [...criticalEvents, ...trimmedProgress];
+  }
 
   switch (envelope.event) {
     case 'pipeline_started': {
