@@ -40,8 +40,8 @@ function enrichDetections(detections: (Detection & { audio_file: AudioFile })[])
  * Falls back to the hour derived from start_time offset when the filename
  * doesn't match the expected pattern.
  */
-function computeDetectionHour(sourceFile: string, startTime: number): number {
-  const base = sourceFile.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
+function computeDetectionHour(filePath: string, startTime: number): number {
+  const base = filePath.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
   const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
   if (match) {
     const [, y, mo, d, h, mi, s] = match;
@@ -112,7 +112,7 @@ export function registerCatalogHandlers(): void {
     const speciesNames = new Set<string>();
 
     for (const row of rows) {
-      const hour = computeDetectionHour(row.source_file, row.start_time);
+      const hour = computeDetectionHour(row.file_path, row.start_time);
       const key = `${row.scientific_name}\0${hour}`;
       counters.set(key, (counters.get(key) ?? 0) + 1);
       speciesNames.add(row.scientific_name);

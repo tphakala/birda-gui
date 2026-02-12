@@ -19,7 +19,7 @@ interface RawRunSpeciesAggregation {
 interface RawGridDetection {
   scientific_name: string;
   start_time: number;
-  source_file: string;
+  file_path: string;
 }
 
 function escapeLike(str: string): string {
@@ -216,10 +216,15 @@ export function getRunSpeciesAggregation(filter: DetectionFilter): RawRunSpecies
 
 export function getDetectionsForGrid(filter: DetectionFilter): RawGridDetection[] {
   const db = getDb();
-  const { where, params } = buildWhereClause(filter);
+  const { where, params } = buildWhereClause(filter, 'd');
 
   return db
-    .prepare(`SELECT scientific_name, start_time, source_file FROM detections ${where}`)
+    .prepare(`
+      SELECT d.scientific_name, d.start_time, af.file_path
+      FROM detections d
+      LEFT JOIN audio_files af ON d.audio_file_id = af.id
+      ${where}
+    `)
     .all(...params) as RawGridDetection[];
 }
 
