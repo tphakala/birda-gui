@@ -5,7 +5,10 @@ export interface AudioMothMeta {
   gain: string;
   batteryV: number | null;
   temperatureC: number | null;
-  recordedAtUtc: string | null;
+  /** ISO 8601 recording timestamp. Includes 'Z' for UTC or '+HH:MM'/'-HH:MM' offset. */
+  recordedAt: string | null;
+  /** UTC offset in minutes parsed from the AudioMoth comment (0 = UTC, null = unknown). */
+  timezoneOffsetMin: number | null;
 }
 
 export interface AudioFileInfo {
@@ -47,6 +50,8 @@ export interface AnalysisRun {
   status: 'pending' | 'running' | 'completed' | 'failed';
   started_at: string | null;
   completed_at: string | null;
+  /** UTC offset in minutes of the recording's timezone (0 = UTC, null = unknown). */
+  timezone_offset_min: number | null;
 }
 
 export interface RunWithStats extends AnalysisRun {
@@ -118,6 +123,8 @@ export interface AnalysisRequest {
   location_name?: string | undefined;
   month?: number | undefined;
   day?: number | undefined;
+  /** UTC offset in minutes from AudioMoth metadata (0 = UTC). Omit if unknown. */
+  timezone_offset_min?: number | undefined;
 }
 
 export interface DetectionFilter {

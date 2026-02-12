@@ -113,9 +113,9 @@
             >
           </div>
         {/if}
-        {#if file.audiomoth?.recordedAtUtc ?? parseRecordingStart(file.name)}
-          {@const isUtc = !!file.audiomoth?.recordedAtUtc}
-          {@const recStart = isUtc ? new Date(file.audiomoth!.recordedAtUtc!) : parseRecordingStart(file.name)!}
+        {#if file.audiomoth?.recordedAt ?? parseRecordingStart(file.name)}
+          {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
+          {@const recStart = isUtc ? new Date(file.audiomoth!.recordedAt!) : parseRecordingStart(file.name)!}
           {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
           <div class="flex items-center gap-2">
             <Calendar size={14} class="text-base-content/40" />

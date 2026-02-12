@@ -451,6 +451,7 @@
           latitude={selectedRun.latitude}
           longitude={selectedRun.longitude}
           recordingDate={recordingStart}
+          timezoneOffsetMin={selectedRun.timezone_offset_min}
         />
       {/if}
     </div>

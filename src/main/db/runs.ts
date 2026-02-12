@@ -7,13 +7,21 @@ export function createRun(
   minConfidence: number,
   locationId?: number | null,
   settingsJson?: string | null,
+  timezoneOffsetMin?: number | null,
 ): AnalysisRun {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO analysis_runs (location_id, source_path, model, min_confidence, settings_json, status, started_at)
-    VALUES (?, ?, ?, ?, ?, 'running', datetime('now'))
+    INSERT INTO analysis_runs (location_id, source_path, model, min_confidence, settings_json, timezone_offset_min, status, started_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'running', datetime('now'))
   `);
-  const result = stmt.run(locationId ?? null, sourcePath, model, minConfidence, settingsJson ?? null);
+  const result = stmt.run(
+    locationId ?? null,
+    sourcePath,
+    model,
+    minConfidence,
+    settingsJson ?? null,
+    timezoneOffsetMin ?? null,
+  );
   return getRunById(result.lastInsertRowid as number)!;
 }
 

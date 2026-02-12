@@ -40,6 +40,7 @@
       longitude: number;
       month?: number | undefined;
       day?: number | undefined;
+      timezoneOffsetMin?: number | undefined;
     }) => void;
     onstop: () => void;
   } = $props();
@@ -299,7 +300,9 @@
       month = d.getMonth() + 1;
       day = d.getDate();
     }
-    onstart({ locationName, latitude, longitude, month, day });
+    // Extract timezone offset from AudioMoth metadata of the first scanned file
+    const timezoneOffsetMin = scanResult?.files[0]?.audiomoth?.timezoneOffsetMin ?? undefined;
+    onstart({ locationName, latitude, longitude, month, day, timezoneOffsetMin });
   }
 
   async function handleOpenFile() {

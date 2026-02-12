@@ -60,7 +60,14 @@ export function registerAnalysisHandlers(): void {
     }
 
     // Create run record
-    const run = createRun(request.source_path, request.model, request.min_confidence, locationId);
+    const run = createRun(
+      request.source_path,
+      request.model,
+      request.min_confidence,
+      locationId,
+      undefined,
+      request.timezone_offset_min,
+    );
     sendLog(win, 'info', 'analysis', `Created analysis run: id=${run.id}`);
 
     // Resolve month/day: prefer values from request, then try to parse from filename
