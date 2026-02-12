@@ -67,22 +67,31 @@ export function markStaleRunsAsFailed(): number {
 
 export function getRunsWithStats(): RunWithStats[] {
   const db = getDb();
-  return db
+  const rows = db
     .prepare(
-      `SELECT
-        r.*,
-        COALESCE(d.cnt, 0) AS detection_count,
-        l.name AS location_name,
-        l.latitude,
-        l.longitude
-      FROM analysis_runs r
-      LEFT JOIN (
-        SELECT run_id, COUNT(*) AS cnt FROM detections GROUP BY run_id
-      ) d ON d.run_id = r.id
-      LEFT JOIN locations l ON l.id = r.location_id
-      ORDER BY r.started_at DESC`,
+      `
+    SELECT
+      ar.*,
+      COUNT(DISTINCT d.id) as detection_count,
+      COUNT(DISTINCT af.id) as file_count,
+      l.name as location_name,
+      l.latitude,
+      l.longitude
+    FROM analysis_runs ar
+    LEFT JOIN detections d ON ar.id = d.run_id
+    LEFT JOIN audio_files af ON ar.id = af.run_id
+    LEFT JOIN locations l ON ar.location_id = l.id
+    GROUP BY ar.id
+    ORDER BY ar.started_at DESC
+  `,
     )
-    .all() as RunWithStats[];
+    .all() as (RunWithStats & { file_count: number })[];
+
+  // Derive is_directory from file_count
+  return rows.map((row) => ({
+    ...row,
+    is_directory: row.file_count > 1,
+  }));
 }
 
 export function deleteCompletedRunsForSource(sourcePath: string, model: string): number {

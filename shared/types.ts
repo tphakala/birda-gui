@@ -56,6 +56,8 @@ export interface AnalysisRun {
 
 export interface RunWithStats extends AnalysisRun {
   detection_count: number;
+  file_count: number; // NEW: number of audio files in this run
+  is_directory: boolean; // NEW: true if source_path is a directory
   location_name: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -65,18 +67,52 @@ export interface Detection {
   id: number;
   run_id: number;
   location_id: number | null;
-  source_file: string;
+  audio_file_id: number; // NEW: replaces source_file as primary reference
   start_time: number;
   end_time: number;
   scientific_name: string;
   confidence: number;
   clip_path: string | null;
   detected_at: string;
+  source_file?: string; // DEPRECATED: kept for backward compat during migration
 }
 
-/** Detection enriched with common_name resolved from label files */
+// === Audio Files ===
+
+export interface AudioFile {
+  id: number;
+  run_id: number;
+  file_path: string;
+  file_name: string;
+  recording_start: string | null;
+  timezone_offset_min: number | null;
+  duration_sec: number | null;
+  sample_rate: number | null;
+  channels: number | null;
+  audiomoth_device_id: string | null;
+  audiomoth_gain: string | null;
+  audiomoth_battery_v: number | null;
+  audiomoth_temperature_c: number | null;
+  created_at: string;
+}
+
+/** Metadata for creating audio_files records during analysis */
+export interface AudioFileMetadata {
+  recording_start: string | null;
+  timezone_offset_min: number | null;
+  duration_sec: number | null;
+  sample_rate: number | null;
+  channels: number | null;
+  audiomoth_device_id?: string | null;
+  audiomoth_gain?: string | null;
+  audiomoth_battery_v?: number | null;
+  audiomoth_temperature_c?: number | null;
+}
+
+/** Detection enriched with common_name and audio_file data */
 export interface EnrichedDetection extends Detection {
   common_name: string;
+  audio_file: AudioFile; // NEW: joined audio file data
 }
 
 export interface SpeciesSummary {

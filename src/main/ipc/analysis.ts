@@ -8,6 +8,9 @@ import { runAnalysis, findBirda, type AnalysisHandle, type LogLevel } from '../b
 import { createRun, updateRunStatus, deleteCompletedRunsForSource } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
+import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
+import { createAudioFile } from '../db/audio-files';
+import type { AudioFileMetadata } from '$shared/types';
 import type {
   BirdaEventEnvelope,
   PipelineStartedPayload,
@@ -106,6 +109,46 @@ const AnalysisRequestSchema = z.object({
   location_name: z.string().optional(),
   timezone_offset_min: z.number().int().optional(),
 });
+
+/**
+ * Parse audio file metadata for storage in audio_files table
+ * Priority: AudioMoth metadata > filename parsing (defaults to UTC if no timezone set)
+ */
+async function parseFileMetadata(filePath: string, runTimezoneOffset: number | null): Promise<AudioFileMetadata> {
+  const meta = await getAudioMetadata(filePath);
+
+  let recordingStart: string | null = null;
+  let timezoneOffset: number | null = runTimezoneOffset;
+
+  // Priority 1: AudioMoth metadata (has timezone)
+  if (meta.audiomoth?.recordedAt) {
+    recordingStart = meta.audiomoth.recordedAt;
+    timezoneOffset = meta.audiomoth.timezoneOffsetMin;
+  }
+  // Priority 2: Filename parsing (default to UTC if no timezone set)
+  else {
+    const basename = filePath.replace(/^.*[\\/]/, '');
+    const parsed = parseRecordingStart(basename);
+    if (parsed) {
+      // Default to UTC (offset 0) if no timezone specified
+      const offset = timezoneOffset ?? 0;
+      recordingStart = formatIsoTimestamp(parsed, offset);
+      timezoneOffset ??= 0;
+    }
+  }
+
+  return {
+    recording_start: recordingStart,
+    timezone_offset_min: timezoneOffset,
+    duration_sec: meta.durationSec,
+    sample_rate: meta.sampleRate,
+    channels: meta.channels,
+    audiomoth_device_id: meta.audiomoth?.deviceId ?? null,
+    audiomoth_gain: meta.audiomoth?.gain ?? null,
+    audiomoth_battery_v: meta.audiomoth?.batteryV ?? null,
+    audiomoth_temperature_c: meta.audiomoth?.temperatureC ?? null,
+  };
+}
 
 export function registerAnalysisHandlers(): void {
   ipcMain.handle('birda:analyze', async (event, rawRequest: unknown) => {
@@ -271,7 +314,14 @@ export function registerAnalysisHandlers(): void {
                   await importSemaphore.acquire();
                   try {
                     const jsonPath = deriveJsonPath(outputDir, payload.file);
-                    const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
+
+                    // NEW: Parse file metadata and create audio_file record
+                    const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                    const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+
+                    // Import detections with audio_file_id reference
+                    const result = await importDetectionsFromJson(run.id, locationId, audioFileId, jsonPath);
+
                     totalDetections += result.detections;
                     sendLog(
                       win,
@@ -309,7 +359,11 @@ export function registerAnalysisHandlers(): void {
               const payload = envelope.payload as DetectionsPayload;
               if (payload.detections.length > 0) {
                 try {
-                  insertDetections(run.id, locationId, payload.file, payload.detections);
+                  // NEW: Create audio_file record for single file
+                  const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                  const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+
+                  insertDetections(run.id, locationId, audioFileId, payload.detections);
                   totalDetections += payload.detections.length;
                   sendLog(
                     win,

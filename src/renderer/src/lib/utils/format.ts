@@ -52,19 +52,46 @@ export function parseRecordingStart(filename: string): Date | null {
 }
 
 /**
- * Compute actual wall-clock time by adding offset seconds to recording start.
- * Handles day boundary crossover via Date arithmetic.
+ * Format detection date from recording_start + offset
+ * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */
-export function formatClockTime(startTime: Date, offsetSeconds: number): string {
-  const actual = new Date(startTime.getTime() + offsetSeconds * 1000);
-  const h = actual.getHours().toString().padStart(2, '0');
-  const m = actual.getMinutes().toString().padStart(2, '0');
-  const s = actual.getSeconds().toString().padStart(2, '0');
-  // Show date prefix if it rolled past the start date
-  if (actual.toDateString() !== startTime.toDateString()) {
-    const mo = (actual.getMonth() + 1).toString().padStart(2, '0');
-    const d = actual.getDate().toString().padStart(2, '0');
-    return `${mo}-${d} ${h}:${m}:${s}`;
+export function formatDetectionDate(detection: {
+  audio_file: { recording_start: string | null };
+  start_time: number;
+}): string {
+  if (!detection.audio_file.recording_start) return '--';
+
+  const recordingStart = new Date(detection.audio_file.recording_start);
+  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
+  const now = new Date();
+
+  const month = (actualTime.getMonth() + 1).toString().padStart(2, '0');
+  const day = actualTime.getDate().toString().padStart(2, '0');
+
+  // Include year if different from current year
+  if (actualTime.getFullYear() !== now.getFullYear()) {
+    const year = actualTime.getFullYear().toString().slice(-2);
+    return `${year}-${month}-${day}`;
   }
+
+  return `${month}-${day}`;
+}
+
+/**
+ * Format detection time from recording_start + offset
+ * Returns: "14:30:22" (HH:MM:SS) or "--" if no timestamp
+ */
+export function formatDetectionTime(detection: {
+  audio_file: { recording_start: string | null };
+  start_time: number;
+}): string {
+  if (!detection.audio_file.recording_start) return '--';
+
+  const recordingStart = new Date(detection.audio_file.recording_start);
+  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
+
+  const h = actualTime.getHours().toString().padStart(2, '0');
+  const m = actualTime.getMinutes().toString().padStart(2, '0');
+  const s = actualTime.getSeconds().toString().padStart(2, '0');
   return `${h}:${m}:${s}`;
 }

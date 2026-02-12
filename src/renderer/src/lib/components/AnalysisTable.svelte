@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown, ChevronLeft } from '@lucide/svelte';
   import DetectionDetail from './DetectionDetail.svelte';
-  import { formatConfidence, formatTime, formatClockTime } from '$lib/utils/format';
+  import { formatConfidence, formatTime, formatDetectionDate, formatDetectionTime } from '$lib/utils/format';
   import type { EnrichedDetection } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -9,8 +9,7 @@
     detections,
     total,
     loading,
-    sourceFile,
-    recordingStart = null,
+    isDirectory,
     sortColumn,
     sortDir,
     offset,
@@ -21,8 +20,7 @@
     detections: EnrichedDetection[];
     total: number;
     loading: boolean;
-    sourceFile: string;
-    recordingStart?: Date | null;
+    isDirectory: boolean;
     sortColumn: string;
     sortDir: 'asc' | 'desc';
     offset: number;
@@ -31,16 +29,55 @@
     onpage: (newOffset: number) => void;
   } = $props();
 
-  type SortableColumn = 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
+  type SortableColumn = 'file_name' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
+  type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
-  const columns = $derived<{ key: SortableColumn; label: string; class?: string }[]>([
-    { key: 'start_time', label: recordingStart ? m.table_columnOffset() : m.table_columnTime(), class: 'w-20' },
-    { key: 'common_name', label: m.table_columnSpecies() },
-    { key: 'scientific_name', label: m.table_columnScientificName() },
-    { key: 'confidence', label: m.table_columnConfidence(), class: 'w-24 text-right' },
+  // Derive whether any detection has timestamp metadata
+  const hasTimestamps = $derived(detections.some((d) => d.audio_file.recording_start !== null));
+
+  // Build columns with visibility logic
+  const columns = $derived<{ key: ColumnKey; label: string; class?: string; sortable: boolean; visible: boolean }[]>([
+    {
+      key: 'file_name',
+      label: m.table_columnSourceFile(),
+      class: 'max-w-xs truncate',
+      sortable: true,
+      visible: isDirectory,
+    },
+    {
+      key: 'date',
+      label: m.table_columnDate(),
+      class: 'w-20',
+      sortable: false,
+      visible: isDirectory && hasTimestamps,
+    },
+    {
+      key: 'time',
+      label: m.table_columnTime(),
+      class: 'w-20',
+      sortable: false,
+      visible: isDirectory && hasTimestamps,
+    },
+    {
+      key: 'start_time',
+      label: hasTimestamps ? m.table_columnOffset() : m.table_columnTime(),
+      class: 'w-20',
+      sortable: true,
+      visible: true,
+    },
+    { key: 'common_name', label: m.table_columnSpecies(), sortable: true, visible: true },
+    { key: 'scientific_name', label: m.table_columnScientificName(), sortable: true, visible: true },
+    {
+      key: 'confidence',
+      label: m.table_columnConfidence(),
+      class: 'w-24 text-right',
+      sortable: true,
+      visible: true,
+    },
   ]);
 
-  const colCount = $derived(recordingStart ? 6 : 5);
+  const visibleColumns = $derived(columns.filter((col) => col.visible));
+  const colCount = $derived(visibleColumns.length + 1);
 
   let expandedId = $state<number | null>(null);
 
@@ -69,29 +106,30 @@
       <thead>
         <tr>
           <th class="w-8"></th>
-          {#each columns as col, i (col.key)}
+          {#each visibleColumns as col (col.key)}
             <th class={col.class ?? ''}>
-              <button
-                class="hover:text-base-content flex items-center gap-1"
-                onclick={() => {
-                  onsort(col.key);
-                }}
-              >
-                {col.label}
-                {#if sortColumn === col.key}
-                  {#if sortDir === 'asc'}
-                    <ArrowUp size={14} />
+              {#if col.sortable}
+                <button
+                  class="hover:text-base-content flex items-center gap-1"
+                  onclick={() => {
+                    onsort(col.key);
+                  }}
+                >
+                  {col.label}
+                  {#if sortColumn === col.key}
+                    {#if sortDir === 'asc'}
+                      <ArrowUp size={14} />
+                    {:else}
+                      <ArrowDown size={14} />
+                    {/if}
                   {:else}
-                    <ArrowDown size={14} />
+                    <ArrowUpDown size={14} class="opacity-30" />
                   {/if}
-                {:else}
-                  <ArrowUpDown size={14} class="opacity-30" />
-                {/if}
-              </button>
+                </button>
+              {:else}
+                {col.label}
+              {/if}
             </th>
-            {#if i === 0 && recordingStart}
-              <th class="w-24">{m.table_columnTime()}</th>
-            {/if}
           {/each}
         </tr>
       </thead>
@@ -110,18 +148,28 @@
                 <ChevronRight size={14} />
               {/if}
             </td>
-            <td class="tabular-nums">{formatTime(detection.start_time)}</td>
-            {#if recordingStart}
-              <td class="text-base-content/60 tabular-nums">{formatClockTime(recordingStart, detection.start_time)}</td>
-            {/if}
-            <td class="font-medium">{detection.common_name}</td>
-            <td class="text-base-content/50 italic">{detection.scientific_name}</td>
-            <td class="text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
+            {#each visibleColumns as col (col.key)}
+              {#if col.key === 'file_name'}
+                <td class={col.class ?? ''}>{detection.audio_file.file_name}</td>
+              {:else if col.key === 'date'}
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">{formatDetectionDate(detection)}</td>
+              {:else if col.key === 'time'}
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">{formatDetectionTime(detection)}</td>
+              {:else if col.key === 'start_time'}
+                <td class="{col.class ?? ''} tabular-nums">{formatTime(detection.start_time)}</td>
+              {:else if col.key === 'common_name'}
+                <td class="{col.class ?? ''} font-medium">{detection.common_name}</td>
+              {:else if col.key === 'scientific_name'}
+                <td class="{col.class ?? ''} text-base-content/50 italic">{detection.scientific_name}</td>
+              {:else if col.key === 'confidence'}
+                <td class="{col.class ?? ''} text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
+              {/if}
+            {/each}
           </tr>
           {#if expandedId === detection.id}
             <tr>
               <td colspan={colCount} class="p-0">
-                <DetectionDetail {detection} {sourceFile} {recordingStart} />
+                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} />
               </td>
             </tr>
           {/if}

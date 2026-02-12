@@ -14,7 +14,7 @@
     getCatalogStats,
     getSpeciesLists,
   } from '$lib/utils/ipc';
-  import { formatNumber, parseRecordingStart } from '$lib/utils/format';
+  import { formatNumber } from '$lib/utils/format';
   import type {
     EnrichedDetection,
     RunWithStats,
@@ -62,7 +62,6 @@
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
   const sourceFileName = $derived(selectedRun ? (selectedRun.source_path.split(/[\\/]/).pop() ?? '') : '');
-  const recordingStart = $derived(sourceFileName ? parseRecordingStart(sourceFileName) : null);
 
   // --- Contextual header count ---
   const headerCount = $derived.by(() => {
@@ -236,8 +235,8 @@
       ignoreConfidence = false;
       speciesData = [];
       gridData = [];
-      // Fall back from grid view if the new run has no recording timestamp
-      if (activeView === 'grid' && !recordingStart) {
+      // Fall back from grid view if the new run is a directory
+      if (activeView === 'grid' && selectedRun?.is_directory) {
         activeView = 'table';
       }
       loadActiveView();
@@ -305,7 +304,15 @@
       <!-- Header row -->
       <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2 text-sm">
         <AudioLines size={16} class="text-primary shrink-0" />
-        <span class="font-medium">{sourceFileName}</span>
+
+        {#if selectedRun.is_directory}
+          <span class="truncate font-medium" title={selectedRun.source_path}>{selectedRun.source_path}</span>
+          <span class="text-base-content/40">|</span>
+          <span class="text-base-content/60">{selectedRun.file_count} files</span>
+        {:else}
+          <span class="font-medium">{sourceFileName}</span>
+        {/if}
+
         <span class="text-base-content/40">|</span>
         <span class="text-base-content/60">{headerCount}</span>
 
@@ -333,17 +340,19 @@
             <LayoutGrid size={14} />
             <span class="hidden sm:inline">{m.view_species()}</span>
           </button>
-          <div class="tooltip tooltip-left" data-tip={!recordingStart ? m.grid_noTimestamp() : ''}>
+          <div class="tooltip tooltip-left" data-tip={selectedRun.is_directory ? m.grid_noTimestamp() : ''}>
             <button
               class="btn btn-sm join-item {activeView === 'grid' ? 'btn-active' : ''}"
-              disabled={!recordingStart}
+              disabled={selectedRun.is_directory}
               onclick={() => {
                 switchView('grid');
               }}
-              title={recordingStart ? m.view_grid() : undefined}
+              title={!selectedRun.is_directory ? m.view_grid() : undefined}
             >
-              <Grid3x3 size={14} class={!recordingStart ? 'opacity-40' : ''} />
-              <span class="hidden sm:inline {!recordingStart ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
+              <Grid3x3 size={14} class={selectedRun.is_directory ? 'opacity-40' : ''} />
+              <span class="hidden sm:inline {selectedRun.is_directory ? 'line-through opacity-40' : ''}"
+                >{m.view_grid()}</span
+              >
             </button>
           </div>
         </div>
@@ -428,8 +437,7 @@
           {detections}
           {total}
           {loading}
-          sourceFile={selectedRun.source_path}
-          {recordingStart}
+          isDirectory={selectedRun.is_directory}
           {sortColumn}
           {sortDir}
           {offset}
@@ -450,7 +458,7 @@
           loading={gridLoading}
           latitude={selectedRun.latitude}
           longitude={selectedRun.longitude}
-          recordingDate={recordingStart}
+          recordingDate={null}
           timezoneOffsetMin={selectedRun.timezone_offset_min}
         />
       {/if}

@@ -143,6 +143,252 @@ function runMigrations(db: Database.Database): void {
       db.pragma('foreign_keys = ON');
     }
   }
+
+  // Migration 5: Add audio_files table and migrate existing data
+  if (!applied.has(5)) {
+    console.log('Migrating to version 5: Add audio_files table');
+
+    // Temporarily disable foreign keys for table recreation
+    db.pragma('foreign_keys = OFF');
+
+    try {
+      db.transaction(() => {
+        // Create audio_files table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS audio_files (
+            id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id                  INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+            file_path               TEXT NOT NULL,
+            file_name               TEXT NOT NULL,
+            recording_start         TEXT,
+            timezone_offset_min     INTEGER,
+            duration_sec            REAL,
+            sample_rate             INTEGER,
+            channels                INTEGER,
+            audiomoth_device_id     TEXT,
+            audiomoth_gain          TEXT,
+            audiomoth_battery_v     REAL,
+            audiomoth_temperature_c REAL,
+            created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_audio_files_run ON audio_files(run_id);
+          CREATE INDEX IF NOT EXISTS idx_audio_files_path ON audio_files(file_path);
+          CREATE INDEX IF NOT EXISTS idx_audio_files_device ON audio_files(audiomoth_device_id);
+          CREATE INDEX IF NOT EXISTS idx_audio_files_recording_start ON audio_files(recording_start);
+        `);
+
+        // Migrate existing data: group detections by (run_id, source_file)
+        const uniqueFiles = db
+          .prepare(
+            `
+          SELECT DISTINCT run_id, source_file
+          FROM detections
+          ORDER BY run_id, source_file
+        `,
+          )
+          .all() as { run_id: number; source_file: string }[];
+
+        console.log(`Migrating ${uniqueFiles.length} unique audio files`);
+
+        const insertAudioFile = db.prepare(`
+          INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+
+        const getRunTimezone = db.prepare(`
+          SELECT timezone_offset_min FROM analysis_runs WHERE id = ?
+        `);
+
+        // Create temporary mapping table
+        db.exec(`
+          CREATE TEMP TABLE audio_file_mapping (
+            run_id INTEGER NOT NULL,
+            source_file TEXT NOT NULL,
+            audio_file_id INTEGER NOT NULL,
+            PRIMARY KEY (run_id, source_file)
+          )
+        `);
+
+        const insertMapping = db.prepare(`
+          INSERT INTO audio_file_mapping (run_id, source_file, audio_file_id)
+          VALUES (?, ?, ?)
+        `);
+
+        for (const { run_id, source_file } of uniqueFiles) {
+          // Extract file name from path
+          const fileName = source_file.split('/').pop() ?? source_file;
+
+          // Try to parse AudioMoth timestamp from filename (YYYYMMDD_HHMMSS)
+          let recordingStart: string | null = null;
+          const audioMothMatch = /(\d{8})_(\d{6})/.exec(fileName);
+          if (audioMothMatch) {
+            const [, dateStr, timeStr] = audioMothMatch;
+            // Parse: YYYYMMDD -> YYYY-MM-DD, HHMMSS -> HH:MM:SS
+            const year = dateStr.slice(0, 4);
+            const month = dateStr.slice(4, 6);
+            const day = dateStr.slice(6, 8);
+            const hour = timeStr.slice(0, 2);
+            const minute = timeStr.slice(2, 4);
+            const second = timeStr.slice(4, 6);
+            recordingStart = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+          }
+
+          // Get timezone from run
+          const runData = getRunTimezone.get(run_id) as { timezone_offset_min: number | null } | undefined;
+          const timezoneOffset = runData?.timezone_offset_min ?? null;
+
+          // Insert audio file record
+          const result = insertAudioFile.run(run_id, source_file, fileName, recordingStart, timezoneOffset);
+
+          // Store mapping for later use
+          insertMapping.run(run_id, source_file, result.lastInsertRowid);
+        }
+
+        console.log('Audio files migration completed');
+
+        // Drop views that depend on detections table
+        db.exec('DROP VIEW IF EXISTS species_summary');
+
+        // Recreate detections table with audio_file_id instead of source_file
+        db.exec(`
+          CREATE TABLE detections_new (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id          INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+            location_id     INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+            audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
+            start_time      REAL NOT NULL,
+            end_time        REAL NOT NULL,
+            scientific_name TEXT NOT NULL,
+            confidence      REAL NOT NULL,
+            clip_path       TEXT,
+            detected_at     TEXT NOT NULL DEFAULT (datetime('now'))
+          );
+        `);
+
+        // Copy data with audio_file_id from mapping
+        db.exec(`
+          INSERT INTO detections_new (id, run_id, location_id, audio_file_id, start_time, end_time, scientific_name, confidence, clip_path, detected_at)
+          SELECT d.id, d.run_id, d.location_id, m.audio_file_id, d.start_time, d.end_time, d.scientific_name, d.confidence, d.clip_path, d.detected_at
+          FROM detections d
+          INNER JOIN audio_file_mapping m ON d.run_id = m.run_id AND d.source_file = m.source_file
+        `);
+
+        // Drop old table and rename new one
+        db.exec('DROP TABLE detections');
+        db.exec('ALTER TABLE detections_new RENAME TO detections');
+
+        // Recreate indexes
+        db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_detections_species ON detections(scientific_name);
+          CREATE INDEX IF NOT EXISTS idx_detections_location ON detections(location_id);
+          CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
+          CREATE INDEX IF NOT EXISTS idx_detections_confidence ON detections(confidence);
+          CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
+        `);
+
+        // Recreate species_summary view
+        db.exec(`
+          CREATE VIEW IF NOT EXISTS species_summary AS
+          SELECT
+            scientific_name,
+            COUNT(DISTINCT location_id) AS location_count,
+            COUNT(*) AS detection_count,
+            MAX(detected_at) AS last_detected,
+            AVG(confidence) AS avg_confidence
+          FROM detections
+          GROUP BY scientific_name
+        `);
+
+        // Clean up temp table
+        db.exec('DROP TABLE audio_file_mapping');
+
+        db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(5);
+      })();
+    } finally {
+      // Re-enable foreign keys even if migration fails
+      db.pragma('foreign_keys = ON');
+    }
+  }
+
+  // Migration 6: Fix detections table if source_file column still exists
+  if (!applied.has(6)) {
+    console.log('Checking if detections table needs fixing...');
+
+    const columns = db.prepare('PRAGMA table_info(detections)').all() as { name: string }[];
+    const hasSourceFile = columns.some((c) => c.name === 'source_file');
+    const hasAudioFileId = columns.some((c) => c.name === 'audio_file_id');
+
+    if (hasSourceFile && hasAudioFileId) {
+      console.log('Fixing detections table: removing source_file column');
+
+      db.pragma('foreign_keys = OFF');
+
+      try {
+        db.transaction(() => {
+          // Drop views that depend on detections table
+          db.exec('DROP VIEW IF EXISTS species_summary');
+
+          // Recreate detections table without source_file
+          db.exec(`
+            CREATE TABLE detections_new (
+              id              INTEGER PRIMARY KEY AUTOINCREMENT,
+              run_id          INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+              location_id     INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+              audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
+              start_time      REAL NOT NULL,
+              end_time        REAL NOT NULL,
+              scientific_name TEXT NOT NULL,
+              confidence      REAL NOT NULL,
+              clip_path       TEXT,
+              detected_at     TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+          `);
+
+          // Copy data
+          db.exec(`
+            INSERT INTO detections_new (id, run_id, location_id, audio_file_id, start_time, end_time, scientific_name, confidence, clip_path, detected_at)
+            SELECT id, run_id, location_id, audio_file_id, start_time, end_time, scientific_name, confidence, clip_path, detected_at
+            FROM detections
+          `);
+
+          // Drop old table and rename new one
+          db.exec('DROP TABLE detections');
+          db.exec('ALTER TABLE detections_new RENAME TO detections');
+
+          // Recreate indexes
+          db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_detections_species ON detections(scientific_name);
+            CREATE INDEX IF NOT EXISTS idx_detections_location ON detections(location_id);
+            CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
+            CREATE INDEX IF NOT EXISTS idx_detections_confidence ON detections(confidence);
+            CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
+          `);
+
+          // Recreate species_summary view
+          db.exec(`
+            CREATE VIEW IF NOT EXISTS species_summary AS
+            SELECT
+              scientific_name,
+              COUNT(DISTINCT location_id) AS location_count,
+              COUNT(*) AS detection_count,
+              MAX(detected_at) AS last_detected,
+              AVG(confidence) AS avg_confidence
+            FROM detections
+            GROUP BY scientific_name
+          `);
+
+          console.log('Detections table fixed');
+        })();
+      } finally {
+        db.pragma('foreign_keys = ON');
+      }
+    } else {
+      console.log('Detections table is already correct');
+    }
+
+    db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(6);
+  }
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {

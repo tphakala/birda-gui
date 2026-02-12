@@ -24,9 +24,9 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
 
 CREATE TABLE IF NOT EXISTS detections (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id          INTEGER NOT NULL REFERENCES analysis_runs(id),
-    location_id     INTEGER REFERENCES locations(id),
-    source_file     TEXT NOT NULL,
+    run_id          INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+    location_id     INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
     start_time      REAL NOT NULL,
     end_time        REAL NOT NULL,
     scientific_name TEXT NOT NULL,
@@ -39,6 +39,29 @@ CREATE INDEX IF NOT EXISTS idx_detections_species ON detections(scientific_name)
 CREATE INDEX IF NOT EXISTS idx_detections_location ON detections(location_id);
 CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
 CREATE INDEX IF NOT EXISTS idx_detections_confidence ON detections(confidence);
+CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
+
+CREATE TABLE IF NOT EXISTS audio_files (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id                  INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+    file_path               TEXT NOT NULL,
+    file_name               TEXT NOT NULL,
+    recording_start         TEXT,
+    timezone_offset_min     INTEGER,
+    duration_sec            REAL,
+    sample_rate             INTEGER,
+    channels                INTEGER,
+    audiomoth_device_id     TEXT,
+    audiomoth_gain          TEXT,
+    audiomoth_battery_v     REAL,
+    audiomoth_temperature_c REAL,
+    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_files_run ON audio_files(run_id);
+CREATE INDEX IF NOT EXISTS idx_audio_files_path ON audio_files(file_path);
+CREATE INDEX IF NOT EXISTS idx_audio_files_device ON audio_files(audiomoth_device_id);
+CREATE INDEX IF NOT EXISTS idx_audio_files_recording_start ON audio_files(recording_start);
 
 CREATE VIEW IF NOT EXISTS species_summary AS
 SELECT

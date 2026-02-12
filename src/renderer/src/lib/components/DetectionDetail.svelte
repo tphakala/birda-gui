@@ -13,11 +13,9 @@
   const {
     detection,
     sourceFile,
-    recordingStart = null,
   }: {
     detection: EnrichedDetection;
     sourceFile: string;
-    recordingStart?: Date | null;
   } = $props();
 
   let wavesurfer: WaveSurfer | null = null;
@@ -269,7 +267,8 @@
       const wavBytes = encodeWavFromRegion(audioBuffer, activeRegion.start, activeRegion.end);
       const species = detection.common_name.replace(/[<>:"/\\|?*]/g, '_');
       let timestamp: string;
-      if (recordingStart) {
+      if (detection.audio_file.recording_start) {
+        const recordingStart = new Date(detection.audio_file.recording_start);
         const actual = new Date(recordingStart.getTime() + detection.start_time * 1000);
         const y = actual.getFullYear();
         const mo = (actual.getMonth() + 1).toString().padStart(2, '0');
