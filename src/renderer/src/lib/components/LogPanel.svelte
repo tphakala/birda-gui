@@ -113,7 +113,7 @@
         {#if logState.entries.length === 0}
           <div class="p-3 text-center text-gray-500">{m.log_empty()}</div>
         {:else}
-          {#each logState.entries as entry (entry.timestamp)}
+          {#each logState.entries as entry (entry.id)}
             <div class="flex gap-1 px-1 hover:bg-white/5">
               <span class="shrink-0 text-gray-500">{formatTime(entry.timestamp)}</span>
               <span class="shrink-0 rounded px-1 {levelBadgeColor(entry.level)}"
