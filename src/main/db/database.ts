@@ -143,6 +143,104 @@ function runMigrations(db: Database.Database): void {
       db.pragma('foreign_keys = ON');
     }
   }
+
+  // Migration 5: Add audio_files table and migrate existing data
+  if (!applied.has(5)) {
+    console.log('Migrating to version 5: Add audio_files table');
+
+    db.transaction(() => {
+      // Create audio_files table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS audio_files (
+          id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id                  INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+          file_path               TEXT NOT NULL,
+          file_name               TEXT NOT NULL,
+          recording_start         TEXT,
+          timezone_offset_min     INTEGER,
+          duration_sec            REAL,
+          sample_rate             INTEGER,
+          channels                INTEGER,
+          audiomoth_device_id     TEXT,
+          audiomoth_gain          TEXT,
+          audiomoth_battery_v     REAL,
+          audiomoth_temperature_c REAL,
+          created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_audio_files_run ON audio_files(run_id);
+        CREATE INDEX IF NOT EXISTS idx_audio_files_path ON audio_files(file_path);
+        CREATE INDEX IF NOT EXISTS idx_audio_files_device ON audio_files(audiomoth_device_id);
+        CREATE INDEX IF NOT EXISTS idx_audio_files_recording_start ON audio_files(recording_start);
+      `);
+
+      // Add audio_file_id column to detections
+      db.exec('ALTER TABLE detections ADD COLUMN audio_file_id INTEGER REFERENCES audio_files(id) ON DELETE SET NULL');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id)');
+
+      // Migrate existing data: group detections by (run_id, source_file)
+      const uniqueFiles = db
+        .prepare(
+          `
+        SELECT DISTINCT run_id, source_file
+        FROM detections
+        ORDER BY run_id, source_file
+      `,
+        )
+        .all() as { run_id: number; source_file: string }[];
+
+      console.log(`Migrating ${uniqueFiles.length} unique audio files`);
+
+      const insertAudioFile = db.prepare(`
+        INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+
+      const updateDetections = db.prepare(`
+        UPDATE detections
+        SET audio_file_id = ?
+        WHERE run_id = ? AND source_file = ?
+      `);
+
+      const getRunTimezone = db.prepare(`
+        SELECT timezone_offset_min FROM analysis_runs WHERE id = ?
+      `);
+
+      for (const { run_id, source_file } of uniqueFiles) {
+        // Extract file name from path
+        const fileName = source_file.split('/').pop() || source_file;
+
+        // Try to parse AudioMoth timestamp from filename (YYYYMMDD_HHMMSS)
+        let recordingStart: string | null = null;
+        const audioMothMatch = fileName.match(/(\d{8})_(\d{6})/);
+        if (audioMothMatch) {
+          const [, dateStr, timeStr] = audioMothMatch;
+          // Parse: YYYYMMDD -> YYYY-MM-DD, HHMMSS -> HH:MM:SS
+          const year = dateStr.slice(0, 4);
+          const month = dateStr.slice(4, 6);
+          const day = dateStr.slice(6, 8);
+          const hour = timeStr.slice(0, 2);
+          const minute = timeStr.slice(2, 4);
+          const second = timeStr.slice(4, 6);
+          recordingStart = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+        }
+
+        // Get timezone from run
+        const runData = getRunTimezone.get(run_id) as { timezone_offset_min: number | null } | undefined;
+        const timezoneOffset = runData?.timezone_offset_min ?? null;
+
+        // Insert audio file record
+        const result = insertAudioFile.run(run_id, source_file, fileName, recordingStart, timezoneOffset);
+
+        // Update all detections for this file
+        updateDetections.run(result.lastInsertRowid, run_id, source_file);
+      }
+
+      console.log('Audio files migration completed');
+
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(5);
+    })();
+  }
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {
