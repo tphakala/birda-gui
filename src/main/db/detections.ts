@@ -4,6 +4,9 @@ import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
 import { z } from 'zod';
 
+const JSON_READ_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 100;
+
 interface RawRunSpeciesAggregation {
   scientific_name: string;
   detection_count: number;
@@ -241,14 +244,14 @@ export function updateDetectionClipPath(id: number, clipPath: string): void {
   db.prepare('UPDATE detections SET clip_path = ? WHERE id = ?').run(clipPath, id);
 }
 
-async function readJsonWithRetry(jsonPath: string, maxRetries = 3): Promise<string> {
+async function readJsonWithRetry(jsonPath: string, maxRetries = JSON_READ_RETRIES): Promise<string> {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fs.promises.readFile(jsonPath, 'utf-8');
     } catch (err) {
       if (i === maxRetries - 1) throw err;
       // Exponential backoff for Windows file locking
-      await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, i)));
+      await new Promise((resolve) => setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, i)));
     }
   }
   throw new Error('Unreachable'); // TypeScript flow analysis

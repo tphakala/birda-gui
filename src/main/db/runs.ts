@@ -84,3 +84,15 @@ export function getRunsWithStats(): RunWithStats[] {
     )
     .all() as RunWithStats[];
 }
+
+export function deleteCompletedRunsForSource(sourcePath: string, model: string): number {
+  const db = getDb();
+
+  return db.transaction(() => {
+    const runs = findCompletedRuns(sourcePath, model);
+    for (const run of runs) {
+      deleteRun(run.id);
+    }
+    return runs.length;
+  })();
+}

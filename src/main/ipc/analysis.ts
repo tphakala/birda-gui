@@ -3,12 +3,15 @@ import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
+import { z } from 'zod';
 import { runAnalysis, findBirda, type AnalysisHandle, type LogLevel } from '../birda/runner';
-import { createRun, updateRunStatus, findCompletedRuns, deleteRun } from '../db/runs';
+import { createRun, updateRunStatus, deleteCompletedRunsForSource } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
-import type { AnalysisRequest } from '$shared/types';
 import type { BirdaEventEnvelope } from '../birda/types';
+
+const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
+const MAX_TRACKED_FILES = 100;
 
 let currentAnalysis: AnalysisHandle | null = null;
 
@@ -38,8 +41,22 @@ function deriveJsonPath(outputDir: string, audioFile: string): string {
   return path.join(outputDir, `${basename}.BirdNET.json`);
 }
 
+const AnalysisRequestSchema = z.object({
+  source_path: z.string().min(1),
+  model: z.string().min(1),
+  min_confidence: z.number().min(0).max(1),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  month: z.number().int().min(1).max(12).optional(),
+  day: z.number().int().min(1).max(31).optional(),
+  location_name: z.string().optional(),
+  timezone_offset_min: z.number().int().optional(),
+});
+
 export function registerAnalysisHandlers(): void {
-  ipcMain.handle('birda:analyze', async (event, request: AnalysisRequest) => {
+  ipcMain.handle('birda:analyze', async (event, rawRequest: unknown) => {
+    // Validate input
+    const request = AnalysisRequestSchema.parse(rawRequest);
     if (currentAnalysis) {
       throw new Error('An analysis is already running. Cancel it first.');
     }
@@ -98,10 +115,9 @@ export function registerAnalysisHandlers(): void {
       }
 
       // Delete any previous completed runs for the same source+model to avoid duplicates
-      const existingRuns = findCompletedRuns(request.source_path, request.model);
-      for (const existing of existingRuns) {
-        sendLog(win, 'info', 'analysis', `Replacing existing run ${existing.id} (same source + model)`);
-        deleteRun(existing.id);
+      const deletedCount = deleteCompletedRunsForSource(request.source_path, request.model);
+      if (deletedCount > 0) {
+        sendLog(win, 'info', 'analysis', `Replaced ${deletedCount} previous run(s) (same source + model)`);
       }
 
       // Create run record
@@ -133,8 +149,8 @@ export function registerAnalysisHandlers(): void {
       // We pass both so BirdNET gets month/day and BSG gets day-of-year.
       let dayOfYear: number | undefined;
       if (month !== undefined && day !== undefined) {
-        const d = new Date(2024, month - 1, day); // leap year to handle Feb 29
-        const start = new Date(2024, 0, 0);
+        const d = new Date(LEAP_YEAR_FOR_DOY, month - 1, day); // leap year to handle Feb 29
+        const start = new Date(LEAP_YEAR_FOR_DOY, 0, 0);
         dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
       }
@@ -158,6 +174,8 @@ export function registerAnalysisHandlers(): void {
       const skippedFiles: string[] = [];
       let totalFiles = 0;
       const pendingImports: Promise<void>[] = [];
+      let failedFilesOverflow = false;
+      let skippedFilesOverflow = false;
 
       // Forward runner log events to renderer
       handle.on('log', (level: LogLevel, message: string) => {
@@ -199,14 +217,29 @@ export function registerAnalysisHandlers(): void {
                     );
                   } catch (err) {
                     sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
-                    failedFiles.push(payload.file);
+                    if (failedFiles.length < MAX_TRACKED_FILES) {
+                      failedFiles.push(payload.file);
+                    } else if (!failedFilesOverflow) {
+                      failedFilesOverflow = true;
+                      sendLog(win, 'warn', 'analysis', `Truncated failed files list at ${MAX_TRACKED_FILES} entries`);
+                    }
                   }
                 } else if (payload.status === 'skipped') {
-                  skippedFiles.push(payload.file);
+                  if (skippedFiles.length < MAX_TRACKED_FILES) {
+                    skippedFiles.push(payload.file);
+                  } else if (!skippedFilesOverflow) {
+                    skippedFilesOverflow = true;
+                    sendLog(win, 'warn', 'analysis', `Truncated skipped files list at ${MAX_TRACKED_FILES} entries`);
+                  }
                   sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
                 } else {
                   // Must be 'failed' - only remaining case
-                  failedFiles.push(payload.file);
+                  if (failedFiles.length < MAX_TRACKED_FILES) {
+                    failedFiles.push(payload.file);
+                  } else if (!failedFilesOverflow) {
+                    failedFilesOverflow = true;
+                    sendLog(win, 'warn', 'analysis', `Truncated failed files list at ${MAX_TRACKED_FILES} entries`);
+                  }
                   sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
                 }
               }

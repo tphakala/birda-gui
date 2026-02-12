@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import type { BirdaEventEnvelope } from './types';
 
+const MAX_STDERR_LINES = 500;
+
 interface AnalysisOptions {
   model: string;
   minConfidence: number;
@@ -134,7 +136,6 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         }
       });
 
-      const MAX_STDERR_LINES = 500;
       child.stderr!.on('data', (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
         if (stderrLines.length < MAX_STDERR_LINES) {
