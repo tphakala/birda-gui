@@ -1,6 +1,8 @@
 import { getDb } from './database';
 import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
+import fs from 'fs';
+import path from 'path';
 
 interface RawRunSpeciesAggregation {
   scientific_name: string;
@@ -237,4 +239,66 @@ export function getCatalogStats(): CatalogStats {
 export function updateDetectionClipPath(id: number, clipPath: string): void {
   const db = getDb();
   db.prepare('UPDATE detections SET clip_path = ? WHERE id = ?').run(clipPath, id);
+}
+
+async function readJsonWithRetry(jsonPath: string, maxRetries = 3): Promise<string> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fs.promises.readFile(jsonPath, 'utf-8');
+    } catch (err) {
+      if (i === maxRetries - 1) throw err;
+      // Exponential backoff for Windows file locking
+      await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, i)));
+    }
+  }
+  throw new Error('Unreachable'); // TypeScript flow analysis
+}
+
+interface BirdaJsonOutput {
+  metadata: {
+    file: string;
+    model: string;
+    min_confidence: number;
+  };
+  detections: Array<{
+    start_time: number;
+    end_time: number;
+    scientific_name: string;
+    confidence: number;
+  }>;
+}
+
+export async function importDetectionsFromJson(
+  runId: number,
+  locationId: number | null,
+  jsonPath: string,
+): Promise<{ detections: number; sourceFile: string }> {
+  // Read with retry logic for Windows file locking
+  const content = await readJsonWithRetry(jsonPath);
+
+  // Parse JSON
+  const data: BirdaJsonOutput = JSON.parse(content);
+
+  // Extract source file from metadata
+  const sourceFile = data.metadata.file;
+
+  // Convert to BirdaDetection format (add missing fields)
+  const birdaDetections: BirdaDetection[] = data.detections.map((d) => ({
+    start_time: d.start_time,
+    end_time: d.end_time,
+    scientific_name: d.scientific_name,
+    confidence: d.confidence,
+    species: d.scientific_name, // Use scientific_name as species identifier
+    common_name: '', // JSON output doesn't include common names
+  }));
+
+  // Import detections using existing transaction-based function
+  if (birdaDetections.length > 0) {
+    insertDetections(runId, locationId, sourceFile, birdaDetections);
+  }
+
+  return {
+    detections: birdaDetections.length,
+    sourceFile,
+  };
 }
