@@ -100,6 +100,11 @@ export function getDetections(filter: DetectionFilter): { detections: (Detection
   // Map sort columns to qualified names for JOIN
   if (sortCol === 'file_name') sortCol = 'af.file_name';
   else if (sortCol === 'recording_start') sortCol = 'af.recording_start';
+  else if (sortCol === 'start_time') {
+    // Sort by actual detection time (recording_start + offset) when timestamps available
+    // Falls back to offset-only sorting when recording_start is null
+    sortCol = `CASE WHEN af.recording_start IS NOT NULL THEN datetime(af.recording_start, '+' || d.start_time || ' seconds') ELSE d.start_time END`;
+  }
   else sortCol = `d.${sortCol}`;
 
   const sortDir = filter.sort_dir === 'asc' ? 'ASC' : 'DESC';

@@ -79,30 +79,33 @@ function parseAudioMothComment(comment: string | undefined, artist: string | und
 /**
  * Parse recording start time from AudioMoth-style filenames: YYYYMMDD_HHMMSS
  * Returns null if the filename doesn't match the pattern.
+ * Allows additional suffixes after timestamp (e.g., "20250328_032043_48khz.flac")
  */
 export function parseRecordingStart(filename: string): Date | null {
-  // Strip path and extension, match YYYYMMDD_HHMMSS
+  // Strip path and extension, match YYYYMMDD_HHMMSS (allow suffixes)
   const base = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
-  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
+  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(base);
   if (!match) return null;
   const [, y, mo, d, h, mi, s] = match;
-  const date = new Date(+y, +mo - 1, +d, +h, +mi, +s);
+  // Parse as UTC to avoid timezone interpretation issues
+  const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
   // Validate the parsed date components match (catches invalid months/days)
-  if (date.getFullYear() !== +y || date.getMonth() !== +mo - 1 || date.getDate() !== +d) return null;
+  if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +mo - 1 || date.getUTCDate() !== +d) return null;
   return date;
 }
 
 /**
  * Format Date + timezone offset as ISO 8601 string
- * Example: formatIsoTimestamp(new Date(2025, 0, 15, 14, 30, 22), 180) => "2025-01-15T14:30:22+03:00"
+ * Date is assumed to be in UTC, components are extracted using UTC getters
+ * Example: formatIsoTimestamp(new Date(Date.UTC(2025, 0, 15, 14, 30, 22)), 0) => "2025-01-15T14:30:22Z"
  */
 export function formatIsoTimestamp(date: Date, offsetMin: number): string {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hour = date.getHours().toString().padStart(2, '0');
-  const minute = date.getMinutes().toString().padStart(2, '0');
-  const second = date.getSeconds().toString().padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+  const day = date.getUTCDate().toString().padStart(2, '0');
+  const hour = date.getUTCHours().toString().padStart(2, '0');
+  const minute = date.getUTCMinutes().toString().padStart(2, '0');
+  const second = date.getUTCSeconds().toString().padStart(2, '0');
 
   const offsetSign = offsetMin >= 0 ? '+' : '-';
   const offsetAbs = Math.abs(offsetMin);
