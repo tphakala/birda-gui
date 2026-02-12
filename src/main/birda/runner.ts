@@ -94,6 +94,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       if (options.outputDir) {
         args.push('--output-dir', options.outputDir);
         args.push('--output-mode', 'ndjson');
+        args.push('--format', 'json'); // Write JSON files to disk (not CSV)
       } else {
         args.push('--stdout');
       }
