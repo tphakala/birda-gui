@@ -49,7 +49,7 @@
     {
       key: 'date',
       label: m.table_columnDate(),
-      class: 'w-16',
+      class: 'w-20',
       sortable: false,
       visible: isDirectory && hasTimestamps,
     },

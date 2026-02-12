@@ -71,7 +71,7 @@ export function formatClockTime(startTime: Date, offsetSeconds: number): string 
 
 /**
  * Format detection date from recording_start + offset
- * Returns: "01-15" (MM-DD) or "--" if no timestamp
+ * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */
 export function formatDetectionDate(detection: {
   audio_file: { recording_start: string | null };
@@ -81,9 +81,17 @@ export function formatDetectionDate(detection: {
 
   const recordingStart = new Date(detection.audio_file.recording_start);
   const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
+  const now = new Date();
 
   const month = (actualTime.getMonth() + 1).toString().padStart(2, '0');
   const day = actualTime.getDate().toString().padStart(2, '0');
+
+  // Include year if different from current year
+  if (actualTime.getFullYear() !== now.getFullYear()) {
+    const year = actualTime.getFullYear().toString().slice(-2);
+    return `${year}-${month}-${day}`;
+  }
+
   return `${month}-${day}`;
 }
 
