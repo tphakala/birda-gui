@@ -2,10 +2,11 @@ import { ipcMain, BrowserWindow, dialog } from 'electron';
 import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { tmpdir } from 'os';
 import { runAnalysis, findBirda, type AnalysisHandle, type LogLevel } from '../birda/runner';
 import { createRun, updateRunStatus, findCompletedRuns, deleteRun } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
-import { insertDetections, updateDetectionClipPath } from '../db/detections';
+import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import type { AnalysisRequest } from '$shared/types';
 import type { BirdaEventEnvelope, DetectionsPayload } from '../birda/types';
 
@@ -17,6 +18,26 @@ function sendLog(win: BrowserWindow, level: LogLevel, source: string, message: s
   }
 }
 
+async function createTempOutputDir(): Promise<string> {
+  const timestamp = Date.now();
+  const tempDir = path.join(tmpdir(), `birda-${timestamp}`);
+  await fs.promises.mkdir(tempDir, { recursive: true });
+  return tempDir;
+}
+
+async function cleanupTempDir(tempDir: string): Promise<void> {
+  try {
+    await fs.promises.rm(tempDir, { recursive: true, force: true });
+  } catch (err) {
+    console.warn(`Failed to cleanup temp directory ${tempDir}:`, err);
+  }
+}
+
+function deriveJsonPath(outputDir: string, audioFile: string): string {
+  const basename = path.basename(audioFile, path.extname(audioFile));
+  return path.join(outputDir, `${basename}.BirdNET.json`);
+}
+
 export function registerAnalysisHandlers(): void {
   ipcMain.handle('birda:analyze', async (event, request: AnalysisRequest) => {
     if (currentAnalysis) {
@@ -25,6 +46,17 @@ export function registerAnalysisHandlers(): void {
 
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) throw new Error('No window found');
+
+    // Detect if source is directory
+    const sourceStat = await fs.promises.stat(request.source_path);
+    const isDirectory = sourceStat.isDirectory();
+
+    let outputDir: string | undefined;
+
+    if (isDirectory) {
+      outputDir = await createTempOutputDir();
+      sendLog(win, 'info', 'analysis', `Created temp output directory: ${outputDir}`);
+    }
 
     sendLog(
       win,
@@ -103,10 +135,14 @@ export function registerAnalysisHandlers(): void {
       month,
       day,
       dayOfYear,
+      outputDir,
     });
     currentAnalysis = handle;
 
     let totalDetections = 0;
+    const failedFiles: string[] = [];
+    const skippedFiles: string[] = [];
+    let totalFiles = 0;
 
     // Forward runner log events to renderer
     handle.on('log', (level: LogLevel, message: string) => {
@@ -114,14 +150,50 @@ export function registerAnalysisHandlers(): void {
     });
 
     // Forward NDJSON events to renderer and capture detections
-    handle.on('data', (envelope: BirdaEventEnvelope) => {
+    handle.on('data', async (envelope: BirdaEventEnvelope) => {
       if (!win.isDestroyed()) {
         win.webContents.send('birda:analysis-progress', envelope);
       }
 
-      // Insert detections from the stream as they arrive
-      if (envelope.event === 'detections') {
-        const payload = envelope.payload as DetectionsPayload;
+      // Directory mode events
+      if (isDirectory && outputDir) {
+        if (envelope.event === 'pipeline_started') {
+          const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
+          totalFiles = payload.files_total;
+          sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
+        } else if (envelope.event === 'file_started') {
+          const payload = envelope.payload as import('../birda/types').FileStartedPayload;
+          sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
+        } else if (envelope.event === 'file_completed') {
+          const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
+
+          if (payload.status === 'processed') {
+            try {
+              const jsonPath = deriveJsonPath(outputDir, payload.file);
+              const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
+              totalDetections += result.detections;
+              sendLog(
+                win,
+                'info',
+                'analysis',
+                `Imported ${result.detections} detections from ${result.sourceFile}`,
+              );
+            } catch (err) {
+              sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
+              failedFiles.push(payload.file);
+            }
+          } else if (payload.status === 'skipped') {
+            skippedFiles.push(payload.file);
+            sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
+          } else if (payload.status === 'failed') {
+            failedFiles.push(payload.file);
+            sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
+          }
+        }
+      }
+      // Single file mode events (existing behavior)
+      else if (envelope.event === 'detections') {
+        const payload = envelope.payload as import('../birda/types').DetectionsPayload;
         if (payload.detections.length > 0) {
           try {
             insertDetections(run.id, locationId, payload.file, payload.detections);
@@ -137,9 +209,27 @@ export function registerAnalysisHandlers(): void {
     try {
       await handle.promise;
 
+      // Determine final status
+      let finalStatus: 'completed' | 'completed_with_errors' = 'completed';
+
+      if (isDirectory) {
+        const processedCount = totalFiles - skippedFiles.length - failedFiles.length;
+
+        if (failedFiles.length > 0) {
+          finalStatus = processedCount > 0 ? 'completed_with_errors' : 'completed';
+        }
+
+        sendLog(
+          win,
+          'info',
+          'analysis',
+          `Directory analysis complete: ${processedCount} processed, ${skippedFiles.length} skipped, ${failedFiles.length} failed`,
+        );
+      }
+
       sendLog(win, 'info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
-      updateRunStatus(run.id, 'completed');
-      return { runId: run.id, status: 'completed' };
+      updateRunStatus(run.id, finalStatus);
+      return { runId: run.id, status: finalStatus };
     } catch (err) {
       updateRunStatus(run.id, 'failed');
       const stderrLog = handle.stderrLog();
@@ -151,6 +241,12 @@ export function registerAnalysisHandlers(): void {
       throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`);
     } finally {
       currentAnalysis = null;
+
+      // Cleanup temp directory if it exists
+      if (outputDir) {
+        await cleanupTempDir(outputDir);
+        sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+      }
     }
   });
 
