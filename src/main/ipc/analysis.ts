@@ -25,7 +25,7 @@ let currentAnalysis: AnalysisHandle | null = null;
 // Simple semaphore for limiting concurrent operations
 class Semaphore {
   private permits: number;
-  private waiting: Array<() => void> = [];
+  private waiting: (() => void)[] = [];
 
   constructor(permits: number) {
     this.permits = permits;
