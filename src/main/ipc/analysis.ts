@@ -44,218 +44,245 @@ export function registerAnalysisHandlers(): void {
       throw new Error('An analysis is already running. Cancel it first.');
     }
 
+    // Lock immediately with placeholder to prevent race condition
+    const placeholderHandle: AnalysisHandle = {
+      cancel: () => {},
+      promise: Promise.resolve(),
+      on: () => {},
+      stderrLog: () => '',
+    };
+    currentAnalysis = placeholderHandle;
+
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) throw new Error('No window found');
-
-    // Detect if source is directory
-    const sourceStat = await fs.promises.stat(request.source_path);
-    const isDirectory = sourceStat.isDirectory();
-
-    let outputDir: string | undefined;
-
-    if (isDirectory) {
-      outputDir = await createTempOutputDir();
-      sendLog(win, 'info', 'analysis', `Created temp output directory: ${outputDir}`);
+    if (!win) {
+      currentAnalysis = null; // Release lock
+      throw new Error('No window found');
     }
-
-    sendLog(
-      win,
-      'info',
-      'analysis',
-      `Starting analysis: model=${request.model}, confidence=${request.min_confidence}, source=${request.source_path}`,
-    );
-
-    // Resolve or create location
-    let locationId: number | null = null;
-    if (request.latitude !== undefined && request.longitude !== undefined) {
-      const existing = findLocationByCoords(request.latitude, request.longitude);
-      if (existing) {
-        locationId = existing.id;
-        sendLog(
-          win,
-          'info',
-          'analysis',
-          `Using existing location: id=${existing.id} (${request.latitude}, ${request.longitude})`,
-        );
-      } else {
-        const loc = createLocation(request.latitude, request.longitude, request.location_name);
-        locationId = loc.id;
-        sendLog(win, 'info', 'analysis', `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`);
-      }
-    }
-
-    // Delete any previous completed runs for the same source+model to avoid duplicates
-    const existingRuns = findCompletedRuns(request.source_path, request.model);
-    for (const existing of existingRuns) {
-      sendLog(win, 'info', 'analysis', `Replacing existing run ${existing.id} (same source + model)`);
-      deleteRun(existing.id);
-    }
-
-    // Create run record
-    const run = createRun(
-      request.source_path,
-      request.model,
-      request.min_confidence,
-      locationId,
-      undefined,
-      request.timezone_offset_min,
-    );
-    sendLog(win, 'info', 'analysis', `Created analysis run: id=${run.id}`);
-
-    // Resolve month/day: prefer values from request, then try to parse from filename
-    let month = request.month;
-    let day = request.day;
-    if (month === undefined || day === undefined) {
-      const base = path.basename(request.source_path).replace(/\.[^.]+$/, '');
-      const dateMatch = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
-      if (dateMatch) {
-        month = month ?? Number(dateMatch[2]);
-        day = day ?? Number(dateMatch[3]);
-        sendLog(win, 'info', 'analysis', `Parsed recording date from filename: month=${month}, day=${day}`);
-      }
-    }
-
-    // Compute day-of-year from month/day for BSG SDM support.
-    // BSG models use --day-of-year (1-366) instead of --month/--day.
-    // We pass both so BirdNET gets month/day and BSG gets day-of-year.
-    let dayOfYear: number | undefined;
-    if (month !== undefined && day !== undefined) {
-      const d = new Date(2024, month - 1, day); // leap year to handle Feb 29
-      const start = new Date(2024, 0, 0);
-      dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
-    }
-
-    // Start analysis
-    const handle = runAnalysis(request.source_path, {
-      model: request.model,
-      minConfidence: request.min_confidence,
-      latitude: request.latitude,
-      longitude: request.longitude,
-      month,
-      day,
-      dayOfYear,
-      outputDir,
-    });
-    currentAnalysis = handle;
-
-    let totalDetections = 0;
-    const failedFiles: string[] = [];
-    const skippedFiles: string[] = [];
-    let totalFiles = 0;
-
-    // Forward runner log events to renderer
-    handle.on('log', (level: LogLevel, message: string) => {
-      sendLog(win, level, 'runner', message);
-    });
-
-    // Forward NDJSON events to renderer and capture detections
-    handle.on('data', (envelope: BirdaEventEnvelope) => {
-      // Synchronously forward event to renderer
-      if (!win.isDestroyed()) {
-        win.webContents.send('birda:analysis-progress', envelope);
-      }
-
-      // Async processing wrapped in void IIFE to prevent unhandled rejections
-      void (async () => {
-        try {
-          // Directory mode events
-          if (isDirectory && outputDir) {
-            if (envelope.event === 'pipeline_started') {
-              const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
-              totalFiles = payload.files_total;
-              sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
-            } else if (envelope.event === 'file_started') {
-              const payload = envelope.payload as import('../birda/types').FileStartedPayload;
-              sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
-            } else if (envelope.event === 'file_completed') {
-              const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
-
-              if (payload.status === 'processed') {
-                try {
-                  const jsonPath = deriveJsonPath(outputDir, payload.file);
-                  const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
-                  totalDetections += result.detections;
-                  sendLog(
-                    win,
-                    'info',
-                    'analysis',
-                    `Imported ${result.detections} detections from ${result.sourceFile}`,
-                  );
-                } catch (err) {
-                  sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
-                  failedFiles.push(payload.file);
-                }
-              } else if (payload.status === 'skipped') {
-                skippedFiles.push(payload.file);
-                sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
-              } else {
-                // Must be 'failed' - only remaining case
-                failedFiles.push(payload.file);
-                sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
-              }
-            }
-          }
-          // Single file mode events (existing behavior)
-          else if (envelope.event === 'detections') {
-            const payload = envelope.payload as import('../birda/types').DetectionsPayload;
-            if (payload.detections.length > 0) {
-              try {
-                insertDetections(run.id, locationId, payload.file, payload.detections);
-                totalDetections += payload.detections.length;
-                sendLog(win, 'info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
-              } catch (err) {
-                sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
-              }
-            }
-          }
-        } catch (err) {
-          sendLog(win, 'error', 'analysis', `Event handler error: ${(err as Error).message}`);
-        }
-      })();
-    });
 
     try {
-      await handle.promise;
+      // Detect if source is directory
+      const sourceStat = await fs.promises.stat(request.source_path);
+      const isDirectory = sourceStat.isDirectory();
 
-      // Determine final status
-      let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
+      let outputDir: string | undefined;
 
       if (isDirectory) {
-        const processedCount = totalFiles - skippedFiles.length - failedFiles.length;
+        outputDir = await createTempOutputDir();
+        sendLog(win, 'info', 'analysis', `Created temp output directory: ${outputDir}`);
+      }
 
-        if (failedFiles.length > 0) {
-          finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
+      sendLog(
+        win,
+        'info',
+        'analysis',
+        `Starting analysis: model=${request.model}, confidence=${request.min_confidence}, source=${request.source_path}`,
+      );
+
+      // Resolve or create location
+      let locationId: number | null = null;
+      if (request.latitude !== undefined && request.longitude !== undefined) {
+        const existing = findLocationByCoords(request.latitude, request.longitude);
+        if (existing) {
+          locationId = existing.id;
+          sendLog(
+            win,
+            'info',
+            'analysis',
+            `Using existing location: id=${existing.id} (${request.latitude}, ${request.longitude})`,
+          );
+        } else {
+          const loc = createLocation(request.latitude, request.longitude, request.location_name);
+          locationId = loc.id;
+          sendLog(win, 'info', 'analysis', `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`);
+        }
+      }
+
+      // Delete any previous completed runs for the same source+model to avoid duplicates
+      const existingRuns = findCompletedRuns(request.source_path, request.model);
+      for (const existing of existingRuns) {
+        sendLog(win, 'info', 'analysis', `Replacing existing run ${existing.id} (same source + model)`);
+        deleteRun(existing.id);
+      }
+
+      // Create run record
+      const run = createRun(
+        request.source_path,
+        request.model,
+        request.min_confidence,
+        locationId,
+        undefined,
+        request.timezone_offset_min,
+      );
+      sendLog(win, 'info', 'analysis', `Created analysis run: id=${run.id}`);
+
+      // Resolve month/day: prefer values from request, then try to parse from filename
+      let month = request.month;
+      let day = request.day;
+      if (month === undefined || day === undefined) {
+        const base = path.basename(request.source_path).replace(/\.[^.]+$/, '');
+        const dateMatch = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
+        if (dateMatch) {
+          month = month ?? Number(dateMatch[2]);
+          day = day ?? Number(dateMatch[3]);
+          sendLog(win, 'info', 'analysis', `Parsed recording date from filename: month=${month}, day=${day}`);
+        }
+      }
+
+      // Compute day-of-year from month/day for BSG SDM support.
+      // BSG models use --day-of-year (1-366) instead of --month/--day.
+      // We pass both so BirdNET gets month/day and BSG gets day-of-year.
+      let dayOfYear: number | undefined;
+      if (month !== undefined && day !== undefined) {
+        const d = new Date(2024, month - 1, day); // leap year to handle Feb 29
+        const start = new Date(2024, 0, 0);
+        dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+        sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
+      }
+
+      // Start analysis
+      const handle = runAnalysis(request.source_path, {
+        model: request.model,
+        minConfidence: request.min_confidence,
+        latitude: request.latitude,
+        longitude: request.longitude,
+        month,
+        day,
+        dayOfYear,
+        outputDir,
+      });
+      // Replace placeholder with real handle
+      currentAnalysis = handle;
+
+      let totalDetections = 0;
+      const failedFiles: string[] = [];
+      const skippedFiles: string[] = [];
+      let totalFiles = 0;
+      const pendingImports: Promise<void>[] = [];
+
+      // Forward runner log events to renderer
+      handle.on('log', (level: LogLevel, message: string) => {
+        sendLog(win, level, 'runner', message);
+      });
+
+      // Forward NDJSON events to renderer and capture detections
+      handle.on('data', (envelope: BirdaEventEnvelope) => {
+        // Synchronously forward event to renderer
+        if (!win.isDestroyed()) {
+          win.webContents.send('birda:analysis-progress', envelope);
         }
 
-        sendLog(
-          win,
-          'info',
-          'analysis',
-          `Directory analysis complete: ${processedCount} processed, ${skippedFiles.length} skipped, ${failedFiles.length} failed`,
-        );
-      }
+        // Capture async processing as a tracked promise
+        const importPromise = (async () => {
+          try {
+            // Directory mode events
+            if (isDirectory && outputDir) {
+              if (envelope.event === 'pipeline_started') {
+                const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
+                totalFiles = payload.files_total;
+                sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
+              } else if (envelope.event === 'file_started') {
+                const payload = envelope.payload as import('../birda/types').FileStartedPayload;
+                sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
+              } else if (envelope.event === 'file_completed') {
+                const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
 
-      sendLog(win, 'info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
-      updateRunStatus(run.id, finalStatus);
-      return { runId: run.id, status: finalStatus };
+                if (payload.status === 'processed') {
+                  try {
+                    const jsonPath = deriveJsonPath(outputDir, payload.file);
+                    const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
+                    totalDetections += result.detections;
+                    sendLog(
+                      win,
+                      'info',
+                      'analysis',
+                      `Imported ${result.detections} detections from ${result.sourceFile}`,
+                    );
+                  } catch (err) {
+                    sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
+                    failedFiles.push(payload.file);
+                  }
+                } else if (payload.status === 'skipped') {
+                  skippedFiles.push(payload.file);
+                  sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
+                } else {
+                  // Must be 'failed' - only remaining case
+                  failedFiles.push(payload.file);
+                  sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
+                }
+              }
+            }
+            // Single file mode events (existing behavior)
+            else if (envelope.event === 'detections') {
+              const payload = envelope.payload as import('../birda/types').DetectionsPayload;
+              if (payload.detections.length > 0) {
+                try {
+                  insertDetections(run.id, locationId, payload.file, payload.detections);
+                  totalDetections += payload.detections.length;
+                  sendLog(win, 'info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
+                } catch (err) {
+                  sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
+                }
+              }
+            }
+          } catch (err) {
+            sendLog(win, 'error', 'analysis', `Event handler error: ${(err as Error).message}`);
+          }
+        })();
+
+        pendingImports.push(importPromise);
+      });
+
+      try {
+        await handle.promise;
+
+        // Wait for all pending imports to complete before calculating status
+        await Promise.allSettled(pendingImports);
+
+        // Determine final status
+        let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
+
+        if (isDirectory) {
+          const processedCount = totalFiles - skippedFiles.length - failedFiles.length;
+
+          if (failedFiles.length > 0) {
+            finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
+          }
+
+          sendLog(
+            win,
+            'info',
+            'analysis',
+            `Directory analysis complete: ${processedCount} processed, ${skippedFiles.length} skipped, ${failedFiles.length} failed`,
+          );
+        }
+
+        sendLog(win, 'info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
+        updateRunStatus(run.id, finalStatus);
+        return { runId: run.id, status: finalStatus };
+      } catch (err) {
+        updateRunStatus(run.id, 'failed');
+        const stderrLog = handle.stderrLog();
+        const errorMsg = `Analysis failed: ${(err as Error).message}`;
+        sendLog(win, 'error', 'analysis', errorMsg);
+        if (stderrLog) {
+          sendLog(win, 'error', 'analysis', `stderr output:\n${stderrLog}`);
+        }
+        throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`);
+      } finally {
+        currentAnalysis = null;
+
+        // Cleanup temp directory if it exists
+        if (outputDir) {
+          await cleanupTempDir(outputDir);
+          sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+        }
+      }
     } catch (err) {
-      updateRunStatus(run.id, 'failed');
-      const stderrLog = handle.stderrLog();
-      const errorMsg = `Analysis failed: ${(err as Error).message}`;
-      sendLog(win, 'error', 'analysis', errorMsg);
-      if (stderrLog) {
-        sendLog(win, 'error', 'analysis', `stderr output:\n${stderrLog}`);
+      // Release lock on setup error ONLY if still placeholder
+      if (currentAnalysis === placeholderHandle) {
+        currentAnalysis = null;
       }
-      throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`);
-    } finally {
-      currentAnalysis = null;
-
-      // Cleanup temp directory if it exists
-      if (outputDir) {
-        await cleanupTempDir(outputDir);
-        sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
-      }
+      throw err;
     }
   });
 
