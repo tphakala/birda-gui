@@ -6,17 +6,13 @@ import path from 'path';
  * Create or retrieve existing audio_file record for idempotency.
  * Returns the audio_file_id.
  */
-export function createAudioFile(
-  runId: number,
-  filePath: string,
-  metadata: AudioFileMetadata,
-): number {
+export function createAudioFile(runId: number, filePath: string, metadata: AudioFileMetadata): number {
   const db = getDb();
 
   // Check if already exists (for retry scenarios)
-  const existing = db
-    .prepare('SELECT id FROM audio_files WHERE run_id = ? AND file_path = ?')
-    .get(runId, filePath) as { id: number } | undefined;
+  const existing = db.prepare('SELECT id FROM audio_files WHERE run_id = ? AND file_path = ?').get(runId, filePath) as
+    | { id: number }
+    | undefined;
 
   if (existing) return existing.id;
 
@@ -62,9 +58,7 @@ export function getAudioFile(id: number): AudioFile | null {
  */
 export function getRunAudioFiles(runId: number): AudioFile[] {
   const db = getDb();
-  return db
-    .prepare('SELECT * FROM audio_files WHERE run_id = ? ORDER BY file_name ASC')
-    .all(runId) as AudioFile[];
+  return db.prepare('SELECT * FROM audio_files WHERE run_id = ? ORDER BY file_name ASC').all(runId) as AudioFile[];
 }
 
 /**

@@ -87,14 +87,24 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
   return { where, params };
 }
 
-export function getDetections(filter: DetectionFilter): { detections: (Detection & { audio_file: AudioFile })[]; total: number } {
+export function getDetections(filter: DetectionFilter): {
+  detections: (Detection & { audio_file: AudioFile })[];
+  total: number;
+} {
   const db = getDb();
   const { where, params } = buildWhereClause(filter, 'd');
   const limit = filter.limit ?? 100;
   const offset = filter.offset ?? 0;
 
   // Whitelist allowed sort columns to prevent SQL injection
-  const allowedSortColumns = new Set(['scientific_name', 'confidence', 'start_time', 'file_name', 'recording_start', 'detected_at']);
+  const allowedSortColumns = new Set([
+    'scientific_name',
+    'confidence',
+    'start_time',
+    'file_name',
+    'recording_start',
+    'detected_at',
+  ]);
   let sortCol = filter.sort_column && allowedSortColumns.has(filter.sort_column) ? filter.sort_column : 'detected_at';
 
   // Map sort columns to qualified names for JOIN
@@ -104,8 +114,7 @@ export function getDetections(filter: DetectionFilter): { detections: (Detection
     // Sort by actual detection time (recording_start + offset) when timestamps available
     // Falls back to offset-only sorting when recording_start is null
     sortCol = `CASE WHEN af.recording_start IS NOT NULL THEN datetime(af.recording_start, '+' || d.start_time || ' seconds') ELSE d.start_time END`;
-  }
-  else sortCol = `d.${sortCol}`;
+  } else sortCol = `d.${sortCol}`;
 
   const sortDir = filter.sort_dir === 'asc' ? 'ASC' : 'DESC';
 
@@ -113,7 +122,8 @@ export function getDetections(filter: DetectionFilter): { detections: (Detection
     .count;
 
   const rows = db
-    .prepare(`
+    .prepare(
+      `
       SELECT
         d.id, d.run_id, d.location_id, d.audio_file_id, d.start_time, d.end_time,
         d.scientific_name, d.confidence, d.clip_path, d.detected_at,
@@ -128,35 +138,36 @@ export function getDetections(filter: DetectionFilter): { detections: (Detection
       ${where}
       ORDER BY ${sortCol} ${sortDir}
       LIMIT ? OFFSET ?
-    `)
+    `,
+    )
     .all(...params, limit, offset) as Array<{
-      id: number;
-      run_id: number;
-      location_id: number | null;
-      audio_file_id: number;
-      start_time: number;
-      end_time: number;
-      scientific_name: string;
-      confidence: number;
-      clip_path: string | null;
-      detected_at: string;
-      af_id: number | null;
-      af_file_path: string | null;
-      af_file_name: string | null;
-      af_recording_start: string | null;
-      af_timezone_offset_min: number | null;
-      af_duration_sec: number | null;
-      af_sample_rate: number | null;
-      af_channels: number | null;
-      af_audiomoth_device_id: string | null;
-      af_audiomoth_gain: string | null;
-      af_audiomoth_battery_v: number | null;
-      af_audiomoth_temperature_c: number | null;
-      af_created_at: string | null;
-    }>;
+    id: number;
+    run_id: number;
+    location_id: number | null;
+    audio_file_id: number;
+    start_time: number;
+    end_time: number;
+    scientific_name: string;
+    confidence: number;
+    clip_path: string | null;
+    detected_at: string;
+    af_id: number | null;
+    af_file_path: string | null;
+    af_file_name: string | null;
+    af_recording_start: string | null;
+    af_timezone_offset_min: number | null;
+    af_duration_sec: number | null;
+    af_sample_rate: number | null;
+    af_channels: number | null;
+    af_audiomoth_device_id: string | null;
+    af_audiomoth_gain: string | null;
+    af_audiomoth_battery_v: number | null;
+    af_audiomoth_temperature_c: number | null;
+    af_created_at: string | null;
+  }>;
 
   // Transform flat rows into Detection objects with audio_file data
-  const detections = rows.map(row => ({
+  const detections = rows.map((row) => ({
     id: row.id,
     run_id: row.run_id,
     location_id: row.location_id,
@@ -182,7 +193,7 @@ export function getDetections(filter: DetectionFilter): { detections: (Detection
       audiomoth_battery_v: row.af_audiomoth_battery_v,
       audiomoth_temperature_c: row.af_audiomoth_temperature_c,
       created_at: row.af_created_at!,
-    }
+    },
   }));
 
   return { detections, total };
@@ -224,12 +235,14 @@ export function getDetectionsForGrid(filter: DetectionFilter): RawGridDetection[
   const { where, params } = buildWhereClause(filter, 'd');
 
   return db
-    .prepare(`
+    .prepare(
+      `
       SELECT d.scientific_name, d.start_time, af.file_path
       FROM detections d
       LEFT JOIN audio_files af ON d.audio_file_id = af.id
       ${where}
-    `)
+    `,
+    )
     .all(...params) as RawGridDetection[];
 }
 

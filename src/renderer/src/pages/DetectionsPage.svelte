@@ -306,7 +306,7 @@
         <AudioLines size={16} class="text-primary shrink-0" />
 
         {#if selectedRun.is_directory}
-          <span class="font-medium truncate" title={selectedRun.source_path}>{selectedRun.source_path}</span>
+          <span class="truncate font-medium" title={selectedRun.source_path}>{selectedRun.source_path}</span>
           <span class="text-base-content/40">|</span>
           <span class="text-base-content/60">{selectedRun.file_count} files</span>
         {:else}
@@ -350,7 +350,9 @@
               title={!selectedRun.is_directory ? m.view_grid() : undefined}
             >
               <Grid3x3 size={14} class={selectedRun.is_directory ? 'opacity-40' : ''} />
-              <span class="hidden sm:inline {selectedRun.is_directory ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
+              <span class="hidden sm:inline {selectedRun.is_directory ? 'line-through opacity-40' : ''}"
+                >{m.view_grid()}</span
+              >
             </button>
           </div>
         </div>
