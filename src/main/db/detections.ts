@@ -2,6 +2,7 @@ import { getDb } from './database';
 import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
+import { z } from 'zod';
 
 interface RawRunSpeciesAggregation {
   scientific_name: string;
@@ -253,20 +254,22 @@ async function readJsonWithRetry(jsonPath: string, maxRetries = 3): Promise<stri
   throw new Error('Unreachable'); // TypeScript flow analysis
 }
 
-interface BirdaJsonOutput {
-  metadata: {
-    file: string;
-    model: string;
-    min_confidence: number;
-  };
-  detections: {
-    start_time: number;
-    end_time: number;
-    scientific_name: string;
-    common_name: string;
-    confidence: number;
-  }[];
-}
+const BirdaDetectionSchema = z.object({
+  start_time: z.number(),
+  end_time: z.number(),
+  scientific_name: z.string(),
+  common_name: z.string(),
+  confidence: z.number(),
+});
+
+const BirdaJsonOutputSchema = z.object({
+  metadata: z.object({
+    file: z.string(),
+    model: z.string(),
+    min_confidence: z.number(),
+  }),
+  detections: z.array(BirdaDetectionSchema),
+});
 
 export async function importDetectionsFromJson(
   runId: number,
@@ -276,8 +279,8 @@ export async function importDetectionsFromJson(
   // Read with retry logic for Windows file locking
   const content = await readJsonWithRetry(jsonPath);
 
-  // Parse JSON
-  const data: BirdaJsonOutput = JSON.parse(content);
+  // Parse and validate JSON with Zod
+  const data = BirdaJsonOutputSchema.parse(JSON.parse(content));
 
   // Extract source file from metadata
   const sourceFile = data.metadata.file;

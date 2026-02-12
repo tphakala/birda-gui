@@ -8,7 +8,7 @@ import { createRun, updateRunStatus, findCompletedRuns, deleteRun } from '../db/
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import type { AnalysisRequest } from '$shared/types';
-import type { BirdaEventEnvelope, DetectionsPayload } from '../birda/types';
+import type { BirdaEventEnvelope } from '../birda/types';
 
 let currentAnalysis: AnalysisHandle | null = null;
 
@@ -150,73 +150,82 @@ export function registerAnalysisHandlers(): void {
     });
 
     // Forward NDJSON events to renderer and capture detections
-    handle.on('data', async (envelope: BirdaEventEnvelope) => {
+    handle.on('data', (envelope: BirdaEventEnvelope) => {
+      // Synchronously forward event to renderer
       if (!win.isDestroyed()) {
         win.webContents.send('birda:analysis-progress', envelope);
       }
 
-      // Directory mode events
-      if (isDirectory && outputDir) {
-        if (envelope.event === 'pipeline_started') {
-          const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
-          totalFiles = payload.files_total;
-          sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
-        } else if (envelope.event === 'file_started') {
-          const payload = envelope.payload as import('../birda/types').FileStartedPayload;
-          sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
-        } else if (envelope.event === 'file_completed') {
-          const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
+      // Async processing wrapped in void IIFE to prevent unhandled rejections
+      void (async () => {
+        try {
+          // Directory mode events
+          if (isDirectory && outputDir) {
+            if (envelope.event === 'pipeline_started') {
+              const payload = envelope.payload as import('../birda/types').PipelineStartedPayload;
+              totalFiles = payload.files_total;
+              sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
+            } else if (envelope.event === 'file_started') {
+              const payload = envelope.payload as import('../birda/types').FileStartedPayload;
+              sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
+            } else if (envelope.event === 'file_completed') {
+              const payload = envelope.payload as import('../birda/types').FileCompletedPayload;
 
-          if (payload.status === 'processed') {
-            try {
-              const jsonPath = deriveJsonPath(outputDir, payload.file);
-              const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
-              totalDetections += result.detections;
-              sendLog(
-                win,
-                'info',
-                'analysis',
-                `Imported ${result.detections} detections from ${result.sourceFile}`,
-              );
-            } catch (err) {
-              sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
-              failedFiles.push(payload.file);
+              if (payload.status === 'processed') {
+                try {
+                  const jsonPath = deriveJsonPath(outputDir, payload.file);
+                  const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
+                  totalDetections += result.detections;
+                  sendLog(
+                    win,
+                    'info',
+                    'analysis',
+                    `Imported ${result.detections} detections from ${result.sourceFile}`,
+                  );
+                } catch (err) {
+                  sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
+                  failedFiles.push(payload.file);
+                }
+              } else if (payload.status === 'skipped') {
+                skippedFiles.push(payload.file);
+                sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
+              } else {
+                // Must be 'failed' - only remaining case
+                failedFiles.push(payload.file);
+                sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
+              }
             }
-          } else if (payload.status === 'skipped') {
-            skippedFiles.push(payload.file);
-            sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
-          } else if (payload.status === 'failed') {
-            failedFiles.push(payload.file);
-            sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
           }
-        }
-      }
-      // Single file mode events (existing behavior)
-      else if (envelope.event === 'detections') {
-        const payload = envelope.payload as import('../birda/types').DetectionsPayload;
-        if (payload.detections.length > 0) {
-          try {
-            insertDetections(run.id, locationId, payload.file, payload.detections);
-            totalDetections += payload.detections.length;
-            sendLog(win, 'info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
-          } catch (err) {
-            sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
+          // Single file mode events (existing behavior)
+          else if (envelope.event === 'detections') {
+            const payload = envelope.payload as import('../birda/types').DetectionsPayload;
+            if (payload.detections.length > 0) {
+              try {
+                insertDetections(run.id, locationId, payload.file, payload.detections);
+                totalDetections += payload.detections.length;
+                sendLog(win, 'info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
+              } catch (err) {
+                sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
+              }
+            }
           }
+        } catch (err) {
+          sendLog(win, 'error', 'analysis', `Event handler error: ${(err as Error).message}`);
         }
-      }
+      })();
     });
 
     try {
       await handle.promise;
 
       // Determine final status
-      let finalStatus: 'completed' | 'completed_with_errors' = 'completed';
+      let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
 
       if (isDirectory) {
         const processedCount = totalFiles - skippedFiles.length - failedFiles.length;
 
         if (failedFiles.length > 0) {
-          finalStatus = processedCount > 0 ? 'completed_with_errors' : 'completed';
+          finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
         }
 
         sendLog(
