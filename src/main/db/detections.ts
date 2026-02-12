@@ -1,5 +1,5 @@
 import { getDb } from './database';
-import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats } from '$shared/types';
+import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats, AudioFile } from '$shared/types';
 import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
 import { z } from 'zod';
@@ -87,7 +87,7 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
   return { where, params };
 }
 
-export function getDetections(filter: DetectionFilter): { detections: Detection[]; total: number } {
+export function getDetections(filter: DetectionFilter): { detections: (Detection & { audio_file: AudioFile })[]; total: number } {
   const db = getDb();
   const { where, params } = buildWhereClause(filter, 'd');
   const limit = filter.limit ?? 100;
@@ -150,10 +150,8 @@ export function getDetections(filter: DetectionFilter): { detections: Detection[
       af_created_at: string | null;
     }>;
 
-  // Transform flat rows into Detection objects
-  // Since Detection interface still has audio_file_id but not nested audio_file,
-  // we just return the detection fields
-  const detections: Detection[] = rows.map(row => ({
+  // Transform flat rows into Detection objects with audio_file data
+  const detections = rows.map(row => ({
     id: row.id,
     run_id: row.run_id,
     location_id: row.location_id,
@@ -164,6 +162,22 @@ export function getDetections(filter: DetectionFilter): { detections: Detection[
     confidence: row.confidence,
     clip_path: row.clip_path,
     detected_at: row.detected_at,
+    audio_file: {
+      id: row.af_id!,
+      run_id: row.run_id,
+      file_path: row.af_file_path!,
+      file_name: row.af_file_name!,
+      recording_start: row.af_recording_start,
+      timezone_offset_min: row.af_timezone_offset_min,
+      duration_sec: row.af_duration_sec,
+      sample_rate: row.af_sample_rate,
+      channels: row.af_channels,
+      audiomoth_device_id: row.af_audiomoth_device_id,
+      audiomoth_gain: row.af_audiomoth_gain,
+      audiomoth_battery_v: row.af_audiomoth_battery_v,
+      audiomoth_temperature_c: row.af_audiomoth_temperature_c,
+      created_at: row.af_created_at!,
+    }
   }));
 
   return { detections, total };

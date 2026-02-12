@@ -68,3 +68,40 @@ export function formatClockTime(startTime: Date, offsetSeconds: number): string 
   }
   return `${h}:${m}:${s}`;
 }
+
+/**
+ * Format detection date from recording_start + offset
+ * Returns: "01-15" (MM-DD) or "--" if no timestamp
+ */
+export function formatDetectionDate(detection: {
+  audio_file: { recording_start: string | null };
+  start_time: number;
+}): string {
+  if (!detection.audio_file.recording_start) return '--';
+
+  const recordingStart = new Date(detection.audio_file.recording_start);
+  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
+
+  const month = (actualTime.getMonth() + 1).toString().padStart(2, '0');
+  const day = actualTime.getDate().toString().padStart(2, '0');
+  return `${month}-${day}`;
+}
+
+/**
+ * Format detection time from recording_start + offset
+ * Returns: "14:30:22" (HH:MM:SS) or "--" if no timestamp
+ */
+export function formatDetectionTime(detection: {
+  audio_file: { recording_start: string | null };
+  start_time: number;
+}): string {
+  if (!detection.audio_file.recording_start) return '--';
+
+  const recordingStart = new Date(detection.audio_file.recording_start);
+  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
+
+  const h = actualTime.getHours().toString().padStart(2, '0');
+  const m = actualTime.getMinutes().toString().padStart(2, '0');
+  const s = actualTime.getSeconds().toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}

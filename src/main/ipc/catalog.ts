@@ -21,9 +21,10 @@ import type {
   EnrichedSpeciesSummary,
   RunSpeciesAggregation,
   HourlyDetectionCell,
+  AudioFile,
 } from '$shared/types';
 
-function enrichDetections(detections: Detection[]): EnrichedDetection[] {
+function enrichDetections(detections: (Detection & { audio_file: AudioFile })[]): EnrichedDetection[] {
   const scientificNames = [...new Set(detections.map((d) => d.scientific_name))];
   const nameMap = resolveAll(scientificNames);
   return detections.map((d) => ({
