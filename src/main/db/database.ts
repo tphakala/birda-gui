@@ -101,8 +101,12 @@ function runMigrations(db: Database.Database): void {
 
   // Migration 4: Add completed_with_errors status
   if (!applied.has(4)) {
+    console.log('Migrating to version 4: Add completed_with_errors status');
+
+    // Temporarily disable foreign keys for table recreation
+    db.pragma('foreign_keys = OFF');
+
     db.transaction(() => {
-      console.log('Migrating to version 4: Add completed_with_errors status');
       db.exec(`
         -- Create new table with updated constraint
         CREATE TABLE analysis_runs_new (
@@ -133,6 +137,9 @@ function runMigrations(db: Database.Database): void {
       `);
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(4);
     })();
+
+    // Re-enable foreign keys
+    db.pragma('foreign_keys = ON');
   }
 }
 
