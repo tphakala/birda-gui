@@ -428,8 +428,7 @@
           {detections}
           {total}
           {loading}
-          sourceFile={selectedRun.source_path}
-          {recordingStart}
+          isDirectory={selectedRun.is_directory}
           {sortColumn}
           {sortDir}
           {offset}
