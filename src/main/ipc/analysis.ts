@@ -286,6 +286,9 @@ export function registerAnalysisHandlers(): void {
         pendingImports.push(importPromise);
       });
 
+      // Track final status for conditional cleanup
+      let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
+
       try {
         await handle.promise;
 
@@ -293,8 +296,6 @@ export function registerAnalysisHandlers(): void {
         await Promise.allSettled(pendingImports);
 
         // Determine final status
-        let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
-
         if (isDirectory) {
           const processedCount = totalFiles - skippedFileCount - failedFileCount;
 
@@ -314,6 +315,7 @@ export function registerAnalysisHandlers(): void {
         updateRunStatus(run.id, finalStatus);
         return { runId: run.id, status: finalStatus };
       } catch (err) {
+        finalStatus = 'failed';
         updateRunStatus(run.id, 'failed');
         const stderrLog = handle.stderrLog();
         const errorMsg = `Analysis failed: ${(err as Error).message}`;
@@ -325,10 +327,19 @@ export function registerAnalysisHandlers(): void {
       } finally {
         currentAnalysis = null;
 
-        // Cleanup temp directory if it exists
+        // Cleanup temp directory on success, preserve on failure for debugging
         if (outputDir) {
-          await cleanupTempDir(outputDir);
-          sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+          if (finalStatus === 'failed') {
+            sendLog(
+              win,
+              'warn',
+              'analysis',
+              `Preserving temp directory for debugging: ${outputDir}`,
+            );
+          } else {
+            await cleanupTempDir(outputDir);
+            sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+          }
         }
       }
     } catch (err) {
