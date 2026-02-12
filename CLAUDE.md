@@ -2,6 +2,38 @@
 
 Desktop GUI for the **birda** bird species detection CLI. Built with Electron + Svelte 5 + TypeScript.
 
+## 🔍 Understanding the Codebase — USE LEANN FIRST
+
+**CRITICAL:** Before reading files, grepping, or exploring the codebase to understand how something works, you MUST use LEANN first. LEANN is a semantic vector search system that provides accurate, context-aware answers about the codebase architecture and implementation patterns.
+
+### When You Need to Understand Code or Project Structure
+
+1. **ALWAYS START WITH LEANN** — Use `fish -c "leann ask birda-gui '<your question>'"` for:
+   - "How does [feature/system] work?"
+   - "Where is [functionality] implemented?"
+   - "What patterns are used for [architecture concern]?"
+   - "How do [components] interact?"
+
+2. **THEN use direct tools** (Read/Grep/Glob) only for:
+   - Reading specific files LEANN pointed you to
+   - Examining exact line-level implementation details
+   - Verifying or modifying code you already understand
+
+**Example workflow:**
+
+❌ **WRONG:** Grep for "IPC" → Read multiple files → Try to piece together understanding
+
+✅ **CORRECT:** `leann ask birda-gui "How does the Electron IPC architecture work?"` → Get comprehensive answer with file references → Read specific files if needed for implementation details
+
+**LEANN provides:**
+- Semantic understanding (not just keyword matching)
+- Architectural context and patterns
+- Accurate file and module references
+- Explanation of how components interact
+- AST-aware code context
+
+See the [LEANN section](#leann-low-storage-vector-index) below for detailed commands and usage patterns.
+
 ## Tech Stack
 
 | Layer        | Technology                       | Version                                |
