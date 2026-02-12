@@ -18,8 +18,39 @@ import type {
 
 const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
 const MAX_TRACKED_FILES = 100;
+const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
 
 let currentAnalysis: AnalysisHandle | null = null;
+
+// Simple semaphore for limiting concurrent operations
+class Semaphore {
+  private permits: number;
+  private waiting: Array<() => void> = [];
+
+  constructor(permits: number) {
+    this.permits = permits;
+  }
+
+  async acquire(): Promise<void> {
+    if (this.permits > 0) {
+      this.permits--;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.waiting.push(resolve);
+    });
+  }
+
+  release(): void {
+    this.permits++;
+    const resolve = this.waiting.shift();
+    if (resolve) {
+      this.permits--;
+      resolve();
+    }
+  }
+}
 
 function sendLog(win: BrowserWindow, level: LogLevel, source: string, message: string): void {
   if (!win.isDestroyed()) {
@@ -189,6 +220,7 @@ export function registerAnalysisHandlers(): void {
       const pendingImports: Promise<void>[] = [];
       let failedFilesOverflow = false;
       let skippedFilesOverflow = false;
+      const importSemaphore = new Semaphore(MAX_CONCURRENT_IMPORTS);
 
       // Forward runner log events to renderer
       handle.on('log', (level: LogLevel, message: string) => {
@@ -218,6 +250,8 @@ export function registerAnalysisHandlers(): void {
                 const payload = envelope.payload as FileCompletedPayload;
 
                 if (payload.status === 'processed') {
+                  // Limit concurrent imports to prevent resource exhaustion
+                  await importSemaphore.acquire();
                   try {
                     const jsonPath = deriveJsonPath(outputDir, payload.file);
                     const result = await importDetectionsFromJson(run.id, locationId, jsonPath);
@@ -237,6 +271,8 @@ export function registerAnalysisHandlers(): void {
                       failedFilesOverflow = true;
                       sendLog(win, 'warn', 'analysis', `Truncated failed files list at ${MAX_TRACKED_FILES} entries`);
                     }
+                  } finally {
+                    importSemaphore.release();
                   }
                 } else if (payload.status === 'skipped') {
                   skippedFileCount++;
