@@ -4,6 +4,7 @@ out/
 release/
 docs/plans/
 logs/
+.leann/
 *.db
 *.db-wal
 *.db-shm

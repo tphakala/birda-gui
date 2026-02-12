@@ -214,3 +214,53 @@ No test framework is configured. Quality is enforced via:
 - **ESM throughout** (`"type": "module"` in package.json), CJS only for Electron main/preload output
 - **No testing files** — no `.test.ts` or `.spec.ts` convention established
 - **Formatting**: single quotes, trailing commas, 120 char lines, 2-space indent
+
+## Development Tools & Context
+
+### LEANN (Low-storage Vector Index)
+
+LEANN is a local, privacy-focused vector database and RAG system optimized for low storage. It uses AST-aware chunking to maintain semantic code boundaries, making it highly effective for finding relevant logic and gathering context in large or unfamiliar codebases without keyword matching.
+
+#### Commands
+
+- **Index Name:** `birda-gui`
+- **Rebuild Index:** `fish -c "leann build birda-gui --docs src shared messages build electron-builder.yml package.json tsconfig.json tsconfig.node.json Taskfile.yml eslint.config.js tailwind.config.ts --use-ast-chunking --force"`
+- **Search:** `fish -c "leann search birda-gui '<query>'"` - Fast file/module location (instant)
+- **Ask:** `fish -c "leann ask birda-gui '<question>'"` - Comprehensive answers with code context (15-37s)
+
+#### When to Use LEANN
+
+**Prefer LEANN for:**
+- Semantic/exploratory searches: "How does IPC communication work?"
+- Architecture questions: "What Svelte 5 stores are available?"
+- Pattern discovery: "How are database operations structured?"
+- Context gathering before implementation: "How does the birda CLI integration work?"
+- Finding code without knowing exact file names or keywords
+
+**Use direct tools (Grep/Glob/Read) for:**
+- Exact file path reads when you know the location
+- Specific symbol searches when you know the name (component names, function names)
+- Single file content searches
+- Quick syntax checks
+
+#### Effective Query Examples
+
+**Good queries:**
+- "How does the Electron IPC architecture work?"
+- "What Svelte 5 stores are available and what state do they manage?"
+- "How is the birda CLI process spawned and how is NDJSON parsed?"
+- "How does the database schema and migration system work?"
+- "What is the i18n setup with Paraglide?"
+
+**Less effective:**
+- Very specific line-level questions (use Read tool instead)
+- Queries about code you've already read in the current session
+- File existence checks (use Glob instead)
+
+### Cross-Project Reference: birda
+
+The Rust CLI backend for Birda is located at `../birda`.
+
+- When changing output types in TypeScript ([shared/types.ts](shared/types.ts)), ensure compatibility with Rust output structures in `../birda/src/output/types.rs`.
+- NDJSON streaming format from birda CLI is parsed in [src/main/birda/](src/main/birda/)
+- LEANN also has an index for `birda` to aid in cross-project navigation.
