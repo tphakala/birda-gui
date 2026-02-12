@@ -13,6 +13,7 @@ interface AnalysisOptions {
   day?: number | undefined;
   dayOfYear?: number | undefined;
   quiet?: boolean | undefined;
+  outputDir?: string | undefined;
 }
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
@@ -85,7 +86,19 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         return;
       }
 
-      const args = ['--stdout', '--force', '--model', options.model, '-c', String(options.minConfidence)];
+      const args: string[] = [];
+
+      // Conditional output mode
+      if (options.outputDir) {
+        args.push('--output-dir', options.outputDir);
+        args.push('--output-mode', 'ndjson');
+      } else {
+        args.push('--stdout');
+      }
+
+      // Existing args
+      args.push('--force', '--model', options.model, '-c', String(options.minConfidence));
+
       if (options.latitude !== undefined && options.longitude !== undefined) {
         args.push('--lat', String(options.latitude), '--lon', String(options.longitude));
       }
