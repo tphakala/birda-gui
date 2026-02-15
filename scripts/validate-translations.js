@@ -104,6 +104,16 @@ const IGNORED_IDENTICAL_KEYS = new Set([
   // Sorting/technical labels
   'species_card_maxConfidence',
   'species_card_sortName',
+  // International/scientific terms (same in French/Italian/etc.)
+  'table_columnDate', // Date (Fr/It)
+  'coords_latitude', // Latitude (international)
+  'coords_longitude', // Longitude (international)
+  'analysis_statusDate', // Date (Fr/It)
+  'analysis_conf', // Conf (abbreviation)
+  'species_custom_description', // Description (Fr)
+  'log_title', // Log (It - technical term)
+  'detail_freqMax', // Freq Max (It - abbreviation)
+  'detail_volume', // Volume (It)
 ]);
 
 /**
