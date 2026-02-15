@@ -12,6 +12,16 @@
     <title>Birda GUI</title>
   </head>
   <body>
+    <script>
+      // Prevent FOUC by setting theme before any render
+      // This executes synchronously before the app mounts, eliminating theme flash
+      (function () {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = systemPrefersDark ? 'birda-dark' : 'birda-light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = systemPrefersDark ? 'dark' : 'light';
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
