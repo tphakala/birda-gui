@@ -218,13 +218,17 @@
   async function handleAcceptAndInstall() {
     if (!licenseModel) return;
     const id = licenseModel.id;
-    licenseModel = null;
+
+    // Start installation first
     installing = id;
     modelsError = null;
+
     try {
       await installModel(id);
       await refreshModels();
+      licenseModel = null; // Close dialog only after successful installation
     } catch (e) {
+      // Keep dialog open on failure so user retains context
       modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });
     } finally {
       installing = null;
