@@ -67,7 +67,11 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
 
         resolve(providers);
       } catch (err) {
-        reject(new Error(`Failed to parse birda providers JSON: ${(err as Error).message}`));
+        reject(
+          new Error(
+            `Failed to parse birda providers JSON: ${(err as Error).message}. Output: ${stdout.substring(0, 200)}`,
+          ),
+        );
       }
     });
 
