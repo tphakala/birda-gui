@@ -7,6 +7,7 @@ import { registerLicenseHandlers } from './licenses';
 import { registerModelHandlers } from './models';
 import { registerSettingsHandlers } from './settings';
 import { registerSpeciesHandlers } from './species';
+import { registerSystemHandlers } from './system';
 
 export async function registerHandlers(): Promise<void> {
   registerAnalysisHandlers();
@@ -17,5 +18,6 @@ export async function registerHandlers(): Promise<void> {
   registerLicenseHandlers();
   registerModelHandlers();
   registerSpeciesHandlers();
+  registerSystemHandlers();
   await registerSettingsHandlers();
 }

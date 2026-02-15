@@ -47,6 +47,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'fs:open-in-explorer',
   'app:get-licenses',
   'gpu:detect-capabilities',
+  'system:get-locale',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([

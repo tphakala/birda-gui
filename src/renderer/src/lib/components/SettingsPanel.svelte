@@ -40,17 +40,11 @@
   import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
   import * as m from '$paraglide/messages';
-  import { locales, setLocale, isLocale } from '$paraglide/runtime';
+  import { setLocale, isLocale } from '$paraglide/runtime';
+  import { LANGUAGES } from '$lib/i18n/languages';
 
-  // --- UI language display names (always in native script) ---
-  const UI_LANGUAGE_NAMES: Record<string, string> = {
-    en: 'English',
-  };
-
-  const uiLanguages = locales.map((code) => ({
-    code,
-    name: UI_LANGUAGE_NAMES[code] ?? code,
-  }));
+  // --- UI language options from central registry ---
+  const uiLanguages = LANGUAGES;
 
   // --- Sub-tab state ---
   type SettingsTab = 'preferences' | 'models' | 'data';
@@ -438,7 +432,7 @@
               <span class="text-base-content/70 text-sm font-medium">{m.settings_general_uiLanguage()}</span>
               <select bind:value={settings.ui_language} class="select select-bordered mt-1 w-full">
                 {#each uiLanguages as lang (lang.code)}
-                  <option value={lang.code}>{lang.name}</option>
+                  <option value={lang.code}>{lang.nativeName}</option>
                 {/each}
               </select>
             </label>
