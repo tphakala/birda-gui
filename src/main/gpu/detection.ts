@@ -2,7 +2,7 @@ import { app } from 'electron';
 import { spawn } from 'child_process';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import type { GpuCapabilities } from '$shared/types';
+import type { GpuCapabilities, BirdaProvidersResponse } from '$shared/types';
 
 const execAsync = promisify(exec);
 
@@ -21,7 +21,7 @@ async function checkNvidiaSmi(): Promise<boolean> {
 
 async function getBirdaProviders(birdaPath: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(birdaPath, ['providers']);
+    const proc = spawn(birdaPath, ['providers', '--output-mode', 'json']);
     let stdout = '';
     let stderr = '';
     let resolved = false;
@@ -59,13 +59,20 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
         return;
       }
 
-      // Parse output (format: "CPU\nCUDA\nTensorRT\n")
-      const providers = stdout
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+      try {
+        const response = JSON.parse(stdout) as unknown as BirdaProvidersResponse;
 
-      resolve(providers);
+        // Extract provider names (e.g., "CPU", "CUDA", "TensorRT")
+        const providers = response.payload.providers.map((p) => p.name);
+
+        resolve(providers);
+      } catch (err) {
+        reject(
+          new Error(
+            `Failed to parse birda providers JSON: ${(err as Error).message}. Output: ${stdout.substring(0, 200)}`,
+          ),
+        );
+      }
     });
 
     proc.on('error', (err) => {

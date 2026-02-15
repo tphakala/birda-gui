@@ -1,5 +1,21 @@
 // === GPU Detection ===
 
+export interface ExecutionProvider {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface BirdaProvidersResponse {
+  spec_version: string;
+  timestamp: string;
+  event: string;
+  payload: {
+    result_type: string;
+    providers: ExecutionProvider[];
+  };
+}
+
 export interface GpuCapabilities {
   hasNvidiaGpu: boolean;
   cudaLibrariesFound: boolean;
