@@ -174,6 +174,14 @@
       const loaded = await getSettings();
       settings = { ...settings, ...loaded };
       savedSettings = structuredClone($state.snapshot(settings));
+
+      // Sync theme to localStorage for instant application on next startup
+      try {
+        localStorage.setItem('theme', settings.theme);
+      } catch (e) {
+        console.error('Failed to save theme to localStorage:', e);
+      }
+
       settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
       birdaStatus = await checkBirda();
@@ -267,6 +275,14 @@
       const previousLang = savedSettings?.ui_language;
       settings = await setSettings($state.snapshot(settings));
       savedSettings = structuredClone($state.snapshot(settings));
+
+      // Sync theme to localStorage for instant application on next startup
+      try {
+        localStorage.setItem('theme', settings.theme);
+      } catch (e) {
+        console.error('Failed to save theme to localStorage:', e);
+      }
+
       birdaStatus = await checkBirda();
 
       // If UI language changed, apply new locale
