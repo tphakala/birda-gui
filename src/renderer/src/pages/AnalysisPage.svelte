@@ -513,6 +513,7 @@
         {:else}
           <button
             onclick={handleStartClick}
+            disabled={appState.isAnalysisRunning}
             class="btn btn-primary w-full gap-2 transition-all duration-200 hover:brightness-110"
           >
             <Play size={18} />
