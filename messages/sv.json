@@ -277,7 +277,7 @@
   "wizard_cli_checking": "Letar efter birda...",
   "wizard_cli_found": "birda hittades vid {path}",
   "wizard_cli_notFound": "birda hittades inte på ditt system.",
-  "wizard_cli_notFoundHint": "birda borde ha installerats automatiskt. Du kan ange sökvägen manuellt eller ladda ner den.",
+  "wizard_cli_notFoundHint": "Du kan ange sökvägen manuellt om birda är installerad, eller ladda ner den via länken nedan.",
   "wizard_cli_download": "Ladda ner birda",
   "wizard_cli_setPath": "Ange sökväg manuellt",
 

@@ -148,12 +148,18 @@ export async function registerSettingsHandlers(): Promise<void> {
   });
 
   ipcMain.handle('fs:open-executable-dialog', async (_event) => {
+    // Platform-specific file filters for executables
+    const filters =
+      process.platform === 'win32'
+        ? [
+            { name: 'Executables', extensions: ['exe', 'cmd', 'bat'] },
+            { name: 'All Files', extensions: ['*'] },
+          ]
+        : [{ name: 'All Files', extensions: ['*'] }];
+
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
-      filters: [
-        { name: 'Executables', extensions: ['exe', 'cmd', 'bat', ''] },
-        { name: 'All Files', extensions: ['*'] },
-      ],
+      filters,
     });
     return result.canceled ? null : result.filePaths[0];
   });

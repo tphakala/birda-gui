@@ -277,7 +277,7 @@
   "wizard_cli_checking": "Tarkistetaan birda-työkalua...",
   "wizard_cli_found": "birda löytyi polusta {path}",
   "wizard_cli_notFound": "birda-työkalua ei löytynyt järjestelmästäsi.",
-  "wizard_cli_notFoundHint": "birda olisi pitänyt asentua automaattisesti. Voit asettaa polun manuaalisesti tai ladata sen.",
+  "wizard_cli_notFoundHint": "Voit asettaa polun manuaalisesti, jos birda on asennettu, tai ladata sen alla olevasta linkistä.",
   "wizard_cli_download": "Lataa birda",
   "wizard_cli_setPath": "Aseta polku manuaalisesti",
 

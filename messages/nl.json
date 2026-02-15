@@ -278,7 +278,7 @@
   "wizard_cli_checking": "Controleren op birda...",
   "wizard_cli_found": "birda gevonden op {path}",
   "wizard_cli_notFound": "birda is niet gevonden op je systeem.",
-  "wizard_cli_notFoundHint": "birda had automatisch geïnstalleerd moeten worden. Je kunt het pad handmatig instellen of downloaden.",
+  "wizard_cli_notFoundHint": "Je kunt het pad handmatig instellen als birda is geïnstalleerd, of het downloaden via de onderstaande link.",
   "wizard_cli_download": "birda downloaden",
   "wizard_cli_setPath": "Pad handmatig instellen",
 

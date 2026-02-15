@@ -277,7 +277,7 @@
   "wizard_cli_checking": "Suche nach birda...",
   "wizard_cli_found": "birda gefunden unter {path}",
   "wizard_cli_notFound": "birda wurde auf Ihrem System nicht gefunden.",
-  "wizard_cli_notFoundHint": "birda sollte automatisch installiert worden sein. Sie können den Pfad manuell festlegen oder es herunterladen.",
+  "wizard_cli_notFoundHint": "Sie können den Pfad manuell festlegen, falls birda installiert ist, oder es über den Link unten herunterladen.",
   "wizard_cli_download": "birda Herunterladen",
   "wizard_cli_setPath": "Pfad manuell festlegen",
 
