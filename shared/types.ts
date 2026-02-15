@@ -203,6 +203,7 @@ export interface DetectionFilter {
 
 // === birda CLI ===
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type BirdaCheckSuccess = {
   available: true;
   path: string;
@@ -210,6 +211,7 @@ type BirdaCheckSuccess = {
   minVersion: string;
 };
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type BirdaCheckFailure = {
   available: false;
   error: string;
