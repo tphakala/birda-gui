@@ -1,3 +1,12 @@
+// === GPU Detection ===
+
+export interface GpuCapabilities {
+  hasNvidiaGpu: boolean;
+  cudaLibrariesFound: boolean;
+  availableProviders: string[];
+  platform: string;
+}
+
 // === Audio file scanning ===
 
 export interface AudioMothMeta {
@@ -205,6 +214,7 @@ export interface AppSettings {
   db_path: string;
   default_model: string;
   default_confidence: number;
+  default_execution_provider: string;
   default_freq_max: number;
   default_spectrogram_height: number;
   species_language: string;

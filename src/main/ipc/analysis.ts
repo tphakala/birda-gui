@@ -10,6 +10,7 @@ import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
 import { createAudioFile } from '../db/audio-files';
+import { loadSettings } from '../settings/loader';
 import type { AudioFileMetadata } from '$shared/types';
 import type {
   BirdaEventEnvelope,
@@ -257,10 +258,14 @@ export function registerAnalysisHandlers(): void {
         sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
       }
 
+      // Load settings to get execution provider
+      const settings = await loadSettings();
+
       // Start analysis
       const handle = runAnalysis(request.source_path, {
         model: request.model,
         minConfidence: request.min_confidence,
+        executionProvider: settings.default_execution_provider,
         latitude: request.latitude,
         longitude: request.longitude,
         month,

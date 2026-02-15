@@ -46,6 +46,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'fs:scan-source',
   'fs:open-in-explorer',
   'app:get-licenses',
+  'gpu:detect-capabilities',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([

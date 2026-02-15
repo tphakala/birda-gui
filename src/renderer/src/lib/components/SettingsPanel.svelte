@@ -14,6 +14,7 @@
     X,
     ExternalLink,
     Cpu,
+    Info,
   } from '@lucide/svelte';
   import logoBirdnet from '../../assets/logo-birdnet.png';
   import logoGoogle from '../../assets/logo-google.png';
@@ -32,6 +33,7 @@
     listModels,
     listAvailableModels,
     installModel,
+    detectGpuCapabilities,
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
   import type { AppSettings, InstalledModel, AvailableModel } from '$shared/types';
@@ -66,6 +68,7 @@
     db_path: '',
     default_model: 'birdnet-v24',
     default_confidence: 0.1,
+    default_execution_provider: 'auto',
     default_freq_max: 15000,
     default_spectrogram_height: 160,
     species_language: 'en',
@@ -122,6 +125,17 @@
   let modelsTab = $state<ModelsTab>('installed');
   const installedIds = $derived(new Set(installedModels.map((mod) => mod.id)));
 
+  // --- GPU state ---
+  let gpuCapabilities = $state<{
+    hasNvidiaGpu: boolean;
+    cudaLibrariesFound: boolean;
+    availableProviders: string[];
+    platform: string;
+  } | null>(null);
+  let gpuAlertDismissed = $state(false);
+
+  const availableProviders = $derived(gpuCapabilities?.availableProviders ?? []);
+
   const LICENSE_URLS: Record<string, string> = {
     'CC-BY-NC-SA-4.0': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
     'Apache-2.0': 'https://www.apache.org/licenses/LICENSE-2.0',
@@ -167,7 +181,7 @@
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
         availableLanguages = await getAvailableLanguages();
-        await refreshModels();
+        await Promise.all([refreshModels(), refreshGpuCapabilities()]);
       }
     } catch (e) {
       error = (e as Error).message;
@@ -185,6 +199,15 @@
       availableModelsToInstall = [];
     } finally {
       modelsLoading = false;
+    }
+  }
+
+  async function refreshGpuCapabilities() {
+    try {
+      gpuCapabilities = await detectGpuCapabilities();
+    } catch (e) {
+      console.error('GPU detection failed:', e);
+      gpuCapabilities = null;
     }
   }
 
@@ -324,6 +347,35 @@
         </div>
       </div>
 
+      <!-- GPU Library Alert -->
+      {#if gpuCapabilities?.hasNvidiaGpu && !gpuCapabilities.cudaLibrariesFound && !gpuAlertDismissed}
+        <div role="alert" class="alert alert-info">
+          <Info size={20} />
+          <div class="flex-1">
+            <h4 class="font-medium">{m.settings_gpu_librariesMissing_title()}</h4>
+            <p class="text-sm opacity-80">
+              {m.settings_gpu_librariesMissing_description()}
+            </p>
+            <div class="mt-2 flex gap-3 text-sm">
+              <a
+                href="https://developer.nvidia.com/cuda-downloads"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link"
+              >
+                Download CUDA
+              </a>
+              <a href="https://developer.nvidia.com/tensorrt" target="_blank" rel="noopener noreferrer" class="link">
+                Download TensorRT
+              </a>
+            </div>
+          </div>
+          <button onclick={() => (gpuAlertDismissed = true)} class="btn btn-ghost btn-sm btn-square">
+            <X size={16} />
+          </button>
+        </div>
+      {/if}
+
       <!-- General -->
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
@@ -402,6 +454,21 @@
                   >{(settings.default_confidence * 100).toFixed(0)}%</span
                 >
               </div>
+            </label>
+
+            <label class="block">
+              <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_executionProvider()}</span>
+              <select bind:value={settings.default_execution_provider} class="select select-bordered mt-1 w-full">
+                <option value="auto">{m.settings_analysis_epAuto()}</option>
+                {#each availableProviders as provider (provider)}
+                  <option value={provider.toLowerCase()}>
+                    {provider}
+                  </option>
+                {/each}
+              </select>
+              <p class="text-base-content/50 mt-1 text-xs">
+                {m.settings_analysis_epDescription()}
+              </p>
             </label>
 
             {#if availableLanguages.length > 0}

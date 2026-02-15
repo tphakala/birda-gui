@@ -1,48 +1,12 @@
-import { ipcMain, dialog, shell, app } from 'electron';
+import { ipcMain, dialog, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { getConfig, getConfigPath } from '../birda/config';
 import { findBirda, setBirdaPath } from '../birda/runner';
 import { listModels } from '../birda/models';
 import { buildLabelsPath, reloadLabels } from '../labels/label-service';
+import { loadSettings, saveSettings } from '../settings/loader';
 import type { AppSettings } from '$shared/types';
-
-const SETTINGS_FILE = 'birda-gui-settings.json';
-
-function getSettingsPath(): string {
-  return path.join(app.getPath('userData'), SETTINGS_FILE);
-}
-
-async function loadSettings(): Promise<AppSettings> {
-  const settingsPath = getSettingsPath();
-  const defaults: AppSettings = {
-    birda_path: '',
-    clip_output_dir: path.join(app.getPath('userData'), 'clips'),
-    db_path: path.join(app.getPath('userData'), 'birda-catalog.db'),
-    default_model: 'birdnet-v24',
-    default_confidence: 0.1,
-    default_freq_max: 15000,
-    default_spectrogram_height: 160,
-    species_language: 'en',
-    ui_language: 'en',
-    theme: 'system',
-    setup_completed: false,
-  };
-
-  try {
-    const raw = await fs.promises.readFile(settingsPath, 'utf-8');
-    return { ...defaults, ...(JSON.parse(raw) as Partial<AppSettings>) };
-  } catch {
-    return defaults;
-  }
-}
-
-async function saveSettings(settings: AppSettings): Promise<void> {
-  const settingsPath = getSettingsPath();
-  const tmpPath = settingsPath + '.tmp';
-  await fs.promises.writeFile(tmpPath, JSON.stringify(settings, null, 2));
-  await fs.promises.rename(tmpPath, settingsPath);
-}
 
 export async function registerSettingsHandlers(): Promise<void> {
   // Apply saved birda path at startup so all handlers can find birda immediately
@@ -136,7 +100,7 @@ export async function registerSettingsHandlers(): Promise<void> {
       const lines = content.trim().split('\n');
       // Try each line - first one that parses as lat,lon wins
       for (const line of lines) {
-        const parts = line.split(',').map((s) => s.trim());
+        const parts = line.split(',').map((s: string) => s.trim());
         if (parts.length >= 2) {
           const lat = parseFloat(parts[0]);
           const lon = parseFloat(parts[1]);
