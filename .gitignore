@@ -11,5 +11,4 @@ logs/
 src/renderer/src/paraglide/
 .env
 .env.*
-.claude
 nul
