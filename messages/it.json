@@ -367,7 +367,7 @@
   "grid_phase_night": "Notte",
   "grid_phase_twilight": "Crepuscolo",
   "grid_phase_daylight": "Luce diurna",
-  "grid_noTimestamp": "La griglia oraria richiede una registrazione con timestamp (AAAAMMGG_HHMMSS)",
+  "grid_noTimestamp": "La griglia oraria richiede una registrazione con timestamp (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} rilevamenti",
   "grid_detectionCountSingular": "{count} rilevamento",
   "grid_less": "Meno",
