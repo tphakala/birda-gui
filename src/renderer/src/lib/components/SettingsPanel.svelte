@@ -94,6 +94,7 @@
     { value: 'dark', label: m.settings_general_themeDark() },
   ];
 
+  let settingsLoaded = $state(false);
   let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
@@ -154,7 +155,10 @@
   const modelNames = $derived(new Map(availableModelsToInstall.map((m) => [m.id, m.name])));
 
   $effect(() => {
-    appState.theme = settings.theme;
+    // Only sync theme to appState after settings are loaded to prevent flash
+    if (settingsLoaded) {
+      appState.theme = settings.theme;
+    }
   });
 
   $effect(() => {
@@ -170,7 +174,15 @@
       const loaded = await getSettings();
       settings = { ...settings, ...loaded };
       savedSettings = structuredClone($state.snapshot(settings));
-      appState.theme = loaded.theme;
+
+      // Sync theme to localStorage for instant application on next startup
+      try {
+        localStorage.setItem('theme', settings.theme);
+      } catch (e) {
+        console.error('Failed to save theme to localStorage:', e);
+      }
+
+      settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
       birdaStatus = await checkBirda();
       if (birdaStatus.available) {
@@ -263,6 +275,14 @@
       const previousLang = savedSettings?.ui_language;
       settings = await setSettings($state.snapshot(settings));
       savedSettings = structuredClone($state.snapshot(settings));
+
+      // Sync theme to localStorage for instant application on next startup
+      try {
+        localStorage.setItem('theme', settings.theme);
+      } catch (e) {
+        console.error('Failed to save theme to localStorage:', e);
+      }
+
       birdaStatus = await checkBirda();
 
       // If UI language changed, apply new locale

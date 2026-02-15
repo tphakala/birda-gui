@@ -7,11 +7,34 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: birda-media: https://*.tile.openstreetmap.org https://*.openfreemap.org; connect-src 'self' birda-media: https://*.tile.openstreetmap.org https://*.openfreemap.org; worker-src 'self' blob:; media-src 'self' blob: birda-media:; base-uri 'self'; form-action 'self'; object-src 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-bEtq9jGWvAawhvC4LymPAZJ/o48HNAO/M4POLQYndC8=' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: birda-media: https://*.tile.openstreetmap.org https://*.openfreemap.org; connect-src 'self' birda-media: https://*.tile.openstreetmap.org https://*.openfreemap.org; worker-src 'self' blob:; media-src 'self' blob: birda-media:; base-uri 'self'; form-action 'self'; object-src 'none'"
     />
     <title>Birda GUI</title>
   </head>
   <body>
+    <script>
+      // Prevent FOUC by setting theme before any render
+      // Prioritizes user's saved theme from localStorage, falls back to system preference
+      (function () {
+        let theme;
+        try {
+          theme = localStorage.getItem('theme');
+        } catch (e) {
+          // localStorage might be disabled
+        }
+
+        let useDark;
+        if (theme === 'light' || theme === 'dark') {
+          useDark = theme === 'dark';
+        } else {
+          // Fallback to system preference if 'system' or not set
+          useDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+
+        document.documentElement.setAttribute('data-theme', useDark ? 'birda-dark' : 'birda-light');
+        document.documentElement.style.colorScheme = useDark ? 'dark' : 'light';
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
