@@ -537,7 +537,7 @@ export function registerAnalysisHandlers(): void {
   });
 
   // Export audio region as WAV file
-  ipcMain.handle('clip:export-region', async (event, base64Data: string, defaultName?: string) => {
+  ipcMain.handle('clip:export-region', async (event, wavBytes: Uint8Array, defaultName?: string) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) throw new Error('No window found');
 
@@ -551,8 +551,7 @@ export function registerAnalysisHandlers(): void {
       return null;
     }
 
-    const wavBuffer = Buffer.from(base64Data, 'base64');
-    await fs.promises.writeFile(result.filePath, wavBuffer);
+    await fs.promises.writeFile(result.filePath, wavBytes);
     return result.filePath;
   });
 }
