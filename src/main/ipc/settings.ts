@@ -41,7 +41,7 @@ export async function registerSettingsHandlers(): Promise<void> {
 
   ipcMain.handle('app:set-settings', async (_event, settings: Partial<AppSettings>) => {
     // Validate untrusted input from renderer process
-    const validated = PartialSettingsSchema.parse(settings);
+    const validated = PartialSettingsSchema.parse(settings) as Partial<AppSettings>;
 
     // Store the old language for comparison before atomic update
     const current = await settingsStore.get();
