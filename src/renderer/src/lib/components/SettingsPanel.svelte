@@ -133,7 +133,6 @@
     platform: string;
   } | null>(null);
   let gpuAlertDismissed = $state(false);
-  let providersLoading = $state(false);
 
   const availableProviders = $derived(gpuCapabilities?.availableProviders ?? []);
 
@@ -204,14 +203,11 @@
   }
 
   async function refreshGpuCapabilities() {
-    providersLoading = true;
     try {
       gpuCapabilities = await detectGpuCapabilities();
     } catch (e) {
       console.error('GPU detection failed:', e);
       gpuCapabilities = null;
-    } finally {
-      providersLoading = false;
     }
   }
 

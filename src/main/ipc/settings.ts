@@ -1,4 +1,6 @@
 import { ipcMain, dialog, shell } from 'electron';
+import fs from 'fs';
+import path from 'path';
 import { getConfig, getConfigPath } from '../birda/config';
 import { findBirda, setBirdaPath } from '../birda/runner';
 import { listModels } from '../birda/models';
@@ -98,7 +100,7 @@ export async function registerSettingsHandlers(): Promise<void> {
       const lines = content.trim().split('\n');
       // Try each line - first one that parses as lat,lon wins
       for (const line of lines) {
-        const parts = line.split(',').map((s) => s.trim());
+        const parts = line.split(',').map((s: string) => s.trim());
         if (parts.length >= 2) {
           const lat = parseFloat(parts[0]);
           const lon = parseFloat(parts[1]);

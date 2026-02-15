@@ -33,7 +33,7 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
     let resolved = false;
 
     const cleanup = () => {
-      if (!resolved && proc && !proc.killed) {
+      if (!resolved && !proc.killed) {
         proc.kill('SIGTERM');
       }
     };
@@ -47,11 +47,11 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
       }
     }, 10000);
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on('data', (data: Buffer) => {
       stdout += data.toString();
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on('data', (data: Buffer) => {
       stderr += data.toString();
     });
 
@@ -87,8 +87,10 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
 
 export async function detectGpuCapabilities(birdaPath?: string): Promise<GpuCapabilities> {
   // 1. Check GPU hardware
-  const info = await app.getGPUInfo('basic');
-  const hasNvidiaGpu = info.gpuDevice?.some((d) => d.vendorId === NVIDIA_VENDOR_ID) ?? false;
+  const info = (await app.getGPUInfo('basic')) as {
+    gpuDevice?: { vendorId: number; deviceId: number }[];
+  };
+  const hasNvidiaGpu = info.gpuDevice?.some((d: { vendorId: number }) => d.vendorId === NVIDIA_VENDOR_ID) ?? false;
 
   // 2. Check CUDA libraries via nvidia-smi
   const cudaLibrariesFound = hasNvidiaGpu && (await checkNvidiaSmi());
