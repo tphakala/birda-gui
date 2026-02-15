@@ -37,7 +37,7 @@
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
   import type { AppSettings, InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
-  import { BIRDA_GITHUB_URL } from '$shared/constants';
+  import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
   import * as m from '$paraglide/messages';
   import { locales, setLocale, isLocale } from '$paraglide/runtime';
@@ -377,7 +377,7 @@
             </p>
             <div class="mt-2">
               <a
-                href={BIRDA_GITHUB_URL}
+                href={BIRDA_RELEASES_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="link link-primary flex items-center gap-1 text-sm"
