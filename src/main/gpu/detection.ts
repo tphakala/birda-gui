@@ -93,7 +93,9 @@ export async function detectGpuCapabilities(birdaPath?: string): Promise<GpuCapa
   let availableProviders: string[] = ['CPU']; // Always available
   if (birdaPath) {
     try {
-      availableProviders = await getBirdaProviders(birdaPath);
+      const birdaProviders = await getBirdaProviders(birdaPath);
+      // Combine with default CPU and deduplicate
+      availableProviders = Array.from(new Set([...availableProviders, ...birdaProviders]));
     } catch (err) {
       console.error('[gpu] Failed to get birda providers:', err);
     }

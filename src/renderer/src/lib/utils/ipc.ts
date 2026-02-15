@@ -16,6 +16,7 @@ import type {
   EnrichedSpeciesListEntry,
   SpeciesFetchRequest,
   BirdaSpeciesResponse,
+  GpuCapabilities,
 } from '$shared/types';
 
 declare global {
@@ -137,18 +138,8 @@ export function getBirdaConfig(): Promise<Record<string, unknown>> {
 }
 
 // GPU detection
-export function detectGpuCapabilities(): Promise<{
-  hasNvidiaGpu: boolean;
-  cudaLibrariesFound: boolean;
-  availableProviders: string[];
-  platform: string;
-}> {
-  return window.birda.invoke('gpu:detect-capabilities') as Promise<{
-    hasNvidiaGpu: boolean;
-    cudaLibrariesFound: boolean;
-    availableProviders: string[];
-    platform: string;
-  }>;
+export function detectGpuCapabilities(): Promise<GpuCapabilities> {
+  return window.birda.invoke('gpu:detect-capabilities') as Promise<GpuCapabilities>;
 }
 
 // File system
