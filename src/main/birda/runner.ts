@@ -6,6 +6,22 @@ import type { BirdaEventEnvelope } from './types';
 
 const MAX_STDERR_LINES = 500;
 
+// Global registry of active child processes for cleanup on shutdown
+const activeProcesses = new Set<ChildProcess>();
+
+/**
+ * Terminates all active birda child processes.
+ * Called on app shutdown to prevent zombie processes.
+ */
+export function killAll(): void {
+  for (const proc of activeProcesses) {
+    if (!proc.killed) {
+      proc.kill('SIGTERM');
+    }
+  }
+  activeProcesses.clear();
+}
+
 interface AnalysisOptions {
   model: string;
   minConfidence: number;
@@ -151,6 +167,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       emitLog('info', `Spawning: ${birdaPath} ${args.join(' ')}`);
 
       child = spawn(birdaPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      activeProcesses.add(child);
 
       const rl = createInterface({ input: child.stdout! });
       rl.on('line', (line) => {
@@ -175,6 +192,9 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       });
 
       child.on('close', (code) => {
+        if (child) {
+          activeProcesses.delete(child);
+        }
         emitLog('info', `Process exited with code ${code}`);
         if (code === 0 || code === null) {
           resolve();
@@ -184,6 +204,9 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       });
 
       child.on('error', (err) => {
+        if (child) {
+          activeProcesses.delete(child);
+        }
         emitLog('error', `Failed to start birda: ${err.message}`);
         reject(new Error(`Failed to start birda: ${err.message}`));
       });
@@ -201,6 +224,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
     cancel: () => {
       if (child && !child.killed) {
         child.kill('SIGTERM');
+        activeProcesses.delete(child);
       }
     },
     promise,
