@@ -3,11 +3,17 @@ import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { getConfig, getConfigPath } from '../birda/config';
-import { findBirda, setBirdaPath } from '../birda/runner';
+import { findBirda, setBirdaPath, validateBirdaVersion } from '../birda/runner';
 import { listModels } from '../birda/models';
 import { buildLabelsPath, reloadLabels } from '../labels/label-service';
 import { settingsStore } from '../settings/store';
-import type { AppSettings } from '$shared/types';
+import type { AppSettings, BirdaCheckResponse } from '$shared/types';
+import { BIRDA_GITHUB_URL } from '$shared/constants';
+
+const MINIMUM_BIRDA_VERSION = '1.6.0';
+
+// Cache for version check to avoid spawning birda process on every call
+let cachedVersionCheck: Promise<BirdaCheckResponse> | null = null;
 
 // Zod schema for validating untrusted settings input from renderer process
 const PartialSettingsSchema = z
@@ -51,8 +57,10 @@ export async function registerSettingsHandlers(): Promise<void> {
     const updated = await settingsStore.update(validated);
 
     // Side effects after successful update
-    if (updated.birda_path) {
+    if (updated.birda_path && updated.birda_path !== current.birda_path) {
       setBirdaPath(updated.birda_path);
+      // Invalidate version check cache when path changes
+      cachedVersionCheck = null;
     }
 
     // Reload labels if species language changed
@@ -71,13 +79,53 @@ export async function registerSettingsHandlers(): Promise<void> {
     return updated;
   });
 
-  ipcMain.handle('app:check-birda', async () => {
-    try {
-      const birdaPath = await findBirda();
-      return { available: true, path: birdaPath };
-    } catch (err) {
-      return { available: false, error: (err as Error).message };
+  ipcMain.handle('app:check-birda', () => {
+    // Return cached result if available
+    if (cachedVersionCheck) {
+      return cachedVersionCheck;
     }
+
+    // Perform check and cache the promise. The promise is cached immediately
+    // to prevent concurrent checks from being spawned.
+    const promise = (async (): Promise<BirdaCheckResponse> => {
+      try {
+        const birdaPath = await findBirda();
+        const versionInfo = await validateBirdaVersion(birdaPath, MINIMUM_BIRDA_VERSION);
+
+        if (!versionInfo.meetsMinimum) {
+          return {
+            available: false,
+            error: `birda version ${versionInfo.version} is too old. Minimum required: ${versionInfo.minVersion}\nDownload latest: ${BIRDA_GITHUB_URL}`,
+            path: birdaPath,
+            version: versionInfo.version,
+            minVersion: versionInfo.minVersion,
+          };
+        }
+
+        return {
+          available: true,
+          path: birdaPath,
+          version: versionInfo.version,
+          minVersion: versionInfo.minVersion,
+        };
+      } catch (err) {
+        return { available: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    })();
+
+    cachedVersionCheck = promise;
+
+    // After the promise resolves, if it failed, clear the cache for the next call.
+    void promise.then((result) => {
+      if (!result.available) {
+        // Avoid race condition: only clear cache if it's still our failed promise.
+        if (cachedVersionCheck === promise) {
+          cachedVersionCheck = null;
+        }
+      }
+    });
+
+    return promise;
   });
 
   ipcMain.handle('birda:config-show', async () => {

@@ -203,6 +203,25 @@ export interface DetectionFilter {
 
 // === birda CLI ===
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+type BirdaCheckSuccess = {
+  available: true;
+  path: string;
+  version: string;
+  minVersion: string;
+};
+
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+type BirdaCheckFailure = {
+  available: false;
+  error: string;
+  path?: string;
+  version?: string;
+  minVersion?: string;
+};
+
+export type BirdaCheckResponse = BirdaCheckSuccess | BirdaCheckFailure;
+
 export interface InstalledModel {
   id: string;
   model_type: string;
