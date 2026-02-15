@@ -361,7 +361,12 @@
               {m.settings_gpu_librariesMissing_description()}
             </p>
             <div class="mt-2 flex gap-3 text-sm">
-              <a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener noreferrer" class="link">
+              <a
+                href="https://developer.nvidia.com/cuda-downloads"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link"
+              >
                 Download CUDA
               </a>
               <a href="https://developer.nvidia.com/tensorrt" target="_blank" rel="noopener noreferrer" class="link">
