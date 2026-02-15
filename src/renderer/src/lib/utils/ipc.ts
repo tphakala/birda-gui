@@ -136,6 +136,21 @@ export function getBirdaConfig(): Promise<Record<string, unknown>> {
   return window.birda.invoke('birda:config-show') as Promise<Record<string, unknown>>;
 }
 
+// GPU detection
+export function detectGpuCapabilities(): Promise<{
+  hasNvidiaGpu: boolean;
+  cudaLibrariesFound: boolean;
+  availableProviders: string[];
+  platform: string;
+}> {
+  return window.birda.invoke('gpu:detect-capabilities') as Promise<{
+    hasNvidiaGpu: boolean;
+    cudaLibrariesFound: boolean;
+    availableProviders: string[];
+    platform: string;
+  }>;
+}
+
 // File system
 export function openFileDialog(): Promise<string | null> {
   return window.birda.invoke('fs:open-file-dialog') as Promise<string | null>;

@@ -9,6 +9,7 @@ const MAX_STDERR_LINES = 500;
 interface AnalysisOptions {
   model: string;
   minConfidence: number;
+  executionProvider?: string | undefined;
   latitude?: number | undefined;
   longitude?: number | undefined;
   month?: number | undefined;
@@ -32,6 +33,28 @@ let configuredBirdaPath: string | null = null;
 
 export function setBirdaPath(p: string): void {
   configuredBirdaPath = p;
+}
+
+function getExecutionProviderFlag(ep: string | undefined): string | null {
+  if (!ep) return null;
+
+  const flagMap: Record<string, string> = {
+    auto: '--gpu',
+    cpu: '--cpu',
+    cuda: '--cuda',
+    tensorrt: '--tensorrt',
+    coreml: '--coreml',
+    directml: '--directml',
+    rocm: '--rocm',
+    openvino: '--openvino',
+    onednn: '--onednn',
+    qnn: '--qnn',
+    acl: '--acl',
+    armnn: '--armnn',
+    xnnpack: '--xnnpack',
+  };
+
+  return flagMap[ep.toLowerCase()] ?? null;
 }
 
 export async function findBirda(): Promise<string> {
@@ -101,6 +124,12 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       // Existing args
       args.push('--force', '--model', options.model, '-c', String(options.minConfidence));
+
+      // Execution provider
+      const epFlag = getExecutionProviderFlag(options.executionProvider);
+      if (epFlag) {
+        args.push(epFlag);
+      }
 
       if (options.latitude !== undefined && options.longitude !== undefined) {
         args.push('--lat', String(options.latitude), '--lon', String(options.longitude));

@@ -30,6 +30,12 @@
   "settings_analysis_title": "Analysis Defaults",
   "settings_analysis_defaultModel": "Default Model",
   "settings_analysis_confidence": "Default Confidence Threshold",
+  "settings_analysis_executionProvider": "Execution Provider",
+  "settings_analysis_epAuto": "Auto (Recommended)",
+  "settings_analysis_epDescription": "Controls hardware acceleration for inference. Auto selects the best available option.",
+
+  "settings_gpu_librariesMissing_title": "GPU Acceleration Available",
+  "settings_gpu_librariesMissing_description": "An Nvidia GPU was detected, but CUDA/TensorRT libraries are not installed. Install them to enable GPU acceleration:",
 
   "settings_spectrogram_title": "Spectrogram",
   "settings_spectrogram_maxFreq": "Default Max Frequency",
