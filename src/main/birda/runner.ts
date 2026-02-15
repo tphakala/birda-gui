@@ -159,7 +159,7 @@ export async function findBirda(): Promise<string> {
  * @returns The version string (e.g., "1.6.0")
  * @throws Error if the version cannot be retrieved or parsed
  */
-export async function getBirdaVersion(birdaPath: string): Promise<string> {
+async function getBirdaVersion(birdaPath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(birdaPath, ['-V'], { timeout: 2000 }, (err, stdout, stderr) => {
       if (err) {
