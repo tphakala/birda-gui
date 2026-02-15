@@ -290,7 +290,7 @@
             {#if detectedLanguage && getLanguage(detectedLanguage)}
               <p class="text-base-content/50 text-xs">
                 {m.wizard_uiLanguage_detected({
-                  language: getLanguage(detectedLanguage)?.nativeName || detectedLanguage,
+                  language: getLanguage(detectedLanguage)?.nativeName ?? detectedLanguage,
                 })}
               </p>
             {/if}
