@@ -10,7 +10,7 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, type Tab } from '$lib/stores/app.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
@@ -114,6 +114,14 @@
   let systemPrefersDark = $state(false);
 
   onMount(() => {
+    // Restore active tab after locale change reload
+    const savedTab = sessionStorage.getItem('activeTabBeforeReload');
+    if (savedTab) {
+      console.log('[App] Restoring activeTab from sessionStorage:', savedTab);
+      appState.activeTab = savedTab as Tab;
+      sessionStorage.removeItem('activeTabBeforeReload');
+    }
+
     // Initial theme setup
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     systemPrefersDark = mediaQuery.matches;
