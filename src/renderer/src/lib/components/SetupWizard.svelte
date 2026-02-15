@@ -27,6 +27,7 @@
     offModelInstallProgress,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
+  import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { onMount, onDestroy } from 'svelte';
   import * as m from '$paraglide/messages';
 
@@ -253,19 +254,17 @@
               <div class="flex flex-col gap-2">
                 <div class="text-success flex items-center gap-2 text-sm">
                   <CircleCheckBig size={18} />
-                  <span>{m.wizard_cli_found({ path: birdaStatus.path ?? '' })}</span>
+                  <span>{m.wizard_cli_found({ path: birdaStatus.path })}</span>
                 </div>
-                {#if birdaStatus.version}
-                  <div class="text-base-content/70 flex items-center gap-2 pl-7 text-xs">
-                    <span>Version: {birdaStatus.version}</span>
-                  </div>
-                {/if}
+                <div class="text-base-content/70 flex items-center gap-2 pl-7 text-xs">
+                  <span>Version: {birdaStatus.version}</span>
+                </div>
               </div>
             {:else}
               <div class="space-y-3">
                 <div class="text-error flex items-center gap-2 text-sm">
                   <CircleX size={18} />
-                  <span>{birdaStatus.error ?? m.wizard_cli_notFound()}</span>
+                  <span>{birdaStatus.error}</span>
                 </div>
                 {#if birdaStatus.version && birdaStatus.minVersion}
                   <div class="text-warning text-xs">
@@ -279,7 +278,7 @@
                     {m.wizard_cli_setPath()}
                   </button>
                   <a
-                    href="https://github.com/tphakala/birda/releases"
+                    href={BIRDA_RELEASES_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn btn-outline btn-sm gap-1.5"

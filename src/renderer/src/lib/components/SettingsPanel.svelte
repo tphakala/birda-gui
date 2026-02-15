@@ -37,6 +37,7 @@
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
   import type { AppSettings, InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
+  import { BIRDA_GITHUB_URL } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
   import * as m from '$paraglide/messages';
   import { locales, setLocale, isLocale } from '$paraglide/runtime';
@@ -350,13 +351,11 @@
             <div class="flex flex-col gap-2">
               <div class="text-success flex items-center gap-2 text-sm">
                 <CircleCheckBig size={16} />
-                <span>{m.settings_cli_availableAt({ path: birdaStatus.path ?? '' })}</span>
+                <span>{m.settings_cli_availableAt({ path: birdaStatus.path })}</span>
               </div>
-              {#if birdaStatus.version}
-                <div class="text-base-content/70 flex items-center gap-2 pl-6 text-sm">
-                  <span>Version: {birdaStatus.version}</span>
-                </div>
-              {/if}
+              <div class="text-base-content/70 flex items-center gap-2 pl-6 text-sm">
+                <span>Version: {birdaStatus.version}</span>
+              </div>
             </div>
           {:else}
             <div class="text-error flex items-center gap-2 text-sm">
@@ -378,7 +377,7 @@
             </p>
             <div class="mt-2">
               <a
-                href="https://github.com/tphakala/birda"
+                href={BIRDA_GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 class="link link-primary flex items-center gap-1 text-sm"

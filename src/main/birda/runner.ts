@@ -1,8 +1,12 @@
-import { spawn, type ChildProcess, execFile } from 'child_process';
+import { spawn, type ChildProcess, execFile as execFileCallback } from 'child_process';
+import { promisify } from 'util';
+
+const execFile = promisify(execFileCallback);
 import { createInterface } from 'readline';
 import path from 'path';
 import fs from 'fs';
 import type { BirdaEventEnvelope } from './types';
+import { BIRDA_GITHUB_URL } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
 
@@ -138,12 +142,12 @@ export async function findBirda(): Promise<string> {
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
 
   return new Promise((resolve, reject) => {
-    execFile(whichCmd, [binaryName], (err, stdout) => {
+    execFileCallback(whichCmd, [binaryName], (err, stdout) => {
       if (err || !stdout.trim()) {
         reject(
           new Error(
             `birda CLI not found in PATH. Install birda or set the path in Settings.\n` +
-              `Download: https://github.com/tphakala/birda`,
+              `Download: ${BIRDA_GITHUB_URL}`,
           ),
         );
         return;
@@ -160,27 +164,23 @@ export async function findBirda(): Promise<string> {
  * @throws Error if the version cannot be retrieved or parsed
  */
 async function getBirdaVersion(birdaPath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, ['-V'], { timeout: 2000 }, (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Failed to get birda version: ${err.message}`));
-        return;
-      }
+  try {
+    const { stdout, stderr } = await execFile(birdaPath, ['-V'], { timeout: 2000 });
 
-      // birda -V outputs: "birda 1.6.0", "Birda CLI v1.6.0" or similar
-      // Case insensitive, allows optional 'v' prefix, flexible spacing
-      const output = (stdout || stderr).trim();
-      const versionRegex = /birda.*?\s+v?(\d+\.\d+\.\d+)/i;
-      const match = versionRegex.exec(output);
+    // birda -V outputs: "birda 1.6.0", "Birda CLI v1.6.0" or similar
+    // Case insensitive, allows optional 'v' prefix, flexible spacing
+    const output = (stdout || stderr).trim();
+    const versionRegex = /birda.*?\s+v?(\d+\.\d+\.\d+)/i;
+    const match = versionRegex.exec(output);
 
-      if (!match) {
-        reject(new Error(`Could not parse birda version from output: ${output}`));
-        return;
-      }
+    if (!match) {
+      throw new Error(`Could not parse birda version from output: ${output}`);
+    }
 
-      resolve(match[1]);
-    });
-  });
+    return match[1];
+  } catch (err) {
+    throw new Error(`Failed to get birda version: ${(err as Error).message}`);
+  }
 }
 
 /**

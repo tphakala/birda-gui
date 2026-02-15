@@ -48,7 +48,7 @@
 
   <div class="flex-1"></div>
 
-  {#if birdaStatus?.available === false && birdaStatus.version && birdaStatus.minVersion}
+  {#if birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion}
     <span
       class="text-warning flex items-center gap-1.5"
       title="birda CLI update required: {birdaStatus.version} → {birdaStatus.minVersion}"
@@ -57,7 +57,7 @@
       <span>birda {birdaStatus.version}</span>
     </span>
     <div class="bg-base-300 h-3 w-px"></div>
-  {:else if birdaStatus?.version}
+  {:else if birdaStatus?.available}
     <span title="birda CLI version">birda {birdaStatus.version}</span>
     <div class="bg-base-300 h-3 w-px"></div>
   {/if}
