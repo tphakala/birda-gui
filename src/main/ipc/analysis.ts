@@ -282,7 +282,7 @@ export function registerAnalysisHandlers(): void {
       let failedFileCount = 0;
       let skippedFileCount = 0;
       let totalFiles = 0;
-      const pendingImports: Promise<void>[] = [];
+      const pendingImports = new Set<Promise<void>>();
       let failedFilesOverflow = false;
       let skippedFilesOverflow = false;
       const importSemaphore = new Semaphore(MAX_CONCURRENT_IMPORTS);
@@ -386,7 +386,8 @@ export function registerAnalysisHandlers(): void {
           }
         })();
 
-        pendingImports.push(importPromise);
+        pendingImports.add(importPromise);
+        void importPromise.finally(() => pendingImports.delete(importPromise));
       });
 
       // Track final status for conditional cleanup
@@ -396,7 +397,7 @@ export function registerAnalysisHandlers(): void {
         await handle.promise;
 
         // Wait for all pending imports to complete before calculating status
-        await Promise.allSettled(pendingImports);
+        await Promise.allSettled(Array.from(pendingImports));
 
         // Determine final status
         if (isDirectory) {
