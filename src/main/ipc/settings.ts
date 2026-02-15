@@ -5,29 +5,35 @@ import { getConfig, getConfigPath } from '../birda/config';
 import { findBirda, setBirdaPath } from '../birda/runner';
 import { listModels } from '../birda/models';
 import { buildLabelsPath, reloadLabels } from '../labels/label-service';
-import { loadSettings, saveSettings } from '../settings/loader';
+import { settingsStore } from '../settings/store';
 import type { AppSettings } from '$shared/types';
 
 export async function registerSettingsHandlers(): Promise<void> {
   // Apply saved birda path at startup so all handlers can find birda immediately
-  const initial = await loadSettings();
+  const initial = await settingsStore.get();
   if (initial.birda_path) {
     setBirdaPath(initial.birda_path);
   }
 
   ipcMain.handle('app:get-settings', async () => {
-    return await loadSettings();
+    return await settingsStore.get();
   });
 
   ipcMain.handle('app:set-settings', async (_event, settings: Partial<AppSettings>) => {
-    const current = await loadSettings();
-    const updated = { ...current, ...settings };
-    await saveSettings(updated);
+    // Store the old language for comparison before atomic update
+    const current = await settingsStore.get();
+    const oldSpeciesLanguage = current.species_language;
+
+    // Atomic update through mutex-protected store
+    const updated = await settingsStore.update(settings);
+
+    // Side effects after successful update
     if (updated.birda_path) {
       setBirdaPath(updated.birda_path);
     }
+
     // Reload labels if species language changed
-    if (settings.species_language && settings.species_language !== current.species_language) {
+    if (settings.species_language && settings.species_language !== oldSpeciesLanguage) {
       try {
         const models = await listModels();
         const defaultModel = models.find((m) => m.is_default) ?? models[0];
