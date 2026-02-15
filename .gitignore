@@ -5,6 +5,7 @@ release/
 docs/plans/
 logs/
 .leann/
+.claude/
 *.db
 *.db-wal
 *.db-shm
