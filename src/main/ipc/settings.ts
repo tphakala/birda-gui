@@ -1,12 +1,32 @@
 import { ipcMain, dialog, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { getConfig, getConfigPath } from '../birda/config';
 import { findBirda, setBirdaPath } from '../birda/runner';
 import { listModels } from '../birda/models';
 import { buildLabelsPath, reloadLabels } from '../labels/label-service';
 import { settingsStore } from '../settings/store';
 import type { AppSettings } from '$shared/types';
+
+// Zod schema for validating untrusted settings input from renderer process
+const PartialSettingsSchema = z
+  .object({
+    birda_path: z.string(),
+    clip_output_dir: z.string(),
+    db_path: z.string(),
+    default_model: z.string(),
+    default_confidence: z.number().min(0).max(1),
+    default_execution_provider: z.string(),
+    default_freq_max: z.number().int().positive(),
+    default_spectrogram_height: z.number().int().positive(),
+    species_language: z.string(),
+    ui_language: z.string(),
+    theme: z.enum(['system', 'light', 'dark']),
+    setup_completed: z.boolean(),
+  })
+  .partial()
+  .strict(); // Reject unknown properties
 
 export async function registerSettingsHandlers(): Promise<void> {
   // Apply saved birda path at startup so all handlers can find birda immediately
@@ -20,12 +40,15 @@ export async function registerSettingsHandlers(): Promise<void> {
   });
 
   ipcMain.handle('app:set-settings', async (_event, settings: Partial<AppSettings>) => {
+    // Validate untrusted input from renderer process
+    const validated = PartialSettingsSchema.parse(settings);
+
     // Store the old language for comparison before atomic update
     const current = await settingsStore.get();
     const oldSpeciesLanguage = current.species_language;
 
     // Atomic update through mutex-protected store
-    const updated = await settingsStore.update(settings);
+    const updated = await settingsStore.update(validated);
 
     // Side effects after successful update
     if (updated.birda_path) {
@@ -33,7 +56,7 @@ export async function registerSettingsHandlers(): Promise<void> {
     }
 
     // Reload labels if species language changed
-    if (settings.species_language && settings.species_language !== oldSpeciesLanguage) {
+    if (validated.species_language && validated.species_language !== oldSpeciesLanguage) {
       try {
         const models = await listModels();
         const defaultModel = models.find((m) => m.is_default) ?? models[0];

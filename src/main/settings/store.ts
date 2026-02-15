@@ -22,17 +22,23 @@ class SettingsStore {
 
   /**
    * Load settings with caching. Cache is invalidated on each update.
-   * Safe for concurrent access (read-only operation).
+   * Uses double-checked locking to prevent stale cache from concurrent calls.
    */
   async get(): Promise<AppSettings> {
-    // Use cached value if available to reduce file I/O
+    // Fast path: return cached value if available
     if (this.cache) {
       return this.cache;
     }
 
-    // No mutex needed for initial load (read-only)
-    this.cache = await loadSettings();
-    return this.cache;
+    // Slow path: use mutex to prevent race conditions during cache population
+    return await this.mutex.runExclusive(async () => {
+      // Double-check: another thread may have populated cache while we waited
+      if (this.cache) {
+        return this.cache;
+      }
+      this.cache = await loadSettings();
+      return this.cache;
+    });
   }
 
   /**
@@ -44,8 +50,8 @@ class SettingsStore {
    */
   async update(partial: Partial<AppSettings>): Promise<AppSettings> {
     return await this.mutex.runExclusive(async () => {
-      // Load current settings inside the critical section
-      const current = await loadSettings();
+      // Use cached settings if available, otherwise load from disk
+      const current = this.cache ?? (await loadSettings());
 
       // Merge partial update
       const updated = { ...current, ...partial };
