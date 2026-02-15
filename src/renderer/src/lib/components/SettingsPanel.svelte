@@ -265,7 +265,7 @@
 
       // If UI language changed, reload to apply new locale
       if (previousLang !== settings.ui_language && isLocale(settings.ui_language)) {
-        void setLocale(settings.ui_language);
+        void setLocale(settings.ui_language, { reload: false });
         return;
       }
 
