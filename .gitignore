@@ -3,6 +3,7 @@ dist/
 out/
 release/
 docs/plans/
+.worktrees/
 logs/
 .leann/
 .claude/
