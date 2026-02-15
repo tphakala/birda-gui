@@ -12,9 +12,7 @@
   let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let showVersionModal = $state(false);
 
-  const isOutdated = $derived(
-    birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion,
-  );
+  const isOutdated = $derived(birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion);
 
   onMount(() => {
     let mounted = true;
