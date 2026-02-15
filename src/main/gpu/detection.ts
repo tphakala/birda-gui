@@ -60,7 +60,7 @@ async function getBirdaProviders(birdaPath: string): Promise<string[]> {
       }
 
       try {
-        const response: BirdaProvidersResponse = JSON.parse(stdout);
+        const response = JSON.parse(stdout) as unknown as BirdaProvidersResponse;
 
         // Extract provider names (e.g., "CPU", "CUDA", "TensorRT")
         const providers = response.payload.providers.map((p) => p.name);
