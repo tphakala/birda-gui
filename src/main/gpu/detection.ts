@@ -2,18 +2,12 @@ import { app } from 'electron';
 import { spawn } from 'child_process';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import type { GpuCapabilities } from '$shared/types';
 
 const execAsync = promisify(exec);
 
 // Nvidia GPU vendor ID (PCI vendor ID for Nvidia Corporation)
 const NVIDIA_VENDOR_ID = 0x10de;
-
-export interface GpuCapabilities {
-  hasNvidiaGpu: boolean;
-  cudaLibrariesFound: boolean;
-  availableProviders: string[];
-  platform: string;
-}
 
 async function checkNvidiaSmi(): Promise<boolean> {
   try {

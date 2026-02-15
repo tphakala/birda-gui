@@ -1,3 +1,12 @@
+// === GPU Detection ===
+
+export interface GpuCapabilities {
+  hasNvidiaGpu: boolean;
+  cudaLibrariesFound: boolean;
+  availableProviders: string[];
+  platform: string;
+}
+
 // === Audio file scanning ===
 
 export interface AudioMothMeta {

@@ -5,7 +5,7 @@ import type { AppSettings } from '$shared/types';
 
 const SETTINGS_FILE = 'birda-gui-settings.json';
 
-export function getSettingsPath(): string {
+function getSettingsPath(): string {
   return path.join(app.getPath('userData'), SETTINGS_FILE);
 }
 
