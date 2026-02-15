@@ -6,6 +6,7 @@ docs/plans/
 logs/
 .leann/
 .claude/
+.worktrees/
 *.db
 *.db-wal
 *.db-shm
