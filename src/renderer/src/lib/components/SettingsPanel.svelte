@@ -258,7 +258,9 @@
     saved = false;
     error = null;
     try {
-      const previousLang = settings.ui_language;
+      // Compare against savedSettings (last saved state), not current settings
+      // because the dropdown binding already changed settings.ui_language
+      const previousLang = savedSettings?.ui_language;
       settings = await setSettings($state.snapshot(settings));
       savedSettings = structuredClone($state.snapshot(settings));
       birdaStatus = await checkBirda();
