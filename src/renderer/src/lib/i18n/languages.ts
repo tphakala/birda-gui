@@ -3,7 +3,7 @@
  * This is the single source of truth for language metadata.
  */
 
-export interface LanguageInfo {
+interface LanguageInfo {
   code: string; // ISO 639-1 language code
   nativeName: string; // Language name in native script
   englishName: string; // Language name in English
