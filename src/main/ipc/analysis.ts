@@ -10,7 +10,7 @@ import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
 import { createAudioFile } from '../db/audio-files';
-import { loadSettings } from '../settings/loader';
+import { settingsStore } from '../settings/store';
 import type { AudioFileMetadata } from '$shared/types';
 import type {
   BirdaEventEnvelope,
@@ -259,7 +259,7 @@ export function registerAnalysisHandlers(): void {
       }
 
       // Load settings to get execution provider
-      const settings = await loadSettings();
+      const settings = await settingsStore.get();
 
       // Start analysis
       const handle = runAnalysis(request.source_path, {
