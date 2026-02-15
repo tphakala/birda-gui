@@ -206,7 +206,7 @@
     if (selectedUiLanguage && isLocale(selectedUiLanguage)) {
       try {
         await setSettings({ ui_language: selectedUiLanguage });
-        void setLocale(selectedUiLanguage);
+        void setLocale(selectedUiLanguage, { reload: false });
       } catch {
         // Proceed even if saving fails
       }

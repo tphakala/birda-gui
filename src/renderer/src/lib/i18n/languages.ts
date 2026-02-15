@@ -12,7 +12,10 @@ export interface LanguageInfo {
 
 /**
  * All available UI languages.
- * To add a new language: Add entry here + create messages/{code}.json
+ * To add a new language:
+ * 1. Add entry here
+ * 2. Create messages/{code}.json
+ * 3. Update project.inlang/settings.json languageTags array
  */
 export const LANGUAGES: LanguageInfo[] = [
   { code: 'en', nativeName: 'English', englishName: 'English', dir: 'ltr' },
