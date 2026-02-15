@@ -148,6 +148,17 @@ function runMigrations(db: Database.Database): void {
   if (!applied.has(5)) {
     console.log('Migrating to version 5: Add audio_files table');
 
+    // Check if detections table has source_file column (old schema)
+    const detectionsColumns = db.prepare('PRAGMA table_info(detections)').all() as { name: string }[];
+    const hasSourceFile = detectionsColumns.some((c) => c.name === 'source_file');
+
+    if (!hasSourceFile) {
+      // New database with current schema - audio_files table already exists via schema.ts
+      console.log('Detections table already uses audio_file_id - skipping migration');
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(5);
+      return;
+    }
+
     // Temporarily disable foreign keys for table recreation
     db.pragma('foreign_keys = OFF');
 

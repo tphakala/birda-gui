@@ -58,13 +58,15 @@
         "AppImage",
         "deb"
       ],
-      "category": "Science"
+      "category": "Science",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
     },
     "mac": {
       "target": [
@@ -75,12 +77,14 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": true
+      "notarize": true,
+      "artifactName": "${productName}-${version}-macos-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "artifactName": "${productName}-Setup-${version}-windows-${arch}.${ext}"
     }
   },
   "dependencies": {
