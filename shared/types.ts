@@ -203,6 +203,14 @@ export interface DetectionFilter {
 
 // === birda CLI ===
 
+export interface BirdaCheckResponse {
+  available: boolean;
+  path?: string;
+  error?: string;
+  version?: string;
+  minVersion?: string;
+}
+
 export interface InstalledModel {
   id: string;
   model_type: string;

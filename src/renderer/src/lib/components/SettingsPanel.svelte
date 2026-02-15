@@ -36,7 +36,7 @@
     detectGpuCapabilities,
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
-  import type { AppSettings, InstalledModel, AvailableModel } from '$shared/types';
+  import type { AppSettings, InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
   import { onDestroy, onMount } from 'svelte';
   import * as m from '$paraglide/messages';
   import { locales, setLocale, isLocale } from '$paraglide/runtime';
@@ -99,7 +99,7 @@
     { value: 'dark', label: m.settings_general_themeDark() },
   ];
 
-  let birdaStatus = $state<{ available: boolean; path?: string; error?: string } | null>(null);
+  let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let savedSettings = $state<AppSettings | null>(null);
@@ -347,9 +347,16 @@
           {#if birdaStatus === null}
             <p class="text-base-content/50 text-sm">{m.settings_cli_checking()}</p>
           {:else if birdaStatus.available}
-            <div class="text-success flex items-center gap-2 text-sm">
-              <CircleCheckBig size={16} />
-              <span>{m.settings_cli_availableAt({ path: birdaStatus.path ?? '' })}</span>
+            <div class="flex flex-col gap-2">
+              <div class="text-success flex items-center gap-2 text-sm">
+                <CircleCheckBig size={16} />
+                <span>{m.settings_cli_availableAt({ path: birdaStatus.path ?? '' })}</span>
+              </div>
+              {#if birdaStatus.version}
+                <div class="text-base-content/70 flex items-center gap-2 text-sm pl-6">
+                  <span>Version: {birdaStatus.version}</span>
+                </div>
+              {/if}
             </div>
           {:else}
             <div class="text-error flex items-center gap-2 text-sm">
@@ -359,6 +366,30 @@
           {/if}
         </div>
       </div>
+
+      <!-- Outdated birda Version Alert -->
+      {#if birdaStatus?.available === false && birdaStatus.version && birdaStatus.minVersion}
+        <div role="alert" class="alert alert-warning">
+          <TriangleAlert size={20} />
+          <div class="flex-1">
+            <h4 class="font-medium">birda Update Required</h4>
+            <p class="text-sm opacity-80">
+              Your birda CLI version ({birdaStatus.version}) is outdated. Version {birdaStatus.minVersion} or higher is required.
+            </p>
+            <div class="mt-2">
+              <a
+                href="https://github.com/tphakala/birda"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link link-primary text-sm flex items-center gap-1"
+              >
+                <ExternalLink size={14} />
+                Download latest version
+              </a>
+            </div>
+          </div>
+        </div>
+      {/if}
 
       <!-- GPU Library Alert -->
       {#if gpuCapabilities?.hasNvidiaGpu && !gpuCapabilities.cudaLibrariesFound && !gpuAlertDismissed}

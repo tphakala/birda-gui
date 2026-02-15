@@ -89,6 +89,37 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
   return flagMap[ep.toLowerCase()] ?? null;
 }
 
+/**
+ * Parses a semantic version string into major, minor, patch components.
+ * Returns null if the version string is invalid.
+ */
+function parseVersion(versionString: string): { major: number; minor: number; patch: number } | null {
+  const versionRegex = /^(\d+)\.(\d+)\.(\d+)/;
+  const match = versionRegex.exec(versionString);
+  if (!match) return null;
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    patch: parseInt(match[3], 10),
+  };
+}
+
+/**
+ * Compares two semantic versions.
+ * Returns:
+ *   negative if v1 < v2
+ *   0 if v1 === v2
+ *   positive if v1 > v2
+ */
+function compareVersions(
+  v1: { major: number; minor: number; patch: number },
+  v2: { major: number; minor: number; patch: number },
+): number {
+  if (v1.major !== v2.major) return v1.major - v2.major;
+  if (v1.minor !== v2.minor) return v1.minor - v2.minor;
+  return v1.patch - v2.patch;
+}
+
 export async function findBirda(): Promise<string> {
   if (configuredBirdaPath) {
     const basename = path.basename(configuredBirdaPath).toLowerCase();
@@ -120,6 +151,63 @@ export async function findBirda(): Promise<string> {
       resolve(stdout.trim().split('\n')[0]);
     });
   });
+}
+
+/**
+ * Gets the birda CLI version by executing `birda -V`.
+ * @param birdaPath - Path to the birda executable
+ * @returns The version string (e.g., "1.6.0")
+ * @throws Error if the version cannot be retrieved or parsed
+ */
+export async function getBirdaVersion(birdaPath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(birdaPath, ['-V'], { timeout: 2000 }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(`Failed to get birda version: ${err.message}`));
+        return;
+      }
+
+      // birda -V outputs: "birda 1.6.0", "Birda CLI v1.6.0" or similar
+      // Case insensitive, allows optional 'v' prefix, flexible spacing
+      const output = (stdout || stderr).trim();
+      const versionRegex = /birda.*?\s+v?(\d+\.\d+\.\d+)/i;
+      const match = versionRegex.exec(output);
+
+      if (!match) {
+        reject(new Error(`Could not parse birda version from output: ${output}`));
+        return;
+      }
+
+      resolve(match[1]);
+    });
+  });
+}
+
+/**
+ * Validates that the birda CLI version meets the minimum required version.
+ * @param birdaPath - Path to the birda executable
+ * @param minVersion - Minimum required version (e.g., "1.6.0")
+ * @returns Object with version info and validation status
+ */
+export async function validateBirdaVersion(
+  birdaPath: string,
+  minVersion: string,
+): Promise<{ version: string; meetsMinimum: boolean; minVersion: string }> {
+  const version = await getBirdaVersion(birdaPath);
+  const parsedVersion = parseVersion(version);
+  const parsedMinVersion = parseVersion(minVersion);
+
+  if (!parsedVersion || !parsedMinVersion) {
+    throw new Error(`Invalid version format: ${version} or ${minVersion}`);
+  }
+
+  const meetsMinimum = compareVersions(parsedVersion, parsedMinVersion) >= 0;
+
+  return {
+    version,
+    meetsMinimum,
+    minVersion,
+  };
 }
 
 export function runAnalysis(sourcePath: string, options: AnalysisOptions): AnalysisHandle {

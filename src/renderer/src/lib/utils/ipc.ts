@@ -17,6 +17,7 @@ import type {
   SpeciesFetchRequest,
   BirdaSpeciesResponse,
   GpuCapabilities,
+  BirdaCheckResponse,
 } from '$shared/types';
 
 declare global {
@@ -129,8 +130,8 @@ export function setSettings(settings: Partial<AppSettings>): Promise<AppSettings
   return window.birda.invoke('app:set-settings', settings) as Promise<AppSettings>;
 }
 
-export function checkBirda(): Promise<{ available: boolean; path?: string; error?: string }> {
-  return window.birda.invoke('app:check-birda') as Promise<{ available: boolean; path?: string; error?: string }>;
+export function checkBirda(): Promise<BirdaCheckResponse> {
+  return window.birda.invoke('app:check-birda') as Promise<BirdaCheckResponse>;
 }
 
 export function getBirdaConfig(): Promise<Record<string, unknown>> {
