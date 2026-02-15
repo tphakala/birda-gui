@@ -12,12 +12,14 @@ import { detectLanguage } from '$lib/i18n/detect';
 // components render with the correct language from the start.
 try {
   const settings = await getSettings();
+  console.log('[main.ts] App starting, ui_language from settings:', settings.ui_language);
 
   // If no UI language is set, auto-detect from system locale
   if (!settings.ui_language) {
     try {
       const systemLocale = await getSystemLocale();
       const detectedLang = detectLanguage(systemLocale);
+      console.log('[main.ts] Auto-detected language:', detectedLang);
       if (isLocale(detectedLang)) {
         void setLocale(detectedLang, { reload: false });
       }
@@ -26,6 +28,7 @@ try {
     }
   } else if (isLocale(settings.ui_language)) {
     // Use saved language preference
+    console.log('[main.ts] Setting locale to:', settings.ui_language, 'with reload:false');
     void setLocale(settings.ui_language, { reload: false });
   }
 } catch {

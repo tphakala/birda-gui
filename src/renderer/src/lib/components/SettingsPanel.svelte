@@ -265,7 +265,10 @@
 
       // If UI language changed, apply new locale
       if (previousLang !== settings.ui_language && isLocale(settings.ui_language)) {
+        console.log('[SettingsPanel] Language changed from', previousLang, 'to', settings.ui_language);
+        console.log('[SettingsPanel] Calling setLocale with reload=true (default)');
         await setLocale(settings.ui_language);
+        console.log('[SettingsPanel] setLocale completed, reload should have happened');
       }
 
       saved = true;
