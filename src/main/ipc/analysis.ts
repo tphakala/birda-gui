@@ -550,7 +550,7 @@ export function registerAnalysisHandlers(): void {
       return null;
     }
 
-    await fs.promises.writeFile(result.filePath, Buffer.from(wavBytes));
+    await fs.promises.writeFile(result.filePath, wavBytes);
     return result.filePath;
   });
 }
