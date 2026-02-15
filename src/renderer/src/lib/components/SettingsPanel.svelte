@@ -353,7 +353,7 @@
                 <span>{m.settings_cli_availableAt({ path: birdaStatus.path ?? '' })}</span>
               </div>
               {#if birdaStatus.version}
-                <div class="text-base-content/70 flex items-center gap-2 text-sm pl-6">
+                <div class="text-base-content/70 flex items-center gap-2 pl-6 text-sm">
                   <span>Version: {birdaStatus.version}</span>
                 </div>
               {/if}
@@ -381,7 +381,7 @@
                 href="https://github.com/tphakala/birda"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="link link-primary text-sm flex items-center gap-1"
+                class="link link-primary flex items-center gap-1 text-sm"
               >
                 <ExternalLink size={14} />
                 Download latest version

@@ -256,7 +256,7 @@
                   <span>{m.wizard_cli_found({ path: birdaStatus.path ?? '' })}</span>
                 </div>
                 {#if birdaStatus.version}
-                  <div class="text-base-content/70 flex items-center gap-2 text-xs pl-7">
+                  <div class="text-base-content/70 flex items-center gap-2 pl-7 text-xs">
                     <span>Version: {birdaStatus.version}</span>
                   </div>
                 {/if}

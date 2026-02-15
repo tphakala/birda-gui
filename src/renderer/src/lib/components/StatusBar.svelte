@@ -49,7 +49,10 @@
   <div class="flex-1"></div>
 
   {#if birdaStatus?.available === false && birdaStatus.version && birdaStatus.minVersion}
-    <span class="text-warning flex items-center gap-1.5" title="birda CLI update required: {birdaStatus.version} → {birdaStatus.minVersion}">
+    <span
+      class="text-warning flex items-center gap-1.5"
+      title="birda CLI update required: {birdaStatus.version} → {birdaStatus.minVersion}"
+    >
       <TriangleAlert size={14} />
       <span>birda {birdaStatus.version}</span>
     </span>
