@@ -248,9 +248,7 @@ function main() {
     console.log(`✓ Reference (${REFERENCE_LANG}.json): ${Object.keys(reference).length} keys\n`);
 
     // Get all language files
-    const files = readdirSync(MESSAGES_DIR).filter(
-      (f) => f.endsWith('.json') && f !== `${REFERENCE_LANG}.json`,
-    );
+    const files = readdirSync(MESSAGES_DIR).filter((f) => f.endsWith('.json') && f !== `${REFERENCE_LANG}.json`);
 
     if (files.length === 0) {
       console.log('⚠️  No translation files found besides reference\n');
