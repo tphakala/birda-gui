@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'child_process';
-import { findBirda } from './runner';
+import { findBirda, registerProcess, unregisterProcess } from './runner';
 import type { InstalledModel, AvailableModel } from '$shared/types';
 
 interface BirdaJsonEnvelope {
@@ -44,6 +44,7 @@ export async function installModel(name: string, onProgress?: (line: string) => 
     const proc = spawn(birdaPath, ['models', 'install', name], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    registerProcess(proc);
 
     let stdout = '';
     let stderr = '';
@@ -80,6 +81,7 @@ export async function installModel(name: string, onProgress?: (line: string) => 
     proc.stdin.end();
 
     proc.on('close', (code) => {
+      unregisterProcess(proc);
       if (onProgress) {
         if (stdoutRemainder.trim()) onProgress(stdoutRemainder.trim());
         if (stderrRemainder.trim()) onProgress(stderrRemainder.trim());
@@ -92,6 +94,7 @@ export async function installModel(name: string, onProgress?: (line: string) => 
     });
 
     proc.on('error', (err) => {
+      unregisterProcess(proc);
       reject(new Error(`Model install failed: ${err.message}`));
     });
   });

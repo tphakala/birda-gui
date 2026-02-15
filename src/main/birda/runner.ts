@@ -22,6 +22,22 @@ export function killAll(): void {
   activeProcesses.clear();
 }
 
+/**
+ * Registers a child process for cleanup on shutdown.
+ * Call this for any long-running birda process (analysis, model install, etc.).
+ */
+export function registerProcess(proc: ChildProcess): void {
+  activeProcesses.add(proc);
+}
+
+/**
+ * Unregisters a child process from cleanup tracking.
+ * Call this when the process exits normally or encounters an error.
+ */
+export function unregisterProcess(proc: ChildProcess): void {
+  activeProcesses.delete(proc);
+}
+
 interface AnalysisOptions {
   model: string;
   minConfidence: number;
@@ -167,7 +183,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       emitLog('info', `Spawning: ${birdaPath} ${args.join(' ')}`);
 
       child = spawn(birdaPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-      activeProcesses.add(child);
+      registerProcess(child);
 
       const rl = createInterface({ input: child.stdout! });
       rl.on('line', (line) => {
@@ -193,7 +209,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       child.on('close', (code) => {
         if (child) {
-          activeProcesses.delete(child);
+          unregisterProcess(child);
         }
         emitLog('info', `Process exited with code ${code}`);
         if (code === 0 || code === null) {
@@ -205,7 +221,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       child.on('error', (err) => {
         if (child) {
-          activeProcesses.delete(child);
+          unregisterProcess(child);
         }
         emitLog('error', `Failed to start birda: ${err.message}`);
         reject(new Error(`Failed to start birda: ${err.message}`));
@@ -224,7 +240,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
     cancel: () => {
       if (child && !child.killed) {
         child.kill('SIGTERM');
-        activeProcesses.delete(child);
+        unregisterProcess(child);
       }
     },
     promise,
