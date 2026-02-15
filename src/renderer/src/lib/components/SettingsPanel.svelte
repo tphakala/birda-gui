@@ -263,10 +263,9 @@
       savedSettings = structuredClone($state.snapshot(settings));
       birdaStatus = await checkBirda();
 
-      // If UI language changed, reload to apply new locale
+      // If UI language changed, apply new locale
       if (previousLang !== settings.ui_language && isLocale(settings.ui_language)) {
-        void setLocale(settings.ui_language, { reload: false });
-        return;
+        await setLocale(settings.ui_language);
       }
 
       saved = true;
