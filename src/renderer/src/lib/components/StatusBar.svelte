@@ -12,6 +12,10 @@
   let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let showVersionModal = $state(false);
 
+  const isOutdated = $derived(
+    birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion,
+  );
+
   onMount(() => {
     let mounted = true;
 
@@ -51,7 +55,7 @@
 
   <div class="flex-1"></div>
 
-  {#if birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion}
+  {#if isOutdated}
     <button
       onclick={() => (showVersionModal = true)}
       class="text-warning flex items-center gap-1.5 transition-opacity hover:opacity-70"

@@ -34,7 +34,7 @@
 </script>
 
 {#if open}
-  <dialog class="modal modal-open">
+  <dialog class="modal modal-open" onclose={close}>
     <div class="modal-box {maxWidth}">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -69,7 +69,7 @@
 
     <!-- Backdrop close handler -->
     <form method="dialog" class="modal-backdrop">
-      <button onclick={close}>close</button>
+      <button>close</button>
     </form>
   </dialog>
 {/if}
