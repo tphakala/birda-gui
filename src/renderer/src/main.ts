@@ -3,7 +3,8 @@ import App from './App.svelte';
 import './app.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { setLocale, isLocale } from '$paraglide/runtime';
-import { getSettings } from '$lib/utils/ipc';
+import { getSettings, getSystemLocale } from '$lib/utils/ipc';
+import { detectLanguage } from '$lib/i18n/detect';
 
 // Set UI locale from persisted settings before mounting the app.
 // Using { reload: false } because no components exist yet — a reload here
@@ -11,7 +12,20 @@ import { getSettings } from '$lib/utils/ipc';
 // components render with the correct language from the start.
 try {
   const settings = await getSettings();
-  if (settings.ui_language && isLocale(settings.ui_language)) {
+
+  // If no UI language is set, auto-detect from system locale
+  if (!settings.ui_language) {
+    try {
+      const systemLocale = await getSystemLocale();
+      const detectedLang = detectLanguage(systemLocale);
+      if (isLocale(detectedLang)) {
+        void setLocale(detectedLang, { reload: false });
+      }
+    } catch {
+      // Auto-detection failed, use default (en)
+    }
+  } else if (isLocale(settings.ui_language)) {
+    // Use saved language preference
     void setLocale(settings.ui_language, { reload: false });
   }
 } catch {

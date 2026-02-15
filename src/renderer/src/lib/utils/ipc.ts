@@ -280,3 +280,8 @@ export function deleteSpeciesListById(id: number): Promise<void> {
 export function saveSpectrogram(clipPath: string, freqMax: number, height: number, dataUrl: string): Promise<string> {
   return window.birda.invoke('clip:save-spectrogram', clipPath, freqMax, height, dataUrl) as Promise<string>;
 }
+
+// System
+export function getSystemLocale(): Promise<string> {
+  return window.birda.invoke('system:get-locale') as Promise<string>;
+}

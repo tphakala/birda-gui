@@ -25,11 +25,15 @@
     getAvailableLanguages,
     onModelInstallProgress,
     offModelInstallProgress,
+    getSystemLocale,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { onMount, onDestroy } from 'svelte';
   import * as m from '$paraglide/messages';
+  import { LANGUAGES, getLanguage } from '$lib/i18n/languages';
+  import { detectLanguage } from '$lib/i18n/detect';
+  import { isLocale, setLocale } from '$paraglide/runtime';
 
   interface Props {
     oncomplete: () => void;
@@ -38,8 +42,8 @@
   const { oncomplete }: Props = $props();
 
   // --- Step management ---
-  type WizardStep = 'welcome' | 'cli' | 'model' | 'language';
-  const steps: WizardStep[] = ['welcome', 'cli', 'model', 'language'];
+  type WizardStep = 'welcome' | 'ui-language' | 'cli' | 'model' | 'language';
+  const steps: WizardStep[] = ['welcome', 'ui-language', 'cli', 'model', 'language'];
   let currentStep = $state<WizardStep>('welcome');
   const stepIndex = $derived(steps.indexOf(currentStep));
 
@@ -147,12 +151,26 @@
     }
   }
 
-  // --- Language ---
+  // --- UI Language ---
+  let selectedUiLanguage = $state('en');
+  let detectedLanguage = $state<string | null>(null);
+
+  // --- Species Language ---
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let selectedLanguage = $state('en');
 
   // --- Lifecycle ---
   onMount(async () => {
+    // Auto-detect system language for UI language step
+    try {
+      const systemLocale = await getSystemLocale();
+      detectedLanguage = detectLanguage(systemLocale);
+      selectedUiLanguage = detectedLanguage;
+    } catch {
+      // Detection failed, use English default
+      selectedUiLanguage = 'en';
+    }
+
     // Pre-fetch data for later steps
     await checkCli();
     try {
@@ -182,6 +200,19 @@
         .catch(() => {});
     }
   });
+
+  async function handleUiLanguageNext() {
+    // Apply UI language immediately and save to settings
+    if (selectedUiLanguage && isLocale(selectedUiLanguage)) {
+      try {
+        await setSettings({ ui_language: selectedUiLanguage });
+        void setLocale(selectedUiLanguage);
+      } catch {
+        // Proceed even if saving fails
+      }
+    }
+    nextStep();
+  }
 
   async function handleSkip() {
     try {
@@ -233,6 +264,45 @@
           </button>
           <button onclick={handleSkip} class="btn btn-ghost btn-sm text-base-content/40">
             {m.wizard_welcome_skip()}
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== UI LANGUAGE ==================== -->
+    {:else if currentStep === 'ui-language'}
+      <div class="text-center">
+        <h2 class="text-xl font-bold">{m.wizard_uiLanguage_title()}</h2>
+        <p class="text-base-content/60 mt-1 text-sm">{m.wizard_uiLanguage_subtitle()}</p>
+
+        <div class="card bg-base-200 mx-auto mt-8 max-w-sm text-left">
+          <div class="card-body p-6">
+            <label class="block">
+              <span class="text-base-content/70 text-sm font-medium">
+                {m.settings_general_uiLanguage()}
+              </span>
+              <select bind:value={selectedUiLanguage} class="select select-bordered mt-2 w-full">
+                {#each LANGUAGES as lang (lang.code)}
+                  <option value={lang.code}>{lang.nativeName}</option>
+                {/each}
+              </select>
+            </label>
+
+            {#if detectedLanguage && getLanguage(detectedLanguage)}
+              <p class="text-base-content/50 text-xs">
+                {m.wizard_uiLanguage_detected({ language: getLanguage(detectedLanguage)?.nativeName || detectedLanguage })}
+              </p>
+            {/if}
+          </div>
+        </div>
+
+        <div class="mt-8 flex items-center justify-between">
+          <button onclick={prevStep} class="btn btn-ghost gap-1">
+            <ChevronLeft size={16} />
+            {m.wizard_back()}
+          </button>
+          <button onclick={handleUiLanguageNext} class="btn btn-primary gap-1">
+            {m.wizard_next()}
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>

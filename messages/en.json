@@ -269,6 +269,10 @@
   "wizard_welcome_getStarted": "Get Started",
   "wizard_welcome_skip": "Skip setup",
 
+  "wizard_uiLanguage_title": "Choose Your Language",
+  "wizard_uiLanguage_subtitle": "Select the language for the Birda GUI interface.",
+  "wizard_uiLanguage_detected": "We detected {language} based on your system settings.",
+
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI needs the birda command-line tool to analyze audio files.",
   "wizard_cli_checking": "Checking for birda...",

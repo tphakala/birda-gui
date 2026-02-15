@@ -28,6 +28,9 @@ jobs:
       - name: Generate Paraglide output
         run: npx paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide
 
+      - name: Validate translations
+        run: npm run validate:translations
+
       - name: Check formatting
         run: npm run format:check
 
