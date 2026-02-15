@@ -116,7 +116,7 @@ export async function registerSettingsHandlers(): Promise<void> {
     cachedVersionCheck = promise;
 
     // After the promise resolves, if it failed, clear the cache for the next call.
-    promise.then((result) => {
+    void promise.then((result) => {
       if (!result.available) {
         // Avoid race condition: only clear cache if it's still our failed promise.
         if (cachedVersionCheck === promise) {
