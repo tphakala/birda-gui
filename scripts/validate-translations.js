@@ -114,6 +114,12 @@ const IGNORED_IDENTICAL_KEYS = new Set([
   'log_title', // Log (It - technical term)
   'detail_freqMax', // Freq Max (It - abbreviation)
   'detail_volume', // Volume (It)
+  // Dutch/Polish cognates (same as English)
+  'settings_spectrogram_title', // Spectrogram (Nl)
+  'filter_title', // Filter (Nl)
+  'analysis_model', // Model (Nl/Pl)
+  'species_fetch_week', // Week (Nl)
+  'species_detail_week', // Week (Nl)
 ]);
 
 /**
