@@ -225,10 +225,19 @@
 
     try {
       await installModel(id);
-      await refreshModels();
-      licenseModel = null; // Close dialog only after successful installation
+      // Close dialog immediately after successful installation
+      licenseModel = null;
+
+      // Refresh model list - if this fails, it's not a critical error
+      try {
+        await refreshModels();
+      } catch (refreshError) {
+        // Model was installed successfully, just the list refresh failed
+        // This is a minor issue - log it but don't show as installation failure
+        console.error('Failed to refresh model list after installation:', refreshError);
+      }
     } catch (e) {
-      // Keep dialog open on failure so user retains context
+      // Keep dialog open on installation failure so user retains context
       modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });
     } finally {
       installing = null;
