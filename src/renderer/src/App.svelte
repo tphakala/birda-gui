@@ -34,8 +34,6 @@
   } from '$lib/utils/ipc';
   import { setupMenuListeners } from '$lib/utils/shortcuts';
   import { onMount, onDestroy } from 'svelte';
-  import { fade } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
 
   let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
@@ -213,25 +211,15 @@
     <div class="flex flex-1 flex-col overflow-hidden">
       <div class="flex flex-1 flex-col overflow-hidden">
         {#if appState.activeTab === 'analysis'}
-          <div transition:fade={{ duration: 150, easing: cubicOut }}>
-            <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
-          </div>
+          <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
         {:else if appState.activeTab === 'detections'}
-          <div transition:fade={{ duration: 150, easing: cubicOut }}>
-            <DetectionsPage />
-          </div>
+          <DetectionsPage />
         {:else if appState.activeTab === 'map'}
-          <div transition:fade={{ duration: 150, easing: cubicOut }}>
-            <MapPage />
-          </div>
+          <MapPage />
         {:else if appState.activeTab === 'species'}
-          <div transition:fade={{ duration: 150, easing: cubicOut }}>
-            <SpeciesPage />
-          </div>
+          <SpeciesPage />
         {:else if appState.activeTab === 'settings'}
-          <div transition:fade={{ duration: 150, easing: cubicOut }}>
-            <SettingsPage />
-          </div>
+          <SettingsPage />
         {/if}
       </div>
 

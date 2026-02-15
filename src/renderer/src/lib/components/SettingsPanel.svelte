@@ -94,6 +94,7 @@
     { value: 'dark', label: m.settings_general_themeDark() },
   ];
 
+  let settingsLoaded = $state(false);
   let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
@@ -154,7 +155,10 @@
   const modelNames = $derived(new Map(availableModelsToInstall.map((m) => [m.id, m.name])));
 
   $effect(() => {
-    appState.theme = settings.theme;
+    // Only sync theme to appState after settings are loaded to prevent flash
+    if (settingsLoaded) {
+      appState.theme = settings.theme;
+    }
   });
 
   $effect(() => {
@@ -170,7 +174,7 @@
       const loaded = await getSettings();
       settings = { ...settings, ...loaded };
       savedSettings = structuredClone($state.snapshot(settings));
-      appState.theme = loaded.theme;
+      settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
       birdaStatus = await checkBirda();
       if (birdaStatus.available) {
