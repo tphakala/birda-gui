@@ -53,7 +53,7 @@
 
   <div class="flex-1"></div>
 
-  {#if isOutdated}
+  {#if isOutdated && birdaStatus}
     <button
       onclick={() => (showVersionModal = true)}
       class="text-warning flex items-center gap-1.5 transition-opacity hover:opacity-70"
@@ -72,7 +72,7 @@
 </div>
 
 <!-- Birda Version Update Modal -->
-{#if birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion}
+{#if isOutdated && birdaStatus}
   <Modal bind:open={showVersionModal} title="birda Update Required" icon={TriangleAlert} iconClass="text-warning">
     <div class="space-y-4">
       <p class="text-base-content/80 text-sm">
