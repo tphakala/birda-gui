@@ -84,6 +84,7 @@
   },
   "dependencies": {
     "@electron/rebuild": "^4.0.3",
+    "async-mutex": "^0.5.0",
     "better-sqlite3": "^12.6.2",
     "daisyui": "^5.5.18",
     "music-metadata": "^11.11.2",
