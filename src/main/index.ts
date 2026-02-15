@@ -15,6 +15,7 @@ import { closeDb } from './db/database';
 import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
+import { killAll as killAllBirdaProcesses } from './birda/runner';
 
 // Must be called before app.whenReady() — tells Chromium the scheme supports fetch()
 protocol.registerSchemesAsPrivileged([{ scheme: 'birda-media', privileges: { supportFetchAPI: true, stream: true } }]);
@@ -239,16 +240,23 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+app.on('before-quit', () => {
+  killAllBirdaProcesses();
+});
+
 app.on('will-quit', () => {
+  killAllBirdaProcesses();
   closeDb();
 });
 
 process.on('SIGINT', () => {
+  killAllBirdaProcesses();
   closeDb();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
+  killAllBirdaProcesses();
   closeDb();
   process.exit(0);
 });
