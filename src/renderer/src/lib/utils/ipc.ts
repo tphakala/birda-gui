@@ -230,14 +230,7 @@ export function offSetupWizard(): void {
 
 // Region export
 export function exportRegionAsWav(wavBytes: Uint8Array, defaultName?: string): Promise<string | null> {
-  // Chunked base64 encoding to avoid stack overflow on large arrays
-  let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < wavBytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...wavBytes.subarray(i, i + chunkSize));
-  }
-  const base64 = btoa(binary);
-  return window.birda.invoke('clip:export-region', base64, defaultName) as Promise<string | null>;
+  return window.birda.invoke('clip:export-region', wavBytes, defaultName) as Promise<string | null>;
 }
 
 // Licenses
