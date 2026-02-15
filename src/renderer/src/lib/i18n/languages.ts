@@ -25,6 +25,9 @@ export const LANGUAGES: LanguageInfo[] = [
   { code: 'es', nativeName: 'Español', englishName: 'Spanish', dir: 'ltr' },
   { code: 'fr', nativeName: 'Français', englishName: 'French', dir: 'ltr' },
   { code: 'it', nativeName: 'Italiano', englishName: 'Italian', dir: 'ltr' },
+  { code: 'pt', nativeName: 'Português', englishName: 'Portuguese', dir: 'ltr' },
+  { code: 'nl', nativeName: 'Nederlands', englishName: 'Dutch', dir: 'ltr' },
+  { code: 'pl', nativeName: 'Polski', englishName: 'Polish', dir: 'ltr' },
 ];
 
 /**
