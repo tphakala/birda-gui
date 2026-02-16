@@ -16,26 +16,26 @@
   function levelColor(level: LogEntry['level']): string {
     switch (level) {
       case 'error':
-        return 'text-red-400';
+        return 'text-error';
       case 'warn':
-        return 'text-yellow-400';
+        return 'text-warning';
       case 'debug':
-        return 'text-gray-400';
+        return 'text-neutral-content/40';
       default:
-        return 'text-gray-300';
+        return 'text-neutral-content/60';
     }
   }
 
   function levelBadgeColor(level: LogEntry['level']): string {
     switch (level) {
       case 'error':
-        return 'bg-red-900/30 text-red-400';
+        return 'bg-error/15 text-error';
       case 'warn':
-        return 'bg-yellow-900/30 text-yellow-400';
+        return 'bg-warning/15 text-warning';
       case 'debug':
-        return 'bg-gray-800 text-gray-500';
+        return 'bg-neutral-content/10 text-neutral-content/40';
       default:
-        return 'bg-blue-900/30 text-blue-400';
+        return 'bg-info/15 text-info';
     }
   }
 
@@ -60,10 +60,7 @@
 
   // Auto-scroll when entries change
   $effect(() => {
-    // Access entries.length to track reactivity (eslint-disable-next-line)
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    logState.entries.length;
-    // Use tick to scroll after DOM update
+    void logState.entries.length;
     requestAnimationFrame(scrollToBottom);
   });
 </script>
@@ -108,18 +105,18 @@
       <div
         bind:this={scrollContainer}
         onscroll={handleScroll}
-        class="flex-1 overflow-auto bg-[#0f172a] p-1 font-mono text-[11px] leading-[18px]"
+        class="bg-neutral flex-1 overflow-auto p-1 font-mono text-[11px] leading-[18px]"
       >
         {#if logState.entries.length === 0}
-          <div class="p-3 text-center text-gray-500">{m.log_empty()}</div>
+          <div class="text-neutral-content/50 p-3 text-center">{m.log_empty()}</div>
         {:else}
           {#each logState.entries as entry (entry.id)}
-            <div class="flex gap-1 px-1 hover:bg-white/5">
-              <span class="shrink-0 text-gray-500">{formatTime(entry.timestamp)}</span>
+            <div class="hover:bg-neutral-content/5 flex gap-1 px-1">
+              <span class="text-neutral-content/50 shrink-0">{formatTime(entry.timestamp)}</span>
               <span class="shrink-0 rounded px-1 {levelBadgeColor(entry.level)}"
                 >{entry.level.toUpperCase().padEnd(5)}</span
               >
-              <span class="shrink-0 text-cyan-400">[{entry.source}]</span>
+              <span class="text-info shrink-0">[{entry.source}]</span>
               <span class="{levelColor(entry.level)} break-all whitespace-pre-wrap">{entry.message}</span>
             </div>
           {/each}
