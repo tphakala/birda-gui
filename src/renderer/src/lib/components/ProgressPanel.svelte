@@ -1,18 +1,30 @@
 <script lang="ts">
-  import { FileHeadphone, CircleCheckBig, CircleX } from '@lucide/svelte';
-  import { analysisState } from '$lib/stores/analysis.svelte';
+  import { FileHeadphone, CircleCheckBig, CircleX, X } from '@lucide/svelte';
+  import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
   import { formatNumber } from '$lib/utils/format';
   import * as m from '$paraglide/messages';
+
+  const AUTO_DISMISS_DELAY_MS = 5000;
 
   const overallPercent = $derived(
     analysisState.totalFiles > 0 ? Math.round((analysisState.filesProcessed / analysisState.totalFiles) * 100) : 0,
   );
+
+  // Auto-dismiss on success after delay
+  $effect(() => {
+    if (analysisState.status === 'completed') {
+      const timer = setTimeout(dismissAnalysis, AUTO_DISMISS_DELAY_MS);
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  });
 </script>
 
 {#if analysisState.status !== 'idle'}
   <div class="border-base-300 bg-base-200 space-y-2 border-t p-3">
     <div class="flex items-center justify-between text-sm">
-      <span class="text-base-content font-medium">
+      <span class="text-base-content flex items-center gap-1 font-medium">
         {#if analysisState.status === 'running'}
           {m.status_analyzing()}
         {:else if analysisState.status === 'completed'}
@@ -25,6 +37,11 @@
             <CircleX size={16} />
             {m.progress_failed()}
           </span>
+        {/if}
+        {#if analysisState.status === 'completed' || analysisState.status === 'failed'}
+          <button onclick={dismissAnalysis} class="btn btn-ghost btn-xs btn-square" aria-label="Dismiss">
+            <X size={14} />
+          </button>
         {/if}
       </span>
       <span class="text-base-content/60">
