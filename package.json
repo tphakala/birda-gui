@@ -35,7 +35,7 @@
   "author": "Tomi P. Hakala <tphakala@users.noreply.github.com>",
   "license": "CC-BY-NC-SA-4.0",
   "build": {
-    "compression": "store",
+    "compression": "normal",
     "appId": "com.birda.gui",
     "productName": "Birda GUI",
     "directories": {
@@ -83,6 +83,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "license": "LICENSE",
+      "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh",
       "artifactName": "${productName}-Setup-${version}-windows-${arch}.${ext}"
     }
