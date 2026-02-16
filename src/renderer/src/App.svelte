@@ -44,8 +44,8 @@
 
   $effect(() => {
     const tab = appState.activeTab;
-    if (tab === 'detections' || tab === 'map' || tab === 'species') {
-      visited[tab] = true;
+    if (tab in visited) {
+      visited[tab as keyof typeof visited] = true;
     }
   });
 
