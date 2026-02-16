@@ -19,9 +19,11 @@ export function setupMenuListeners(callbacks: {
     })();
   };
 
+  const VALID_TABS = new Set<string>(['analysis', 'detections', 'map', 'species', 'settings']);
+
   const handleSwitchTab = (...args: unknown[]) => {
     const tab = args[0] as string;
-    if (['detections', 'map', 'settings'].includes(tab)) {
+    if (VALID_TABS.has(tab)) {
       appState.activeTab = tab as Tab;
     }
   };
