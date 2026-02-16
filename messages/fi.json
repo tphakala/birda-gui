@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Nimi",
   "sourceFiles_columnFormat": "Muoto",
   "sourceFiles_columnStatus": "Tila",
-  "sourceFiles_statusSkip": "ohita",
+  "sourceFiles_statusSkip": "ohitettu",
   "sourceFiles_noAudioFiles": "Ei äänitteitä",
   "sourceFiles_supportedFormats": "Tuetut: WAV, MP3, FLAC, OGG, M4A",
 
@@ -366,7 +366,7 @@
   "grid_phase_night": "Yö",
   "grid_phase_twilight": "Hämärä",
   "grid_phase_daylight": "Päivänvalo",
-  "grid_noTimestamp": "Tuntiruudukko vaatii aikaleimallisen tallennuksen (VVVVKKPP_TTMMSS)",
+  "grid_noTimestamp": "Tuntiruudukko vaatii aikaleimallisen tallennuksen (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} havaintoa",
   "grid_detectionCountSingular": "{count} havainto",
   "grid_less": "Vähemmän",

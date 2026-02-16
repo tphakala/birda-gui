@@ -79,7 +79,7 @@
   "settings_data_species": "{count} espécies",
   "settings_data_locations": "{count} localizações",
   "settings_data_clearAll": "Limpar Todos os Dados",
-  "settings_data_cleared": "Limpas {detections} deteções, {runs} execuções, {locations} localizações",
+  "settings_data_cleared": "Dados limpos: {detections} deteções, {runs} execuções, {locations} localizações",
   "settings_data_birdaConfig": "Configuração do birda (apenas leitura)",
 
   "settings_clearModal_title": "Limpar Base de Dados",
@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Nome",
   "sourceFiles_columnFormat": "Formato",
   "sourceFiles_columnStatus": "Estado",
-  "sourceFiles_statusSkip": "saltar",
+  "sourceFiles_statusSkip": "ignorado",
   "sourceFiles_noAudioFiles": "Não foram encontrados ficheiros de áudio",
   "sourceFiles_supportedFormats": "Suportados: WAV, MP3, FLAC, OGG, M4A",
 
@@ -367,7 +367,7 @@
   "grid_phase_night": "Noite",
   "grid_phase_twilight": "Crepúsculo",
   "grid_phase_daylight": "Luz do dia",
-  "grid_noTimestamp": "A grelha horária requer uma gravação com data e hora (AAAAMMDD_HHMMSS)",
+  "grid_noTimestamp": "A grelha horária requer uma gravação com data e hora (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} deteções",
   "grid_detectionCountSingular": "{count} deteção",
   "grid_less": "Menos",

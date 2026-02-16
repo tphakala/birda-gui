@@ -147,7 +147,7 @@
 
   "pagination_detectionCount": "{count} detecties",
   "pagination_detectionCountSingular": "{count} detectie",
-  "pagination_totalDetections": "{count} totaal detecties",
+  "pagination_totalDetections": "{count} detecties totaal",
   "pagination_pageOf": "Pagina {current} van {total}",
 
   "detail_audioLoadFailed": "Audio laden mislukt: {message}",
@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Naam",
   "sourceFiles_columnFormat": "Formaat",
   "sourceFiles_columnStatus": "Status",
-  "sourceFiles_statusSkip": "overslaan",
+  "sourceFiles_statusSkip": "overgeslagen",
   "sourceFiles_noAudioFiles": "Geen audiobestanden gevonden",
   "sourceFiles_supportedFormats": "Ondersteund: WAV, MP3, FLAC, OGG, M4A",
 
@@ -367,7 +367,7 @@
   "grid_phase_night": "Nacht",
   "grid_phase_twilight": "Schemering",
   "grid_phase_daylight": "Daglicht",
-  "grid_noTimestamp": "Uurrooster vereist een opname met tijdstempel (JJJJMMDD_UUMMSS)",
+  "grid_noTimestamp": "Uurrooster vereist een opname met tijdstempel (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detecties",
   "grid_detectionCountSingular": "{count} detectie",
   "grid_less": "Minder",

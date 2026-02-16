@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Nazwa",
   "sourceFiles_columnFormat": "Format",
   "sourceFiles_columnStatus": "Status",
-  "sourceFiles_statusSkip": "pomiń",
+  "sourceFiles_statusSkip": "pominięty",
   "sourceFiles_noAudioFiles": "Nie znaleziono plików audio",
   "sourceFiles_supportedFormats": "Obsługiwane: WAV, MP3, FLAC, OGG, M4A",
 
@@ -367,7 +367,7 @@
   "grid_phase_night": "Noc",
   "grid_phase_twilight": "Zmierzch",
   "grid_phase_daylight": "Dzień",
-  "grid_noTimestamp": "Siatka godzinowa wymaga nagrania z sygnaturą czasową (RRRRMMDD_GGMMSS)",
+  "grid_noTimestamp": "Siatka godzinowa wymaga nagrania z sygnaturą czasową (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detekcji",
   "grid_detectionCountSingular": "{count} detekcja",
   "grid_less": "Mniej",
