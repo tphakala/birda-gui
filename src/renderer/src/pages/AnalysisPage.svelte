@@ -24,7 +24,7 @@
     getLocations,
     scanSource,
   } from '$lib/utils/ipc';
-  import { parseRecordingStart } from '$lib/utils/format';
+  import { parseLocalDate, parseRecordingStart } from '$lib/utils/format';
   import type { AvailableModel, InstalledModel, Location, SourceScanResult } from '$shared/types';
   import { onMount } from 'svelte';
   import * as m from '$paraglide/messages';
@@ -63,12 +63,6 @@
 
   // --- Date picker state ---
   let showDatePicker = $state(false);
-
-  /** Parse YYYY-MM-DD as local date (avoids UTC midnight shift). */
-  function parseLocalDate(iso: string): Date {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
 
   const selectedDateObj = $derived(recordingDate ? parseLocalDate(recordingDate) : null);
   const formattedDate = $derived(

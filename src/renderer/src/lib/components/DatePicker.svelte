@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
+  import { parseLocalDate } from '$lib/utils/format';
 
   const {
     value,
@@ -11,12 +12,6 @@
     onchange: (date: string) => void;
     onclose: () => void;
   } = $props();
-
-  /** Parse YYYY-MM-DD as local date (avoids UTC midnight shift). */
-  function parseLocalDate(iso: string): Date {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
 
   function getInitialCalendar(val: string) {
     const d = val ? parseLocalDate(val) : new Date();
