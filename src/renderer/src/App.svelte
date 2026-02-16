@@ -39,6 +39,16 @@
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
 
+  // Track which expensive tabs have been visited (lazy keep-alive)
+  const visited = $state({ detections: false, map: false, species: false });
+
+  $effect(() => {
+    const tab = appState.activeTab;
+    if (tab in visited) {
+      visited[tab as keyof typeof visited] = true;
+    }
+  });
+
   async function handleWizardComplete() {
     try {
       const settings = await getSettings();
@@ -210,19 +220,33 @@
     <Sidebar />
 
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex flex-1 flex-col overflow-hidden">
-        {#if appState.activeTab === 'analysis'}
-          <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
-        {:else if appState.activeTab === 'detections'}
+      <!-- Lazy keep-alive: mount on first visit, then toggle via CSS -->
+      {#if visited.detections}
+        <div class="flex flex-1 flex-col overflow-hidden" class:hidden={appState.activeTab !== 'detections'}>
           <DetectionsPage />
-        {:else if appState.activeTab === 'map'}
+        </div>
+      {/if}
+      {#if visited.map}
+        <div class="flex flex-1 flex-col overflow-hidden" class:hidden={appState.activeTab !== 'map'}>
           <MapPage />
-        {:else if appState.activeTab === 'species'}
+        </div>
+      {/if}
+      {#if visited.species}
+        <div class="flex flex-1 flex-col overflow-hidden" class:hidden={appState.activeTab !== 'species'}>
           <SpeciesPage />
-        {:else if appState.activeTab === 'settings'}
+        </div>
+      {/if}
+
+      <!-- Conditionally rendered (cheap to recreate) -->
+      {#if appState.activeTab === 'analysis'}
+        <div class="flex flex-1 flex-col overflow-hidden">
+          <AnalysisPage onstart={handleStartAnalysis} onstop={handleStop} />
+        </div>
+      {:else if appState.activeTab === 'settings'}
+        <div class="flex flex-1 flex-col overflow-hidden">
           <SettingsPage />
-        {/if}
-      </div>
+        </div>
+      {/if}
 
       <ProgressPanel />
       <LogPanel />
