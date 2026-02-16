@@ -285,3 +285,7 @@ export function saveSpectrogram(clipPath: string, freqMax: number, height: numbe
 export function getSystemLocale(): Promise<string> {
   return window.birda.invoke('system:get-locale') as Promise<string>;
 }
+
+export function getAppVersion(): Promise<string> {
+  return window.birda.invoke('app:get-version') as Promise<string>;
+}
