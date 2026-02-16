@@ -11,4 +11,8 @@ export function registerSystemHandlers(): void {
   ipcMain.handle('system:get-locale', () => {
     return app.getLocale();
   });
+
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion();
+  });
 }

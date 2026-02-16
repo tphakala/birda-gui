@@ -1,7 +1,7 @@
 <script lang="ts">
   import { appState } from '$lib/stores/app.svelte';
   import { formatNumber } from '$lib/utils/format';
-  import { checkBirda } from '$lib/utils/ipc';
+  import { checkBirda, getAppVersion } from '$lib/utils/ipc';
   import type { BirdaCheckResponse } from '$shared/types';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { TriangleAlert, ExternalLink } from '@lucide/svelte';
@@ -11,6 +11,7 @@
 
   let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let showVersionModal = $state(false);
+  let appVersion = $state('');
 
   const isOutdated = $derived(birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion);
 
@@ -23,6 +24,18 @@
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (mounted) {
           birdaStatus = result;
+        }
+      } catch {
+        // Silent fail - status bar is not critical
+      }
+    })();
+
+    void (async () => {
+      try {
+        const version = await getAppVersion();
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (mounted) {
+          appVersion = version;
         }
       } catch {
         // Silent fail - status bar is not critical
@@ -68,7 +81,7 @@
     <div class="bg-base-300 h-3 w-px"></div>
   {/if}
 
-  <span>v1.0.0</span>
+  {#if appVersion}<span>v{appVersion}</span>{/if}
 </div>
 
 <!-- Birda Version Update Modal -->
