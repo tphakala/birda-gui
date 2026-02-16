@@ -27,7 +27,10 @@ export function formatTime(seconds: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  const d = parseLocalDate(dateStr);
+  // Database values may be full ISO datetimes (e.g. "2026-02-16T10:37:23Z");
+  // parseLocalDate only handles "YYYY-MM-DD", so use the Date constructor for
+  // anything longer than a plain date string.
+  const d = dateStr.length === 10 ? parseLocalDate(dateStr) : new Date(dateStr);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 

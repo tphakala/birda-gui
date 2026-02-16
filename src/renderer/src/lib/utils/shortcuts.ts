@@ -23,9 +23,9 @@ export function setupMenuListeners(callbacks: {
 
   const handleSwitchTab = (...args: unknown[]) => {
     const tab = args[0] as string;
-    if (VALID_TABS.has(tab as Tab)) {
-      appState.activeTab = tab as Tab;
-    }
+    if (!VALID_TABS.has(tab as Tab)) return;
+    if (appState.activeTab === 'settings' && appState.settingsHasUnsavedChanges) return;
+    appState.activeTab = tab as Tab;
   };
 
   const handleFocusSearch = () => {

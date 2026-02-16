@@ -140,7 +140,7 @@ function createMenu() {
             void electronDialog.showMessageBox({
               type: 'info',
               title: 'About Birda GUI',
-              message: 'Birda GUI v1.0.0',
+              message: `Birda GUI v${app.getVersion()}`,
               detail: 'Desktop GUI for the birda bird species detection CLI.\nhttps://github.com/tphakala/birda',
             });
           },
