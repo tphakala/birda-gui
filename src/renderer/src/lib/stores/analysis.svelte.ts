@@ -38,6 +38,12 @@ export const analysisState = $state<AnalysisProgress>({
   events: [],
 });
 
+export function dismissAnalysis(): void {
+  if (analysisState.status === 'completed' || analysisState.status === 'failed') {
+    analysisState.status = 'idle';
+  }
+}
+
 export function resetAnalysis(): void {
   analysisState.totalFiles = 0;
   analysisState.filesProcessed = 0;
