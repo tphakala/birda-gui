@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Nimi",
   "sourceFiles_columnFormat": "Muoto",
   "sourceFiles_columnStatus": "Tila",
-  "sourceFiles_statusSkip": "ohita",
+  "sourceFiles_statusSkip": "ohitettu",
   "sourceFiles_noAudioFiles": "Ei äänitteitä",
   "sourceFiles_supportedFormats": "Tuetut: WAV, MP3, FLAC, OGG, M4A",
 

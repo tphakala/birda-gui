@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Naam",
   "sourceFiles_columnFormat": "Formaat",
   "sourceFiles_columnStatus": "Status",
-  "sourceFiles_statusSkip": "overslaan",
+  "sourceFiles_statusSkip": "overgeslagen",
   "sourceFiles_noAudioFiles": "Geen audiobestanden gevonden",
   "sourceFiles_supportedFormats": "Ondersteund: WAV, MP3, FLAC, OGG, M4A",
 

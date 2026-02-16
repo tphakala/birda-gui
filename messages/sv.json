@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Namn",
   "sourceFiles_columnFormat": "Format",
   "sourceFiles_columnStatus": "Status",
-  "sourceFiles_statusSkip": "hoppa över",
+  "sourceFiles_statusSkip": "överhoppad",
   "sourceFiles_noAudioFiles": "Inga ljudfiler hittades",
   "sourceFiles_supportedFormats": "Stödda: WAV, MP3, FLAC, OGG, M4A",
 

@@ -180,7 +180,7 @@
   "sourceFiles_columnName": "Nombre",
   "sourceFiles_columnFormat": "Formato",
   "sourceFiles_columnStatus": "Estado",
-  "sourceFiles_statusSkip": "omitir",
+  "sourceFiles_statusSkip": "omitido",
   "sourceFiles_noAudioFiles": "No se encontraron archivos de audio",
   "sourceFiles_supportedFormats": "Soportados: WAV, MP3, FLAC, OGG, M4A",
 
