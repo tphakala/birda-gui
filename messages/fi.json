@@ -366,7 +366,7 @@
   "grid_phase_night": "Yö",
   "grid_phase_twilight": "Hämärä",
   "grid_phase_daylight": "Päivänvalo",
-  "grid_noTimestamp": "Tuntiruudukko vaatii aikaleimallisen tallennuksen (VVVVKKPP_TTMMSS)",
+  "grid_noTimestamp": "Tuntiruudukko vaatii aikaleimallisen tallennuksen (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} havaintoa",
   "grid_detectionCountSingular": "{count} havainto",
   "grid_less": "Vähemmän",

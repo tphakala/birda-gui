@@ -367,7 +367,7 @@
   "grid_phase_night": "Noche",
   "grid_phase_twilight": "Crepúsculo",
   "grid_phase_daylight": "Luz del día",
-  "grid_noTimestamp": "La cuadrícula horaria requiere una grabación con marca de tiempo (AAAAMMDD_HHMMSS)",
+  "grid_noTimestamp": "La cuadrícula horaria requiere una grabación con marca de tiempo (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detecciones",
   "grid_detectionCountSingular": "{count} detección",
   "grid_less": "Menos",

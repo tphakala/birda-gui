@@ -366,7 +366,7 @@
   "grid_phase_night": "Natt",
   "grid_phase_twilight": "Skymning",
   "grid_phase_daylight": "Dagsljus",
-  "grid_noTimestamp": "Timrutnät kräver en tidsstämplad inspelning (ÅÅÅÅMMDD_HHMMSS)",
+  "grid_noTimestamp": "Timrutnät kräver en tidsstämplad inspelning (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} detektioner",
   "grid_detectionCountSingular": "{count} detektion",
   "grid_less": "Mindre",

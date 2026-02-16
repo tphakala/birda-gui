@@ -366,7 +366,7 @@
   "grid_phase_night": "Nacht",
   "grid_phase_twilight": "Dämmerung",
   "grid_phase_daylight": "Tageslicht",
-  "grid_noTimestamp": "Stündliches Raster erfordert eine Aufnahme mit Zeitstempel (JJJJMMTT_HHMMSS)",
+  "grid_noTimestamp": "Stündliches Raster erfordert eine Aufnahme mit Zeitstempel (YYYYMMDD_HHMMSS)",
   "grid_detectionCount": "{count} Erkennungen",
   "grid_detectionCountSingular": "{count} Erkennung",
   "grid_less": "Weniger",
