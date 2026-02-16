@@ -64,7 +64,13 @@
   // --- Date picker state ---
   let showDatePicker = $state(false);
 
-  const selectedDateObj = $derived(recordingDate ? new Date(recordingDate) : null);
+  /** Parse YYYY-MM-DD as local date (avoids UTC midnight shift). */
+  function parseLocalDate(iso: string): Date {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  const selectedDateObj = $derived(recordingDate ? parseLocalDate(recordingDate) : null);
   const formattedDate = $derived(
     selectedDateObj
       ? selectedDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -139,7 +145,7 @@
     let month: number | undefined;
     let day: number | undefined;
     if (recordingDate) {
-      const d = new Date(recordingDate);
+      const d = parseLocalDate(recordingDate);
       month = d.getMonth() + 1;
       day = d.getDate();
     }

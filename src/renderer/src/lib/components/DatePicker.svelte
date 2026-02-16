@@ -12,8 +12,14 @@
     onclose: () => void;
   } = $props();
 
+  /** Parse YYYY-MM-DD as local date (avoids UTC midnight shift). */
+  function parseLocalDate(iso: string): Date {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
   function getInitialCalendar(val: string) {
-    const d = val ? new Date(val) : new Date();
+    const d = val ? parseLocalDate(val) : new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   }
 
@@ -76,7 +82,7 @@
     return days;
   });
 
-  const selectedDateObj = $derived(value ? new Date(value) : null);
+  const selectedDateObj = $derived(value ? parseLocalDate(value) : null);
 
   let dateInput = $state('');
   let dateInputError = $state(false);
