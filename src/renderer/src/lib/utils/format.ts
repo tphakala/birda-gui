@@ -27,8 +27,14 @@ export function formatTime(seconds: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** Parse YYYY-MM-DD as local date (avoids UTC midnight shift from new Date()). */
+export function parseLocalDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export function formatNumber(n: number): string {
