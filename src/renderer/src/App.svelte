@@ -198,8 +198,9 @@
 </script>
 
 {#if showWizard === null}
-  <!-- Loading settings, show nothing -->
-  <main class="bg-base-100 flex h-screen select-none"></main>
+  <main class="bg-base-100 flex h-screen items-center justify-center select-none">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </main>
 {:else if showWizard}
   <main class="bg-base-100 text-base-content h-screen select-none">
     <SetupWizard oncomplete={handleWizardComplete} />
