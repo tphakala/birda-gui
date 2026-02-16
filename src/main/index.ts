@@ -80,24 +80,24 @@ function createMenu() {
       label: 'View',
       submenu: [
         {
-          label: 'Detections',
+          label: 'Analysis',
           accelerator: 'CmdOrCtrl+1',
+          click: () => mainWindow?.webContents.send('menu:switch-tab', 'analysis'),
+        },
+        {
+          label: 'Detections',
+          accelerator: 'CmdOrCtrl+2',
           click: () => mainWindow?.webContents.send('menu:switch-tab', 'detections'),
         },
         {
           label: 'Map',
-          accelerator: 'CmdOrCtrl+2',
+          accelerator: 'CmdOrCtrl+3',
           click: () => mainWindow?.webContents.send('menu:switch-tab', 'map'),
         },
         {
           label: 'Species',
-          accelerator: 'CmdOrCtrl+3',
-          click: () => mainWindow?.webContents.send('menu:switch-tab', 'species'),
-        },
-        {
-          label: 'Models',
           accelerator: 'CmdOrCtrl+4',
-          click: () => mainWindow?.webContents.send('menu:switch-tab', 'models'),
+          click: () => mainWindow?.webContents.send('menu:switch-tab', 'species'),
         },
         {
           label: 'Settings',
