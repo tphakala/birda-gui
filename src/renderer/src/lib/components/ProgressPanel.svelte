@@ -4,14 +4,16 @@
   import { formatNumber } from '$lib/utils/format';
   import * as m from '$paraglide/messages';
 
+  const AUTO_DISMISS_DELAY_MS = 5000;
+
   const overallPercent = $derived(
     analysisState.totalFiles > 0 ? Math.round((analysisState.filesProcessed / analysisState.totalFiles) * 100) : 0,
   );
 
-  // Auto-dismiss on success after 5 seconds
+  // Auto-dismiss on success after delay
   $effect(() => {
     if (analysisState.status === 'completed') {
-      const timer = setTimeout(dismissAnalysis, 5000);
+      const timer = setTimeout(dismissAnalysis, AUTO_DISMISS_DELAY_MS);
       return () => {
         clearTimeout(timer);
       };
