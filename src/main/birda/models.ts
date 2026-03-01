@@ -83,12 +83,7 @@ export async function installModel(name: string, onProgress?: (line: string) => 
       try {
         const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
         const payload = envelope.payload as unknown as ModelInstalledResult;
-        resolve({
-          id: payload.id,
-          set_as_default: payload.set_as_default,
-          model_path: payload.model_path,
-          labels_path: payload.labels_path,
-        });
+        resolve(payload);
       } catch {
         reject(new Error(`Failed to parse install result: ${stdout.slice(0, 200)}`));
       }
@@ -103,12 +98,7 @@ export async function installModel(name: string, onProgress?: (line: string) => 
 
 export async function removeModel(name: string): Promise<ModelRemovedResult> {
   const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'remove', name, '--purge']);
-  const payload = envelope.payload as unknown as ModelRemovedResult;
-  return {
-    id: payload.id,
-    purge_requested: payload.purge_requested,
-    new_default: payload.new_default,
-  };
+  return envelope.payload as unknown as ModelRemovedResult;
 }
 
 export async function modelInfo(name: string): Promise<unknown> {
