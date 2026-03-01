@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Lämna tomt för att använda PATH",
 
   "settings_analysis_title": "Analysstandarder",
-  "settings_analysis_defaultModel": "Standardmodell",
   "settings_analysis_confidence": "Standard säkerhetströskel",
   "settings_analysis_executionProvider": "Exekveringsleverantör",
   "settings_analysis_epAuto": "Auto (Rekommenderas)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Installerar...",
   "settings_models_default": "Standard",
   "settings_models_setDefault": "Sätt som standard",
-  "settings_models_uninstallSoon": "Avinstallera (kommer snart)",
+  "settings_models_remove": "Ta bort",
+  "settings_models_confirmRemove": "Ta bort {modelName}?",
+  "settings_models_confirmRemoveDescription": "Detta tar bort modellen från din konfiguration och raderar modellfilerna från disken.",
+  "settings_models_failedRemove": "Misslyckades med att ta bort {modelId}: {error}",
   "settings_models_failedInstall": "Misslyckades med att installera {modelId}: {error}",
 
   "settings_data_dbContent": "Databasinnehåll",

@@ -121,6 +121,14 @@ export function installModel(name: string): Promise<string> {
   return window.birda.invoke('birda:models-install', name) as Promise<string>;
 }
 
+export function setDefaultModel(modelId: string): Promise<void> {
+  return window.birda.invoke('birda:models-set-default', modelId) as Promise<void>;
+}
+
+export function removeModel(modelId: string): Promise<void> {
+  return window.birda.invoke('birda:models-remove', modelId) as Promise<void>;
+}
+
 // Settings
 export function getSettings(): Promise<AppSettings> {
   return window.birda.invoke('app:get-settings') as Promise<AppSettings>;

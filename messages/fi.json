@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Jätä tyhjäksi käyttääksesi PATH-muuttujaa",
 
   "settings_analysis_title": "Analyysin oletukset",
-  "settings_analysis_defaultModel": "Oletusmalli",
   "settings_analysis_confidence": "Luottamusrajan oletusarvo",
   "settings_analysis_executionProvider": "Suorituspalveluntarjoaja",
   "settings_analysis_epAuto": "Automaattinen (suositeltu)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Asennetaan...",
   "settings_models_default": "Oletus",
   "settings_models_setDefault": "Aseta oletukseksi",
-  "settings_models_uninstallSoon": "Poista asennus (tulossa pian)",
+  "settings_models_remove": "Poista",
+  "settings_models_confirmRemove": "Poista {modelName}?",
+  "settings_models_confirmRemoveDescription": "Tämä poistaa mallin asetuksistasi ja poistaa mallitiedostot levyltä.",
+  "settings_models_failedRemove": "Mallin {modelId} poistaminen epäonnistui: {error}",
   "settings_models_failedInstall": "Mallin {modelId} asennus epäonnistui: {error}",
 
   "settings_data_dbContent": "Tietokannan sisältö",

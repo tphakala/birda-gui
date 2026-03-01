@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Laat leeg om PATH te gebruiken",
 
   "settings_analysis_title": "Analysestandaarden",
-  "settings_analysis_defaultModel": "Standaardmodel",
   "settings_analysis_confidence": "Standaard betrouwbaarheidsdrempel",
   "settings_analysis_executionProvider": "Uitvoeringsprovider",
   "settings_analysis_epAuto": "Automatisch (aanbevolen)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Installeren...",
   "settings_models_default": "Standaard",
   "settings_models_setDefault": "Als standaard instellen",
-  "settings_models_uninstallSoon": "Verwijderen (binnenkort beschikbaar)",
+  "settings_models_remove": "Verwijderen",
+  "settings_models_confirmRemove": "{modelName} verwijderen?",
+  "settings_models_confirmRemoveDescription": "Dit verwijdert het model uit je configuratie en wist de modelbestanden van schijf.",
+  "settings_models_failedRemove": "Verwijderen van {modelId} mislukt: {error}",
   "settings_models_failedInstall": "Installeren van {modelId} mislukt: {error}",
 
   "settings_data_dbContent": "Database-inhoud",

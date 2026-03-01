@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Pozostaw puste, aby użyć PATH",
 
   "settings_analysis_title": "Domyślne ustawienia analizy",
-  "settings_analysis_defaultModel": "Domyślny model",
   "settings_analysis_confidence": "Domyślny próg pewności",
   "settings_analysis_executionProvider": "Dostawca wykonania",
   "settings_analysis_epAuto": "Auto (zalecane)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Instaluję...",
   "settings_models_default": "Domyślny",
   "settings_models_setDefault": "Ustaw jako domyślny",
-  "settings_models_uninstallSoon": "Odinstaluj (wkrótce)",
+  "settings_models_remove": "Usuń",
+  "settings_models_confirmRemove": "Usunąć {modelName}?",
+  "settings_models_confirmRemoveDescription": "To usunie model z konfiguracji i usunie pliki modelu z dysku.",
+  "settings_models_failedRemove": "Nie udało się usunąć {modelId}: {error}",
   "settings_models_failedInstall": "Nie udało się zainstalować {modelId}: {error}",
 
   "settings_data_dbContent": "Zawartość bazy danych",

@@ -21,6 +21,7 @@
   import {
     getCatalogStats,
     getSettings,
+    listModels,
     startAnalysis,
     cancelAnalysis,
     onAnalysisProgress,
@@ -39,6 +40,17 @@
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
 
+  /** Sync appState.selectedModel from birda CLI's is_default flag. */
+  async function syncDefaultModel(): Promise<void> {
+    try {
+      const models = await listModels();
+      const defaultModel = models.find((m) => m.is_default);
+      appState.selectedModel = defaultModel?.id ?? '';
+    } catch {
+      // birda may not be available yet
+    }
+  }
+
   // Track which expensive tabs have been visited (lazy keep-alive)
   const visited = $state({ detections: false, map: false, species: false });
 
@@ -54,12 +66,10 @@
       const settings = await getSettings();
       appState.theme = settings.theme;
       appState.analysisConfidence = settings.default_confidence;
-      if (settings.default_model) {
-        appState.selectedModel = settings.default_model;
-      }
     } catch {
       // proceed with existing state
     }
+    await syncDefaultModel();
     try {
       appState.catalogStats = await getCatalogStats();
     } catch {
@@ -147,14 +157,13 @@
         const settings = await getSettings();
         appState.theme = settings.theme;
         appState.analysisConfidence = settings.default_confidence;
-        if (settings.default_model) {
-          appState.selectedModel = settings.default_model;
-        }
         showWizard = !settings.setup_completed;
       } catch {
         // Failed to load settings — show wizard as fallback
         showWizard = true;
       }
+
+      await syncDefaultModel();
 
       try {
         appState.catalogStats = await getCatalogStats();

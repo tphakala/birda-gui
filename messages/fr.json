@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Laisser vide pour utiliser PATH",
 
   "settings_analysis_title": "Paramètres d'analyse par défaut",
-  "settings_analysis_defaultModel": "Modèle par défaut",
   "settings_analysis_confidence": "Seuil de confiance par défaut",
   "settings_analysis_executionProvider": "Fournisseur d'exécution",
   "settings_analysis_epAuto": "Auto (Recommandé)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Installation...",
   "settings_models_default": "Par défaut",
   "settings_models_setDefault": "Définir par défaut",
-  "settings_models_uninstallSoon": "Désinstaller (bientôt disponible)",
+  "settings_models_remove": "Supprimer",
+  "settings_models_confirmRemove": "Supprimer {modelName} ?",
+  "settings_models_confirmRemoveDescription": "Cela supprimera le modèle de votre configuration et effacera les fichiers du modèle du disque.",
+  "settings_models_failedRemove": "Échec de la suppression de {modelId} : {error}",
   "settings_models_failedInstall": "Échec de l'installation de {modelId} : {error}",
 
   "settings_data_dbContent": "Contenu de la base de données",

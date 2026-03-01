@@ -15,7 +15,6 @@ export async function loadSettings(): Promise<AppSettings> {
     birda_path: '',
     clip_output_dir: path.join(app.getPath('userData'), 'clips'),
     db_path: path.join(app.getPath('userData'), 'birda-catalog.db'),
-    default_model: 'birdnet-v24',
     default_confidence: 0.1,
     default_execution_provider: 'auto',
     default_freq_max: 15000,
@@ -28,7 +27,10 @@ export async function loadSettings(): Promise<AppSettings> {
 
   try {
     const raw = await fs.promises.readFile(settingsPath, 'utf-8');
-    return { ...defaults, ...(JSON.parse(raw) as Partial<AppSettings>) };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    // Migration: strip deprecated fields from older config files
+    delete parsed.default_model;
+    return { ...defaults, ...(parsed as Partial<AppSettings>) };
   } catch {
     return defaults;
   }
