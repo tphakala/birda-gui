@@ -18,6 +18,8 @@ import type {
   BirdaSpeciesResponse,
   GpuCapabilities,
   BirdaCheckResponse,
+  ModelRemovedResult,
+  ModelInstalledResult,
 } from '$shared/types';
 
 declare global {
@@ -117,16 +119,16 @@ export function listAvailableModels(): Promise<AvailableModel[]> {
   return window.birda.invoke('birda:models-available') as Promise<AvailableModel[]>;
 }
 
-export function installModel(name: string): Promise<string> {
-  return window.birda.invoke('birda:models-install', name) as Promise<string>;
+export function installModel(name: string): Promise<ModelInstalledResult> {
+  return window.birda.invoke('birda:models-install', name) as Promise<ModelInstalledResult>;
 }
 
 export function setDefaultModel(modelId: string): Promise<void> {
   return window.birda.invoke('birda:models-set-default', modelId) as Promise<void>;
 }
 
-export function removeModel(modelId: string): Promise<void> {
-  return window.birda.invoke('birda:models-remove', modelId) as Promise<void>;
+export function removeModel(modelId: string): Promise<ModelRemovedResult> {
+  return window.birda.invoke('birda:models-remove', modelId) as Promise<ModelRemovedResult>;
 }
 
 // Settings

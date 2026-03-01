@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'child_process';
 import { findBirda, registerProcess, unregisterProcess } from './runner';
-import type { InstalledModel, AvailableModel } from '$shared/types';
+import type { InstalledModel, AvailableModel, ModelRemovedResult, ModelInstalledResult } from '$shared/types';
 
 interface BirdaJsonEnvelope {
   spec_version: string;
@@ -38,63 +38,54 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-export async function installModel(name: string, onProgress?: (line: string) => void): Promise<string> {
+export async function installModel(name: string, onProgress?: (line: string) => void): Promise<ModelInstalledResult> {
   const birdaPath = await findBirda();
   return new Promise((resolve, reject) => {
-    const proc = spawn(birdaPath, ['models', 'install', name], {
+    // JSON mode auto-accepts license and defaults "set as default?" to no.
+    // No stdin interaction needed — the GUI shows its own license dialog
+    // and manages defaults separately via birda:models-set-default.
+    const proc = spawn(birdaPath, ['--output-mode', 'json', 'models', 'install', name], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     registerProcess(proc);
 
     let stdout = '';
-    let stderr = '';
-    let stdoutRemainder = '';
     let stderrRemainder = '';
 
-    const reportProgress = (chunk: string, remainder: string): string => {
-      if (!onProgress) return remainder + chunk;
-      const text = remainder + chunk;
-      const parts = text.split('\n');
-      const newRemainder = parts.pop() ?? '';
+    // stdout = final JSON envelope (not progress)
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    // stderr = indicatif progress bars
+    proc.stderr.on('data', (data: Buffer) => {
+      if (!onProgress) return;
+      const combined = stderrRemainder + data.toString();
+      const parts = combined.split('\n');
+      stderrRemainder = parts.pop() ?? '';
       for (const line of parts) {
         const trimmed = line.trim();
         if (trimmed) onProgress(trimmed);
       }
-      return newRemainder;
-    };
-
-    proc.stdout.on('data', (data: Buffer) => {
-      const text = data.toString();
-      stdout += text;
-      stdoutRemainder = reportProgress(text, stdoutRemainder);
     });
 
-    proc.stderr.on('data', (data: Buffer) => {
-      const text = data.toString();
-      stderr += text;
-      stderrRemainder = reportProgress(text, stderrRemainder);
-    });
-
-    // Auto-accept the license prompt; the GUI shows its own acceptance dialog
-    // before calling this function.
-    // Decline the "Set as default?" prompt — the GUI manages defaults separately
-    // via birda:models-set-default IPC channel.
-    // Silence EPIPE if the process exits before reading stdin.
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    proc.stdin.on('error', () => {});
-    proc.stdin.write('accept\nn\n');
     proc.stdin.end();
 
     proc.on('close', (code) => {
       unregisterProcess(proc);
-      if (onProgress) {
-        if (stdoutRemainder.trim()) onProgress(stdoutRemainder.trim());
-        if (stderrRemainder.trim()) onProgress(stderrRemainder.trim());
+      if (onProgress && stderrRemainder.trim()) {
+        onProgress(stderrRemainder.trim());
       }
       if (code !== 0) {
-        reject(new Error(`Model install failed: ${stderr || stdout}`));
-      } else {
-        resolve(stdout);
+        reject(new Error(`Model install failed: ${stdout}`));
+        return;
+      }
+      try {
+        const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
+        const payload = envelope.payload as unknown as ModelInstalledResult;
+        resolve(payload);
+      } catch {
+        reject(new Error(`Failed to parse install result: ${stdout.slice(0, 200)}`));
       }
     });
 
@@ -105,17 +96,9 @@ export async function installModel(name: string, onProgress?: (line: string) => 
   });
 }
 
-export async function removeModel(name: string): Promise<void> {
-  const birdaPath = await findBirda();
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, ['models', 'remove', name], (err, _stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Failed to remove model: ${stderr || err.message}`));
-        return;
-      }
-      resolve();
-    });
-  });
+export async function removeModel(name: string): Promise<ModelRemovedResult> {
+  const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'remove', name, '--purge']);
+  return envelope.payload as unknown as ModelRemovedResult;
 }
 
 export async function modelInfo(name: string): Promise<unknown> {

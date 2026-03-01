@@ -322,6 +322,23 @@ export interface DetectionsPayload {
   }[];
 }
 
+// === Model operation results (from birda CLI JSON output) ===
+
+/** Result payload from `birda --output-mode json models remove` */
+export interface ModelRemovedResult {
+  id: string;
+  purge_requested: boolean;
+  new_default: string | null;
+}
+
+/** Result payload from `birda --output-mode json models install` */
+export interface ModelInstalledResult {
+  id: string;
+  set_as_default: boolean;
+  model_path: string;
+  labels_path: string;
+}
+
 // === Species Lists ===
 
 /** A species list stored in the database */
