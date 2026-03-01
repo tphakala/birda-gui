@@ -10,6 +10,7 @@
  */
 
 import https from 'node:https';
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -89,56 +90,59 @@ function download(url: string): Promise<Buffer> {
         return;
       }
 
-      https
-        .get(requestUrl, (res) => {
-          // Follow redirects
-          if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-            res.resume(); // Drain response to free socket
-            doRequest(res.headers.location, redirectCount + 1);
-            return;
-          }
+      const client = requestUrl.startsWith('https:') ? https : http;
+      const req = client.get(requestUrl, { timeout: 60_000 }, (res) => {
+        // Follow redirects
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume(); // Drain response to free socket
+          doRequest(res.headers.location, redirectCount + 1);
+          return;
+        }
 
-          if (res.statusCode === 404) {
-            res.resume();
-            reject(
-              new Error(
-                `404 Not Found: ${requestUrl}\nCheck that birdaCli.version in package.json matches a valid release tag.`,
-              ),
+        if (res.statusCode === 404) {
+          res.resume();
+          reject(
+            new Error(
+              `404 Not Found: ${requestUrl}\nCheck that birdaCli.version in package.json matches a valid release tag.`,
+            ),
+          );
+          return;
+        }
+
+        if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+          res.resume();
+          reject(new Error(`HTTP ${res.statusCode} for ${requestUrl}`));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let downloaded = 0;
+        const total = parseInt(res.headers['content-length'] ?? '0', 10);
+
+        res.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+          downloaded += chunk.length;
+          if (total > 0) {
+            const pct = Math.round((downloaded / total) * 100);
+            process.stdout.write(
+              `\r  Downloading: ${(downloaded / 1024 / 1024).toFixed(1)} MB / ${(total / 1024 / 1024).toFixed(1)} MB (${pct}%)`,
             );
-            return;
+          } else {
+            process.stdout.write(`\r  Downloading: ${(downloaded / 1024 / 1024).toFixed(1)} MB`);
           }
+        });
 
-          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-            res.resume();
-            reject(new Error(`HTTP ${res.statusCode} for ${requestUrl}`));
-            return;
-          }
+        res.on('end', () => {
+          process.stdout.write('\n');
+          resolve(Buffer.concat(chunks));
+        });
 
-          const chunks: Buffer[] = [];
-          let downloaded = 0;
-          const total = parseInt(res.headers['content-length'] ?? '0', 10);
-
-          res.on('data', (chunk: Buffer) => {
-            chunks.push(chunk);
-            downloaded += chunk.length;
-            if (total > 0) {
-              const pct = Math.round((downloaded / total) * 100);
-              process.stdout.write(
-                `\r  Downloading: ${(downloaded / 1024 / 1024).toFixed(1)} MB / ${(total / 1024 / 1024).toFixed(1)} MB (${pct}%)`,
-              );
-            } else {
-              process.stdout.write(`\r  Downloading: ${(downloaded / 1024 / 1024).toFixed(1)} MB`);
-            }
-          });
-
-          res.on('end', () => {
-            process.stdout.write('\n');
-            resolve(Buffer.concat(chunks));
-          });
-
-          res.on('error', reject);
-        })
-        .on('error', reject);
+        res.on('error', reject);
+      });
+      req.on('timeout', () => {
+        req.destroy(new Error(`Request timed out after 60s: ${requestUrl}`));
+      });
+      req.on('error', reject);
     };
 
     doRequest(url, 0);
@@ -217,8 +221,8 @@ async function main(): Promise<void> {
     );
   }
 
-  // Make binary executable on Unix
-  if (process.platform !== 'win32') {
+  // Make binary executable on Unix targets
+  if (!platformInfo.name.startsWith('windows')) {
     fs.chmodSync(binaryPath, 0o755);
   }
 
