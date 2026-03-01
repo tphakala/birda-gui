@@ -10,7 +10,6 @@
  */
 
 import https from 'node:https';
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -90,11 +89,19 @@ function download(url: string): Promise<Buffer> {
         return;
       }
 
-      const client = requestUrl.startsWith('https:') ? https : http;
-      const req = client.get(requestUrl, { timeout: 60_000 }, (res) => {
-        // Follow redirects
+      if (!requestUrl.startsWith('https:')) {
+        reject(new Error(`Refusing non-HTTPS URL: ${requestUrl}`));
+        return;
+      }
+
+      const req = https.get(requestUrl, { timeout: 60_000 }, (res) => {
+        // Follow redirects (HTTPS only)
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume(); // Drain response to free socket
+          if (!res.headers.location.startsWith('https:')) {
+            reject(new Error(`Redirect to non-HTTPS URL refused: ${res.headers.location}`));
+            return;
+          }
           doRequest(res.headers.location, redirectCount + 1);
           return;
         }
