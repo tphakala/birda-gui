@@ -247,7 +247,6 @@ export interface AppSettings {
   birda_path: string;
   clip_output_dir: string;
   db_path: string;
-  default_model: string;
   default_confidence: number;
   default_execution_provider: string;
   default_freq_max: number;

@@ -21,7 +21,6 @@ const PartialSettingsSchema = z
     birda_path: z.string(),
     clip_output_dir: z.string(),
     db_path: z.string(),
-    default_model: z.string(),
     default_confidence: z.number().min(0).max(1),
     default_execution_provider: z.string(),
     default_freq_max: z.number().int().positive(),

@@ -13,6 +13,8 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'birda:models-available',
   'birda:models-install',
   'birda:models-info',
+  'birda:models-set-default',
+  'birda:models-remove',
   'birda:extract-clip',
   'clip:save-spectrogram',
   'clip:get-spectrogram',

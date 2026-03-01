@@ -77,7 +77,12 @@ export async function installModel(name: string, onProgress?: (line: string) => 
 
     // Auto-accept the license prompt; the GUI shows its own acceptance dialog
     // before calling this function.
-    proc.stdin.write('accept\n');
+    // Decline the "Set as default?" prompt — the GUI manages defaults separately
+    // via birda:models-set-default IPC channel.
+    // Silence EPIPE if the process exits before reading stdin.
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    proc.stdin.on('error', () => {});
+    proc.stdin.write('accept\nn\n');
     proc.stdin.end();
 
     proc.on('close', (code) => {
@@ -96,6 +101,19 @@ export async function installModel(name: string, onProgress?: (line: string) => 
     proc.on('error', (err) => {
       unregisterProcess(proc);
       reject(new Error(`Model install failed: ${err.message}`));
+    });
+  });
+}
+
+export async function removeModel(name: string): Promise<void> {
+  const birdaPath = await findBirda();
+  return new Promise((resolve, reject) => {
+    execFile(birdaPath, ['models', 'remove', name], (err, _stdout, stderr) => {
+      if (err) {
+        reject(new Error(`Failed to remove model: ${stderr || err.message}`));
+        return;
+      }
+      resolve();
     });
   });
 }

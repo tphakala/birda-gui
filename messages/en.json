@@ -28,7 +28,6 @@
   "settings_general_birdaPathPlaceholder": "Leave empty to use PATH",
 
   "settings_analysis_title": "Analysis Defaults",
-  "settings_analysis_defaultModel": "Default Model",
   "settings_analysis_confidence": "Default Confidence Threshold",
   "settings_analysis_executionProvider": "Execution Provider",
   "settings_analysis_epAuto": "Auto (Recommended)",
@@ -71,7 +70,10 @@
   "settings_models_installing": "Installing...",
   "settings_models_default": "Default",
   "settings_models_setDefault": "Set Default",
-  "settings_models_uninstallSoon": "Uninstall (coming soon)",
+  "settings_models_remove": "Remove",
+  "settings_models_confirmRemove": "Remove {modelName}?",
+  "settings_models_confirmRemoveDescription": "This will remove the model from your configuration and delete model files from disk.",
+  "settings_models_failedRemove": "Failed to remove {modelId}: {error}",
   "settings_models_failedInstall": "Failed to install {modelId}: {error}",
 
   "settings_data_dbContent": "Database Content",

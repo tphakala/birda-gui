@@ -33,6 +33,8 @@
     listModels,
     listAvailableModels,
     installModel,
+    setDefaultModel,
+    removeModel,
     detectGpuCapabilities,
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
@@ -61,7 +63,6 @@
     birda_path: '',
     clip_output_dir: '',
     db_path: '',
-    default_model: 'birdnet-v24',
     default_confidence: 0.1,
     default_execution_provider: 'auto',
     default_freq_max: 15000,
@@ -114,8 +115,10 @@
   let availableModelsToInstall = $state<AvailableModel[]>([]);
   let modelsLoading = $state(false);
   let installing = $state<string | null>(null);
+  let deleting = $state<string | null>(null);
   let modelsError = $state<string | null>(null);
   let licenseModel = $state<AvailableModel | null>(null);
+  let removeConfirmModel = $state<InstalledModel | null>(null);
 
   type ModelsTab = 'installed' | 'catalog';
   let modelsTab = $state<ModelsTab>('installed');
@@ -151,8 +154,7 @@
     return null;
   }
 
-  const modelInList = $derived(installedModels.some((mod) => mod.id === settings.default_model));
-  const modelNames = $derived(new Map(availableModelsToInstall.map((m) => [m.id, m.name])));
+  const defaultModelId = $derived(installedModels.find((mod) => mod.is_default)?.id ?? '');
 
   $effect(() => {
     // Only sync theme to appState after settings are loaded to prevent flash
@@ -200,6 +202,9 @@
     modelsError = null;
     try {
       [installedModels, availableModelsToInstall] = await Promise.all([listModels(), listAvailableModels()]);
+      // Sync appState.selectedModel from birda's is_default flag
+      const defaultModel = installedModels.find((mod) => mod.is_default);
+      appState.selectedModel = defaultModel?.id ?? '';
     } catch (e) {
       modelsError = (e as Error).message;
       installedModels = [];
@@ -252,16 +257,32 @@
   }
 
   async function handleSetDefault(modelId: string) {
-    settings.default_model = modelId;
     saving = true;
     error = null;
     try {
-      settings = await setSettings($state.snapshot(settings));
-      savedSettings = structuredClone($state.snapshot(settings));
+      await setDefaultModel(modelId);
+      await refreshModels();
     } catch (e) {
       error = (e as Error).message;
     } finally {
       saving = false;
+    }
+  }
+
+  async function handleRemoveModel() {
+    if (!removeConfirmModel) return;
+    const id = removeConfirmModel.id;
+    deleting = id;
+    modelsError = null;
+    try {
+      await removeModel(id);
+      removeConfirmModel = null;
+      await refreshModels();
+    } catch (e) {
+      modelsError = m.settings_models_failedRemove({ modelId: id, error: (e as Error).message });
+    } finally {
+      removeConfirmModel = null;
+      deleting = null;
     }
   }
 
@@ -489,20 +510,6 @@
 
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <label class="block">
-              <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_defaultModel()}</span>
-              <select bind:value={settings.default_model} class="select select-bordered mt-1 w-full">
-                {#if !modelInList && settings.default_model}
-                  <option value={settings.default_model}
-                    >{modelNames.get(settings.default_model) ?? settings.default_model}</option
-                  >
-                {/if}
-                {#each installedModels as model (model.id)}
-                  <option value={model.id}>{modelNames.get(model.id) ?? model.id}</option>
-                {/each}
-              </select>
-            </label>
-
-            <label class="block">
               <span class="text-base-content/70 text-sm font-medium">{m.settings_analysis_confidence()}</span>
               <div class="mt-1 flex items-center gap-3">
                 <input
@@ -696,9 +703,10 @@
                     <div class="flex items-center gap-1.5">
                       <button
                         onclick={() => handleSetDefault(model.id)}
-                        class="btn btn-xs {settings.default_model === model.id ? 'btn-primary' : 'btn-ghost'}"
+                        disabled={saving}
+                        class="btn btn-xs {defaultModelId === model.id ? 'btn-primary' : 'btn-ghost'}"
                       >
-                        {#if settings.default_model === model.id}
+                        {#if defaultModelId === model.id}
                           <CircleCheckBig size={12} />
                           {m.settings_models_default()}
                         {:else}
@@ -707,10 +715,15 @@
                       </button>
                       <button
                         class="btn btn-ghost btn-xs btn-square"
-                        disabled
-                        title={m.settings_models_uninstallSoon()}
+                        disabled={deleting !== null || defaultModelId === model.id}
+                        title={defaultModelId === model.id ? m.settings_models_default() : m.settings_models_remove()}
+                        onclick={() => (removeConfirmModel = model)}
                       >
-                        <Trash2 size={13} />
+                        {#if deleting === model.id}
+                          <Loader size={13} class="animate-spin" />
+                        {:else}
+                          <Trash2 size={13} />
+                        {/if}
                       </button>
                     </div>
                   </div>
@@ -939,6 +952,40 @@
     </div>
     <form method="dialog" class="modal-backdrop">
       <button onclick={() => (licenseModel = null)}>close</button>
+    </form>
+  </dialog>
+{/if}
+
+<!-- Remove Model Confirmation Modal -->
+{#if removeConfirmModel}
+  {@const modelToRemove = removeConfirmModel}
+  {@const info = availableModelsToInstall.find((a) => a.id === modelToRemove.id)}
+  <dialog class="modal modal-open">
+    <div class="modal-box">
+      <div class="text-error flex items-center gap-3">
+        <TriangleAlert size={24} />
+        <h3 class="text-lg font-semibold">
+          {m.settings_models_confirmRemove({ modelName: info?.name ?? modelToRemove.id })}
+        </h3>
+      </div>
+      <p class="text-base-content/70 mt-3 text-sm">
+        {m.settings_models_confirmRemoveDescription()}
+      </p>
+      <div class="modal-action">
+        <button onclick={() => (removeConfirmModel = null)} disabled={deleting !== null} class="btn">
+          {m.common_button_cancel()}
+        </button>
+        <button onclick={handleRemoveModel} disabled={deleting !== null} class="btn btn-error gap-1.5">
+          {#if deleting}
+            <Loader size={14} class="animate-spin" />
+          {/if}
+          <Trash2 size={14} />
+          {m.settings_models_remove()}
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button onclick={() => (removeConfirmModel = null)}>close</button>
     </form>
   </dialog>
 {/if}

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { listModels, listAvailable, installModel, modelInfo } from '../birda/models';
+import { listModels, listAvailable, installModel, modelInfo, removeModel } from '../birda/models';
+import { setDefaultModel } from '../birda/config';
 
 export function registerModelHandlers(): void {
   ipcMain.handle('birda:models-list', async () => {
@@ -21,5 +22,13 @@ export function registerModelHandlers(): void {
 
   ipcMain.handle('birda:models-info', async (_event, name: string) => {
     return modelInfo(name);
+  });
+
+  ipcMain.handle('birda:models-set-default', async (_event, modelId: string) => {
+    return setDefaultModel(modelId);
+  });
+
+  ipcMain.handle('birda:models-remove', async (_event, modelId: string) => {
+    return removeModel(modelId);
   });
 }

@@ -57,6 +57,20 @@ export async function getConfig(): Promise<Record<string, unknown>> {
   });
 }
 
+export async function setDefaultModel(modelId: string): Promise<void> {
+  const birdaPath = await findBirda();
+
+  return new Promise((resolve, reject) => {
+    execFile(birdaPath, ['config', 'set', 'defaults.model', modelId], (err, _stdout, stderr) => {
+      if (err) {
+        reject(new Error(`Failed to set default model: ${stderr || err.message}`));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 export async function getConfigPath(): Promise<string> {
   const birdaPath = await findBirda();
 
