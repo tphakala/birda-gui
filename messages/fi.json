@@ -7,16 +7,13 @@
   "common_button_back": "Takaisin",
   "status_ready": "Valmis",
   "status_analyzing": "Analysoidaan...",
-
   "settings_title": "Asetukset",
   "settings_tab_preferences": "Asetukset",
   "settings_tab_models": "Mallit",
   "settings_tab_data": "Data",
-
   "settings_cli_title": "birda CLI -tila",
   "settings_cli_checking": "Tarkistetaan...",
   "settings_cli_availableAt": "Saatavilla polussa {path}",
-
   "settings_general_title": "Yleiset",
   "settings_general_theme": "Teema",
   "settings_general_themeSystem": "Järjestelmän oletus",
@@ -26,36 +23,32 @@
   "settings_general_uiLanguage": "Käyttöliittymän kieli",
   "settings_general_birdaPath": "birda-binäärin polku",
   "settings_general_birdaPathPlaceholder": "Jätä tyhjäksi käyttääksesi PATH-muuttujaa",
-
   "settings_analysis_title": "Analyysin oletukset",
   "settings_analysis_confidence": "Luottamusrajan oletusarvo",
   "settings_analysis_executionProvider": "Suorituspalveluntarjoaja",
   "settings_analysis_epAuto": "Automaattinen (suositeltu)",
   "settings_analysis_epDescription": "Hallinnoi laitteistokiihdytystä päättelyä varten. Automaattinen valitsee parhaan saatavilla olevan vaihtoehdon.",
-
   "settings_gpu_librariesMissing_title": "GPU-kiihdytys saatavilla",
   "settings_gpu_librariesMissing_description": "Nvidia GPU havaittiin, mutta CUDA/TensorRT-kirjastoja ei ole asennettu. Asenna ne ottaaksesi GPU-kiihdytyksen käyttöön:",
-
-  "settings_cuda_title": "GPU Acceleration",
-  "settings_cuda_notSupported": "CUDA GPU acceleration is only available on Linux and Windows with NVIDIA GPUs.",
-  "settings_cuda_noGpu": "No NVIDIA GPU detected. CUDA acceleration requires an NVIDIA GPU.",
-  "settings_cuda_notInstalled": "CUDA libraries are not installed. Download them to enable GPU acceleration.",
-  "settings_cuda_installed": "CUDA libraries installed",
-  "settings_cuda_version": "Version: {version}",
-  "settings_cuda_diskUsage": "Disk usage: {size}",
-  "settings_cuda_downloadButton": "Download CUDA Libraries",
-  "settings_cuda_downloadSize": "Download size: ~{size}",
-  "settings_cuda_downloading": "Downloading CUDA libraries...",
-  "settings_cuda_extracting": "Extracting CUDA libraries...",
-  "settings_cuda_verifying": "Verifying installation...",
-  "settings_cuda_downloadComplete": "CUDA libraries installed successfully.",
-  "settings_cuda_downloadFailed": "Download failed: {error}",
-  "settings_cuda_removeButton": "Remove CUDA Libraries",
-  "settings_cuda_removeFailed": "Failed to remove CUDA libraries: {error}",
-  "settings_cuda_removeConfirm": "Remove downloaded CUDA libraries? This will free {size} of disk space. You can re-download them later.",
-  "settings_cuda_cancelButton": "Cancel Download",
-  "settings_cuda_requiresRestart": "Restart analysis to use GPU acceleration.",
-
+  "settings_cuda_title": "GPU-kiihdytys",
+  "settings_cuda_notSupported": "CUDA GPU-kiihdytys on saatavilla vain Linuxissa ja Windowsissa NVIDIA-näytönohjaimilla.",
+  "settings_cuda_noGpu": "NVIDIA-näytönohjainta ei havaittu. CUDA-kiihdytys vaatii NVIDIA-näytönohjaimen.",
+  "settings_cuda_notInstalled": "CUDA-kirjastoja ei ole asennettu. Lataa ne ottaaksesi GPU-kiihdytyksen käyttöön.",
+  "settings_cuda_installed": "CUDA-kirjastot asennettu",
+  "settings_cuda_version": "Versio: {version}",
+  "settings_cuda_diskUsage": "Levytila: {size}",
+  "settings_cuda_downloadButton": "Lataa CUDA-kirjastot",
+  "settings_cuda_downloadSize": "Latauksen koko: ~{size}",
+  "settings_cuda_downloading": "Ladataan CUDA-kirjastoja...",
+  "settings_cuda_extracting": "Puretaan CUDA-kirjastoja...",
+  "settings_cuda_verifying": "Tarkistetaan asennusta...",
+  "settings_cuda_downloadComplete": "CUDA-kirjastot asennettu onnistuneesti.",
+  "settings_cuda_downloadFailed": "Lataus epäonnistui: {error}",
+  "settings_cuda_removeButton": "Poista CUDA-kirjastot",
+  "settings_cuda_removeFailed": "CUDA-kirjastojen poistaminen epäonnistui: {error}",
+  "settings_cuda_removeConfirm": "Poistetaanko ladatut CUDA-kirjastot? Tämä vapauttaa {size} levytilaa. Voit ladata ne myöhemmin uudelleen.",
+  "settings_cuda_cancelButton": "Peruuta lataus",
+  "settings_cuda_requiresRestart": "Käynnistä analyysi uudelleen käyttääksesi GPU-kiihdytystä.",
   "settings_spectrogram_title": "Spektrogrammi",
   "settings_spectrogram_maxFreq": "Maksimitaajuuden oletusarvo",
   "settings_spectrogram_height": "Spektrogrammin oletuskorkeus",
@@ -63,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Keskikokoinen",
   "settings_spectrogram_heightLarge": "Suuri",
   "settings_spectrogram_heightXL": "Erittäin suuri",
-
   "settings_storage_title": "Tallennus",
   "settings_storage_clipDir": "Pätkien tulostuskansio",
   "settings_storage_openClipDir": "Avaa pätkäkansio",
   "settings_storage_dbLocation": "Tietokannan sijainti",
-
   "settings_saved": "Tallennettu",
   "settings_unsavedModal_title": "Tallentamattomia muutoksia",
   "settings_unsavedModal_warning": "Sinulla on tallentamattomia asetusmuutoksia. Jos poistut nyt, muutoksesi menetetään.",
   "settings_unsavedModal_discard": "Hylkää muutokset",
   "settings_unsavedModal_stayOnPage": "Pysy sivulla",
-
   "settings_models_installed": "Asennetut",
   "settings_models_catalog": "Luettelo",
   "settings_models_refresh": "Päivitä",
@@ -95,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Tämä poistaa mallin asetuksistasi ja poistaa mallitiedostot levyltä.",
   "settings_models_failedRemove": "Mallin {modelId} poistaminen epäonnistui: {error}",
   "settings_models_failedInstall": "Mallin {modelId} asennus epäonnistui: {error}",
-
   "settings_data_dbContent": "Tietokannan sisältö",
   "settings_data_detections": "{count} havaintoa",
   "settings_data_species": "{count} lajia",
@@ -103,13 +92,11 @@
   "settings_data_clearAll": "Tyhjennä kaikki data",
   "settings_data_cleared": "Tyhjennetty {detections} havaintoa, {runs} ajoa, {locations} sijaintia",
   "settings_data_birdaConfig": "birda-konfiguraatio (vain luku)",
-
   "settings_clearModal_title": "Tyhjennä tietokanta",
   "settings_clearModal_warning": "Tämä poistaa pysyvästi kaikki havainnot, analyysiajot ja sijainnit tietokannasta. Tätä toimintoa ei voi perua.",
   "settings_clearModal_detectionsRemoved": "{count} havaintoa poistetaan",
   "settings_clearModal_locationsRemoved": "{count} sijaintia poistetaan",
   "settings_clearModal_deleteAll": "Poista kaikki data",
-
   "settings_licenseModal_title": "Lisenssisopimus",
   "settings_licenseModal_license": "Lisenssi",
   "settings_licenseModal_commercialUse": "Kaupallinen käyttö",
@@ -117,25 +104,19 @@
   "settings_licenseModal_notAllowed": "Ei sallittu",
   "settings_licenseModal_agree": "Asentamalla tämän mallin hyväksyt {license}-lisenssin ehdot.",
   "settings_licenseModal_acceptInstall": "Hyväksy ja asenna",
-
   "licenses_title": "Kolmannen osapuolen lisenssit",
   "licenses_notFound": "Lisenssitietoja ei ole saatavilla.",
-
   "common_button_close": "Sulje",
-
   "sidebar_analysis": "Analyysi",
   "sidebar_detections": "Havainnot",
   "sidebar_map": "Kartta",
   "sidebar_species": "Lajit",
   "sidebar_settings": "Asetukset",
-
   "status_detections": "{count} havaintoa",
   "status_species": "{count} lajia",
   "status_locations": "{count} sijaintia",
-
   "audio_pause": "Keskeytä",
   "audio_playClip": "Toista pätkä",
-
   "log_title": "Loki",
   "log_expand": "Laajenna",
   "log_collapse": "Pienennä",
@@ -143,11 +124,9 @@
   "log_clear": "Tyhjennä loki",
   "log_close": "Sulje lokipaneeli",
   "log_empty": "Ei vielä lokimerkintöjä. Suorita analyysi nähdäksesi tulosteen täällä.",
-
   "progress_complete": "Analyysi valmis",
   "progress_failed": "Analyysi epäonnistui",
   "progress_status": "{processed}/{total} tiedostoa · {detections} havaintoa",
-
   "filter_title": "Suodattimet",
   "filter_collapse": "Pienennä suodattimet",
   "filter_species": "Lajit",
@@ -155,7 +134,6 @@
   "filter_minConfidence": "Min. luottamus",
   "filter_show": "Näytä suodattimet",
   "filter_all": "Kaikki",
-
   "table_columnOffset": "Siirtymä",
   "table_columnTime": "Aika",
   "table_columnSpecies": "Laji",
@@ -166,12 +144,10 @@
   "table_columnClip": "Pätkä",
   "table_loadingDetections": "Ladataan havaintoja...",
   "table_noDetections": "Ei havaintoja",
-
   "pagination_detectionCount": "{count} havaintoa",
   "pagination_detectionCountSingular": "{count} havainto",
   "pagination_totalDetections": "{count} havaintoa yhteensä",
   "pagination_pageOf": "Sivu {current}/{total}",
-
   "detail_audioLoadFailed": "Äänen lataus epäonnistui: {message}",
   "detail_freqMax": "Taaj. maks.",
   "detail_height": "Korkeus",
@@ -185,7 +161,6 @@
   "detail_exporting": "Viedään...",
   "detail_exportAsWav": "Vie valinta WAV-tiedostona",
   "detail_clearSelection": "Tyhjennä valinta",
-
   "sourceFiles_scanning": "Skannataan tiedostoja...",
   "sourceFiles_sourceFile": "Lähdetiedosto",
   "sourceFiles_duration": "Kesto",
@@ -205,7 +180,6 @@
   "sourceFiles_statusSkip": "ohitettu",
   "sourceFiles_noAudioFiles": "Ei äänitteitä",
   "sourceFiles_supportedFormats": "Tuetut: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Koordinaatit",
   "coords_autoDetected": "automaattisesti havaittu",
   "coords_pickOnMap": "Valitse koordinaatit kartalta",
@@ -216,12 +190,9 @@
   "coords_longitudePlaceholder": "-180...180",
   "coords_pickTitle": "Valitse koordinaatit",
   "coords_clickToSet": "Napsauta karttaa asettaaksesi koordinaatit",
-
   "speciesSearch_placeholder": "Etsi lajeja kartalta...",
   "speciesSearch_detCount": "{count} hav.",
-
   "map_unknownLocation": "Tuntematon sijainti",
-
   "runs_title": "Ajot",
   "runs_empty": "Ei vielä analyysiajoja",
   "runs_emptyHint": "Siirry Analyysi-välilehdelle aloittaaksesi ensimmäisen analyysin.",
@@ -234,7 +205,6 @@
   "runs_status_failed": "Epäonnistui",
   "runs_deleteRun": "Poista ajo",
   "runs_status_pending": "Odottaa",
-
   "analysis_title": "Analyysi",
   "analysis_selectFile": "Valitse tiedosto",
   "analysis_selectFileDesc": "Valitse analysoitava äänitiedosto",
@@ -263,7 +233,6 @@
   "analysis_filterByName": "Suodata lajin mukaan...",
   "analysis_conf": "Luott.",
   "analysis_allConfidences": "Kaikki",
-
   "calendar_datePlaceholder": "PP/KK/VVVV",
   "calendar_today": "Tänään",
   "calendar_month_january": "Tammikuu",
@@ -285,7 +254,6 @@
   "calendar_weekday_fr": "Pe",
   "calendar_weekday_sa": "La",
   "calendar_weekday_su": "Su",
-
   "wizard_welcome_title": "Tervetuloa Birda GUI:hin",
   "wizard_welcome_subtitle": "Otetaan sinut käyttöön muutamalla nopealla askeleella.",
   "wizard_welcome_getStarted": "Aloita",
@@ -293,7 +261,6 @@
   "wizard_uiLanguage_title": "Valitse kieli",
   "wizard_uiLanguage_subtitle": "Valitse Birda GUI -käyttöliittymän kieli.",
   "wizard_uiLanguage_detected": "Havaitsimme kielen {language} järjestelmäasetustesi perusteella.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI tarvitsee birda-komentorivityökalun äänitiedostojen analysointiin.",
   "wizard_cli_checking": "Tarkistetaan birda-työkalua...",
@@ -302,22 +269,18 @@
   "wizard_cli_notFoundHint": "Voit asettaa polun manuaalisesti, jos birda on asennettu, tai ladata sen alla olevasta linkistä.",
   "wizard_cli_download": "Lataa birda",
   "wizard_cli_setPath": "Aseta polku manuaalisesti",
-
   "wizard_model_title": "Asenna malli",
   "wizard_model_subtitle": "Tarvitset vähintään yhden mallin lintuäänten analysointiin. Valitse asennettava malli.",
   "wizard_model_installing": "Asennetaan {name}...",
   "wizard_model_installed": "asennettu",
   "wizard_model_hasModels": "Sinulla on {count} malli(a) asennettuna. Voit asentaa lisää myöhemmin asetuksista.",
   "wizard_model_noCli": "birda CLI ei ole saatavilla. Palaa edelliseen vaiheeseen määrittääksesi CLI:n ennen mallien asennusta.",
-
   "wizard_language_title": "Lajien kieli",
   "wizard_language_subtitle": "Valitse lintulajien nimien kieli havaintotuloksissa.",
-
   "wizard_finish": "Viimeistele asennus",
   "wizard_next": "Seuraava",
   "wizard_back": "Takaisin",
   "wizard_stepOf": "Vaihe {current}/{total}",
-
   "species_title": "Lajiluettelot",
   "species_fetchNew": "Hae uusi",
   "species_customList": "Luo mukautettu",
@@ -331,7 +294,6 @@
   "species_selectList": "Valitse lajiluettelo nähdäksesi sen sisällön.",
   "species_useAsFilter": "Käytä havaintosuodattimena",
   "species_searchInList": "Suodata lajeja luettelossa...",
-
   "species_fetch_title": "Hae lajiluettelo",
   "species_fetch_subtitle": "Hae odotettavat lintulajit sijainnille ja vuodenajalle.",
   "species_fetch_week": "Viikko",
@@ -345,7 +307,6 @@
   "species_fetch_listName": "Luettelon nimi",
   "species_fetch_listNamePlaceholder": "esim. Helsinki, Viikko 24",
   "species_fetch_save": "Tallenna luettelo",
-
   "species_custom_title": "Luo mukautettu lajiluettelo",
   "species_custom_name": "Luettelon nimi",
   "species_custom_namePlaceholder": "Oma lajiluetteloni...",
@@ -354,24 +315,19 @@
   "species_custom_searchAdd": "Etsi ja lisää lajeja...",
   "species_custom_selectedCount": "{count} valittu",
   "species_custom_create": "Luo luettelo",
-
   "species_table_commonName": "Yleisnimi",
   "species_table_scientificName": "Tieteellinen nimi",
   "species_table_frequency": "Taajuus",
-
   "species_detail_location": "Sijainti",
   "species_detail_week": "Viikko {week}",
   "species_detail_threshold": "Kynnys: {threshold} %",
-
   "species_fetch_weekError": "Viikon on oltava välillä 1–48",
   "species_fetch_coordsError": "Aseta koordinaatit",
   "species_fetch_moreSpecies": "...ja {count} muuta",
   "species_loading": "Ladataan...",
-
   "view_table": "Taulukko",
   "view_species": "Lajit",
   "view_grid": "Ruudukko",
-
   "species_card_detections": "{count} havaintoa",
   "species_card_detectionsSingular": "{count} havainto",
   "species_card_avgConfidence": "Keskim. {value}",
@@ -382,7 +338,6 @@
   "species_card_sortCount": "Määrä",
   "species_card_sortName": "Nimi",
   "species_card_sortConfidence": "Luottamus",
-
   "grid_noResults": "Ei dataa lämpökarttaa varten",
   "grid_daylight": "Päivänvalo",
   "grid_phase_night": "Yö",
@@ -393,6 +348,5 @@
   "grid_detectionCountSingular": "{count} havainto",
   "grid_less": "Vähemmän",
   "grid_more": "Enemmän",
-
   "pagination_speciesCount": "{count} lajia"
 }
