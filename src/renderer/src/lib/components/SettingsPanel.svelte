@@ -36,10 +36,24 @@
     setDefaultModel,
     removeModel,
     detectGpuCapabilities,
+    checkCudaStatus,
+    downloadCudaLibs,
+    cancelCudaDownload,
+    removeCudaLibs,
+    getCudaDownloadSize,
+    onCudaDownloadProgress,
+    offCudaDownloadProgress,
   } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
-  import type { AppSettings, InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
-  import { BIRDA_RELEASES_URL } from '$shared/constants';
+  import type {
+    AppSettings,
+    InstalledModel,
+    AvailableModel,
+    BirdaCheckResponse,
+    CudaStatus,
+    CudaDownloadProgress,
+  } from '$shared/types';
+  import { BIRDA_RELEASES_URL, BIRDA_CLI_VERSION } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
   import * as m from '$paraglide/messages';
   import { setLocale, isLocale } from '$paraglide/runtime';
@@ -131,9 +145,17 @@
     availableProviders: string[];
     platform: string;
   } | null>(null);
-  let gpuAlertDismissed = $state(false);
-
   const availableProviders = $derived(gpuCapabilities?.availableProviders ?? []);
+
+  // --- CUDA state ---
+  let cudaStatus = $state<CudaStatus | null>(null);
+  let cudaDownloading = $state(false);
+  let cudaProgress = $state<CudaDownloadProgress | null>(null);
+  let cudaError = $state<string | null>(null);
+  let cudaRemoveError = $state<string | null>(null);
+  let cudaDownloadSizeBytes = $state<number>(0);
+  let showCudaRemoveConfirm = $state(false);
+  let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
 
   const LICENSE_URLS: Record<string, string> = {
     'CC-BY-NC-SA-4.0': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
@@ -190,7 +212,7 @@
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
         availableLanguages = await getAvailableLanguages();
-        await Promise.all([refreshModels(), refreshGpuCapabilities()]);
+        await Promise.all([refreshModels(), refreshGpuCapabilities(), refreshCudaStatus()]);
       }
     } catch (e) {
       error = (e as Error).message;
@@ -221,6 +243,94 @@
       console.error('GPU detection failed:', e);
       gpuCapabilities = null;
     }
+  }
+
+  async function refreshCudaStatus() {
+    try {
+      cudaStatus = await checkCudaStatus();
+      // Rehydrate download state if a download is running (e.g., after tab navigation)
+      if (cudaStatus.downloadInProgress && !cudaDownloading) {
+        cudaDownloading = true;
+        cudaProgress = null;
+        onCudaDownloadProgress((progress) => {
+          cudaProgress = progress;
+        });
+        // Poll for completion since we can't await the original IPC invoke
+        if (cudaPollTimer) clearInterval(cudaPollTimer);
+        cudaPollTimer = setInterval(() => {
+          void checkCudaStatus()
+            .then((status) => {
+              if (!status.downloadInProgress) {
+                if (cudaPollTimer) {
+                  clearInterval(cudaPollTimer);
+                  cudaPollTimer = null;
+                }
+                cudaDownloading = false;
+                cudaProgress = null;
+                offCudaDownloadProgress();
+                cudaStatus = status;
+              }
+            })
+            .catch(() => {
+              // Ignore polling errors
+            });
+        }, 2000);
+      }
+      if (!cudaStatus.installed && cudaStatus.platformSupported) {
+        cudaDownloadSizeBytes = await getCudaDownloadSize(BIRDA_CLI_VERSION);
+      }
+    } catch (e) {
+      console.error('CUDA status check failed:', e);
+      cudaStatus = null;
+    }
+  }
+
+  async function handleCudaDownload() {
+    cudaDownloading = true;
+    cudaError = null;
+    cudaProgress = null;
+
+    onCudaDownloadProgress((progress) => {
+      cudaProgress = progress;
+    });
+
+    try {
+      await downloadCudaLibs(BIRDA_CLI_VERSION);
+      await refreshCudaStatus();
+    } catch (e) {
+      const msg = (e as Error).message;
+      // Don't show error when user cancelled the download
+      if (!msg.includes('cancelled')) {
+        cudaError = msg;
+      }
+    } finally {
+      cudaDownloading = false;
+      cudaProgress = null;
+      offCudaDownloadProgress();
+    }
+  }
+
+  async function handleCudaCancelDownload() {
+    // State cleanup is handled by handleCudaDownload's finally block
+    await cancelCudaDownload();
+  }
+
+  async function handleCudaRemove() {
+    showCudaRemoveConfirm = false;
+    cudaRemoveError = null;
+    try {
+      await removeCudaLibs();
+      await refreshCudaStatus();
+    } catch (e) {
+      cudaRemoveError = (e as Error).message;
+    }
+  }
+
+  function formatBytes(bytes: number): string {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
   }
 
   function promptLicense(model: AvailableModel) {
@@ -364,6 +474,8 @@
   onDestroy(() => {
     if (savedTimer) clearTimeout(savedTimer);
     if (clearResultTimer) clearTimeout(clearResultTimer);
+    if (cudaPollTimer) clearInterval(cudaPollTimer);
+    offCudaDownloadProgress();
     appState.settingsHasUnsavedChanges = false;
   });
 </script>
@@ -438,34 +550,108 @@
         </div>
       {/if}
 
-      <!-- GPU Library Alert -->
-      {#if gpuCapabilities?.hasNvidiaGpu && !gpuCapabilities.cudaLibrariesFound && !gpuAlertDismissed}
-        <div role="alert" class="alert alert-info">
-          <Info size={20} />
-          <div class="flex-1">
-            <h4 class="font-medium">{m.settings_gpu_librariesMissing_title()}</h4>
-            <p class="text-sm opacity-80">
-              {m.settings_gpu_librariesMissing_description()}
+      <!-- GPU Acceleration Section -->
+      <div class="card bg-base-200">
+        <div class="card-body gap-3 p-4">
+          <h3 class="text-base-content/70 text-sm font-medium">{m.settings_cuda_title()}</h3>
+
+          {#if cudaStatus === null}
+            <p class="text-base-content/50 text-sm">{m.settings_cli_checking()}</p>
+          {:else if !cudaStatus.platformSupported}
+            <p class="text-base-content/50 text-sm">
+              <Info size={14} class="mr-1 inline" />
+              {m.settings_cuda_notSupported()}
             </p>
-            <div class="mt-2 flex gap-3 text-sm">
-              <a
-                href="https://developer.nvidia.com/cuda-downloads"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link"
+          {:else if !cudaStatus.hasNvidiaGpu}
+            <p class="text-base-content/50 text-sm">
+              <Info size={14} class="mr-1 inline" />
+              {m.settings_cuda_noGpu()}
+            </p>
+          {:else if cudaDownloading}
+            <div class="space-y-2">
+              <p class="text-sm">
+                {#if cudaProgress?.phase === 'extracting'}
+                  {m.settings_cuda_extracting()}
+                {:else if cudaProgress?.phase === 'verifying'}
+                  {m.settings_cuda_verifying()}
+                {:else}
+                  {m.settings_cuda_downloading()}
+                {/if}
+              </p>
+              <div class="flex items-center gap-3">
+                <progress
+                  class="progress progress-primary flex-1"
+                  value={cudaProgress?.totalBytes ? cudaProgress.downloadedBytes : undefined}
+                  max={cudaProgress?.totalBytes ?? undefined}
+                ></progress>
+                <span class="text-base-content/50 w-28 text-right text-xs">
+                  {#if cudaProgress?.phase === 'downloading' && cudaProgress.totalBytes > 0}
+                    {formatBytes(cudaProgress.downloadedBytes)} / {formatBytes(cudaProgress.totalBytes)}
+                  {/if}
+                </span>
+              </div>
+              <button
+                class="btn btn-ghost btn-sm"
+                onclick={handleCudaCancelDownload}
+                disabled={cudaProgress?.phase !== 'downloading'}
               >
-                Download CUDA
-              </a>
-              <a href="https://developer.nvidia.com/tensorrt" target="_blank" rel="noopener noreferrer" class="link">
-                Download TensorRT
-              </a>
+                {m.settings_cuda_cancelButton()}
+              </button>
             </div>
-          </div>
-          <button onclick={() => (gpuAlertDismissed = true)} class="btn btn-ghost btn-sm btn-square">
-            <X size={16} />
-          </button>
+          {:else if !cudaStatus.installed}
+            <p class="text-base-content/70 text-sm">{m.settings_cuda_notInstalled()}</p>
+            {#if cudaDownloadSizeBytes > 0}
+              <p class="text-base-content/50 text-xs">
+                {m.settings_cuda_downloadSize({ size: formatBytes(cudaDownloadSizeBytes) })}
+              </p>
+            {/if}
+            <div>
+              <button class="btn btn-primary btn-sm gap-1.5" onclick={handleCudaDownload}>
+                <Download size={14} />
+                {m.settings_cuda_downloadButton()}
+              </button>
+            </div>
+          {:else}
+            <div class="flex items-center gap-2">
+              <span class="badge badge-success gap-1">
+                <CircleCheckBig size={12} />
+                {m.settings_cuda_installed()}
+              </span>
+              <span class="text-base-content/70 text-sm">
+                {m.settings_cuda_version({ version: cudaStatus.version ?? '' })}
+              </span>
+            </div>
+            <p class="text-base-content/50 text-xs">
+              {m.settings_cuda_diskUsage({ size: formatBytes(cudaStatus.diskUsageBytes) })}
+            </p>
+            <p class="text-base-content/50 text-xs">
+              {m.settings_cuda_requiresRestart()}
+            </p>
+            <div>
+              <button class="btn btn-outline btn-error btn-sm" onclick={() => (showCudaRemoveConfirm = true)}>
+                {m.settings_cuda_removeButton()}
+              </button>
+            </div>
+          {/if}
+
+          {#if cudaError}
+            <div role="alert" class="alert alert-error mt-2">
+              <span>{m.settings_cuda_downloadFailed({ error: cudaError })}</span>
+              <button class="btn btn-ghost btn-sm btn-square" onclick={() => (cudaError = null)}>
+                <X size={16} />
+              </button>
+            </div>
+          {/if}
+          {#if cudaRemoveError}
+            <div role="alert" class="alert alert-error mt-2">
+              <span>{cudaRemoveError}</span>
+              <button class="btn btn-ghost btn-sm btn-square" onclick={() => (cudaRemoveError = null)}>
+                <X size={16} />
+              </button>
+            </div>
+          {/if}
         </div>
-      {/if}
+      </div>
 
       <!-- General -->
       <div class="card bg-base-200">
@@ -962,6 +1148,32 @@
     </div>
     <form method="dialog" class="modal-backdrop">
       <button onclick={() => (licenseModel = null)}>close</button>
+    </form>
+  </dialog>
+{/if}
+
+<!-- CUDA Remove Confirmation Modal -->
+{#if showCudaRemoveConfirm}
+  <dialog class="modal modal-open">
+    <div class="modal-box">
+      <div class="text-error flex items-center gap-3">
+        <TriangleAlert size={24} />
+        <h3 class="text-lg font-semibold">{m.settings_cuda_removeButton()}</h3>
+      </div>
+      <p class="text-base-content/70 mt-3 text-sm">
+        {m.settings_cuda_removeConfirm({ size: formatBytes(cudaStatus?.diskUsageBytes ?? 0) })}
+      </p>
+      <div class="modal-action">
+        <button class="btn" onclick={() => (showCudaRemoveConfirm = false)}>
+          {m.common_button_cancel()}
+        </button>
+        <button class="btn btn-error" onclick={handleCudaRemove}>
+          {m.settings_cuda_removeButton()}
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button onclick={() => (showCudaRemoveConfirm = false)}>close</button>
     </form>
   </dialog>
 {/if}

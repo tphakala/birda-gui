@@ -49,6 +49,11 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'fs:open-in-explorer',
   'app:get-licenses',
   'gpu:detect-capabilities',
+  'cuda:check-status',
+  'cuda:get-download-size',
+  'cuda:download',
+  'cuda:cancel-download',
+  'cuda:remove',
   'system:get-locale',
   'app:get-version',
 ]);
@@ -56,6 +61,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
 const ALLOWED_RECEIVE_CHANNELS = new Set([
   'birda:analysis-progress',
   'birda:models-install-progress',
+  'cuda:download-progress',
   'app:log',
   'menu:open-file',
   'menu:open-folder',

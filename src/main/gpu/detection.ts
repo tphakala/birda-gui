@@ -1,13 +1,14 @@
 import { app } from 'electron';
+import fs from 'node:fs';
 import { spawn } from 'child_process';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { GpuCapabilities, BirdaProvidersResponse } from '$shared/types';
+import path from 'node:path';
+import { getCudaLibsDir } from '../cuda/manager';
+import { BIRDA_CLI_VERSION, CUDA_VERSION_FILE, NVIDIA_VENDOR_ID } from '$shared/constants';
 
 const execAsync = promisify(exec);
-
-// Nvidia GPU vendor ID (PCI vendor ID for Nvidia Corporation)
-const NVIDIA_VENDOR_ID = 0x10de;
 
 async function checkNvidiaSmi(): Promise<boolean> {
   try {
@@ -93,8 +94,19 @@ export async function detectGpuCapabilities(birdaPath?: string): Promise<GpuCapa
   };
   const hasNvidiaGpu = info.gpuDevice?.some((d: { vendorId: number }) => d.vendorId === NVIDIA_VENDOR_ID) ?? false;
 
-  // 2. Check CUDA libraries via nvidia-smi
-  const cudaLibrariesFound = hasNvidiaGpu && (await checkNvidiaSmi());
+  // 2. Check CUDA libraries via nvidia-smi or downloaded cuda-libs directory
+  let cudaLibrariesFound = false;
+  if (hasNvidiaGpu) {
+    const nvidiaSmiFound = await checkNvidiaSmi();
+    let downloadedCudaFound = false;
+    try {
+      const version = fs.readFileSync(path.join(getCudaLibsDir(), CUDA_VERSION_FILE), 'utf-8').trim();
+      downloadedCudaFound = version === BIRDA_CLI_VERSION;
+    } catch {
+      // Not downloaded or unreadable
+    }
+    cudaLibrariesFound = nvidiaSmiFound || downloadedCudaFound;
+  }
 
   // 3. Get available providers from birda
   let availableProviders: string[] = ['CPU']; // Always available

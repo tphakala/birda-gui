@@ -20,6 +20,9 @@ import type {
   BirdaCheckResponse,
   ModelRemovedResult,
   ModelInstalledResult,
+  CudaStatus,
+  CudaDownloadProgress,
+  CudaDownloadResult,
 } from '$shared/types';
 
 declare global {
@@ -151,6 +154,35 @@ export function getBirdaConfig(): Promise<Record<string, unknown>> {
 // GPU detection
 export function detectGpuCapabilities(): Promise<GpuCapabilities> {
   return window.birda.invoke('gpu:detect-capabilities') as Promise<GpuCapabilities>;
+}
+
+// CUDA library management
+export function checkCudaStatus(): Promise<CudaStatus> {
+  return window.birda.invoke('cuda:check-status') as Promise<CudaStatus>;
+}
+
+export function getCudaDownloadSize(version: string): Promise<number> {
+  return window.birda.invoke('cuda:get-download-size', version) as Promise<number>;
+}
+
+export function downloadCudaLibs(version: string): Promise<CudaDownloadResult> {
+  return window.birda.invoke('cuda:download', version) as Promise<CudaDownloadResult>;
+}
+
+export function cancelCudaDownload(): Promise<boolean> {
+  return window.birda.invoke('cuda:cancel-download') as Promise<boolean>;
+}
+
+export function removeCudaLibs(): Promise<void> {
+  return window.birda.invoke('cuda:remove') as Promise<void>;
+}
+
+export function onCudaDownloadProgress(callback: (progress: CudaDownloadProgress) => void): void {
+  window.birda.on('cuda:download-progress', callback as (...args: unknown[]) => void);
+}
+
+export function offCudaDownloadProgress(): void {
+  window.birda.removeAllListeners('cuda:download-progress');
 }
 
 // File system

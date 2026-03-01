@@ -1,3 +1,52 @@
+// === CUDA Library Management ===
+
+export interface CudaStatus {
+  /** Whether an NVIDIA GPU was detected */
+  hasNvidiaGpu: boolean;
+  /** Whether CUDA libraries are downloaded and available */
+  installed: boolean;
+  /** Version of the installed CUDA libraries (from manifest), null if not installed */
+  version: string | null;
+  /** Disk usage in bytes of the installed CUDA libraries, 0 if not installed */
+  diskUsageBytes: number;
+  /** Platform supports CUDA (linux or windows only) */
+  platformSupported: boolean;
+  /** Whether a CUDA download is currently in progress */
+  downloadInProgress: boolean;
+}
+
+export interface CudaDownloadProgress {
+  /** Bytes downloaded so far */
+  downloadedBytes: number;
+  /** Total bytes to download (0 if unknown) */
+  totalBytes: number;
+  /** Current phase: 'downloading' | 'extracting' | 'verifying' */
+  phase: 'downloading' | 'extracting' | 'verifying';
+}
+
+export interface CudaDownloadResult {
+  /** Whether the download and extraction succeeded */
+  success: boolean;
+  /** Version string from manifest */
+  version: string;
+  /** Final disk usage in bytes */
+  diskUsageBytes: number;
+}
+
+export interface BirdaManifest {
+  version: string;
+  min_gui_version: string;
+  assets: {
+    embed: Record<string, string>;
+    cuda_libs: Record<string, string>;
+  };
+  cuda: {
+    onnxruntime: string;
+    cuda_toolkit: string;
+    cudnn: string;
+  };
+}
+
 // === GPU Detection ===
 
 export interface ExecutionProvider {

@@ -7,7 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import type { BirdaEventEnvelope } from './types';
-import { BIRDA_GITHUB_URL } from '$shared/constants';
+import { BIRDA_CLI_VERSION, BIRDA_GITHUB_URL, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
 
@@ -92,6 +92,24 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
   };
 
   return flagMap[ep.toLowerCase()] ?? null;
+}
+
+function getCudaEnv(): Record<string, string> | undefined {
+  const cudaLibsDir = path.join(app.getPath('userData'), CUDA_LIBS_DIR_NAME);
+  const versionFile = path.join(cudaLibsDir, CUDA_VERSION_FILE);
+  try {
+    const version = fs.readFileSync(versionFile, 'utf-8').trim();
+    if (version !== BIRDA_CLI_VERSION) return undefined;
+    // Prepend CUDA libs to the platform-appropriate library search path
+    if (process.platform === 'win32') {
+      const existingPath = process.env.PATH ?? '';
+      return { PATH: `${cudaLibsDir};${existingPath}` };
+    }
+    const existingLdPath = process.env.LD_LIBRARY_PATH ?? '';
+    return { LD_LIBRARY_PATH: existingLdPath ? `${cudaLibsDir}:${existingLdPath}` : cudaLibsDir };
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -295,7 +313,11 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       emitLog('info', `Spawning: ${birdaPath} ${args.join(' ')}`);
 
-      child = spawn(birdaPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      const cudaEnv = getCudaEnv();
+      child = spawn(birdaPath, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: cudaEnv ? { ...process.env, ...cudaEnv } : undefined,
+      });
       registerProcess(child);
 
       const rl = createInterface({ input: child.stdout! });
@@ -328,7 +350,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         if (code === 0 || code === null) {
           resolve();
         } else {
-          reject(new Error(`birda exited with code ${code}\n${stderrLines.join('')}`));
+          reject(new Error(`birda exited with code ${code}\n${stderrLines.join('\n')}`));
         }
       });
 
@@ -357,6 +379,6 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       }
     },
     promise,
-    stderrLog: () => stderrLines.join(''),
+    stderrLog: () => stderrLines.join('\n'),
   };
 }
