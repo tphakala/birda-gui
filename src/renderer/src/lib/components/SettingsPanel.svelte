@@ -212,8 +212,10 @@
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
         availableLanguages = await getAvailableLanguages();
-        await Promise.all([refreshModels(), refreshGpuCapabilities(), refreshCudaStatus()]);
+        await Promise.all([refreshModels(), refreshGpuCapabilities()]);
       }
+      // CUDA status is independent of birda CLI availability
+      await refreshCudaStatus();
     } catch (e) {
       error = (e as Error).message;
     }
@@ -644,7 +646,7 @@
           {/if}
           {#if cudaRemoveError}
             <div role="alert" class="alert alert-error mt-2">
-              <span>{cudaRemoveError}</span>
+              <span>{m.settings_cuda_removeFailed({ error: cudaRemoveError })}</span>
               <button class="btn btn-ghost btn-sm btn-square" onclick={() => (cudaRemoveError = null)}>
                 <X size={16} />
               </button>

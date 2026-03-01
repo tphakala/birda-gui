@@ -51,6 +51,7 @@
   "settings_cuda_downloadComplete": "CUDA libraries installed successfully.",
   "settings_cuda_downloadFailed": "Download failed: {error}",
   "settings_cuda_removeButton": "Remove CUDA Libraries",
+  "settings_cuda_removeFailed": "Failed to remove CUDA libraries: {error}",
   "settings_cuda_removeConfirm": "Remove downloaded CUDA libraries? This will free {size} of disk space. You can re-download them later.",
   "settings_cuda_cancelButton": "Cancel Download",
   "settings_cuda_requiresRestart": "Restart analysis to use GPU acceleration.",

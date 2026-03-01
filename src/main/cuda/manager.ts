@@ -172,9 +172,10 @@ export async function fetchManifest(version: string): Promise<BirdaManifest> {
   });
 }
 
-function getPlatformKey(): string {
+function getPlatformKey(): 'windows-x64' | 'linux-x64' {
   if (process.platform === 'win32') return 'windows-x64';
-  return 'linux-x64';
+  if (process.platform === 'linux') return 'linux-x64';
+  throw new Error(`CUDA libraries are not supported on platform: ${process.platform}`);
 }
 
 function cleanupArchive(archivePath: string): void {
