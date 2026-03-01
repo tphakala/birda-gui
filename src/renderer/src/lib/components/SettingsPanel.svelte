@@ -261,7 +261,11 @@
     modelsError = null;
     try {
       await setDefaultModel(modelId);
-      await refreshModels();
+      try {
+        await refreshModels();
+      } catch (refreshError) {
+        console.error('Failed to refresh model list after setting default:', refreshError);
+      }
     } catch (e) {
       modelsError = (e as Error).message;
     } finally {
@@ -720,6 +724,9 @@
                         class="btn btn-ghost btn-xs btn-square"
                         disabled={deleting !== null || defaultModelId === model.id}
                         title={defaultModelId === model.id ? m.settings_models_default() : m.settings_models_remove()}
+                        aria-label={defaultModelId === model.id
+                          ? m.settings_models_default()
+                          : m.settings_models_remove()}
                         onclick={() => (removeConfirmModel = model)}
                       >
                         {#if deleting === model.id}
