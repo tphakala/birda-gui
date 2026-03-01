@@ -6,6 +6,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "prebuild": "tsx scripts/fetch-birda-cli.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
@@ -34,6 +35,10 @@
   "keywords": [],
   "author": "Tomi P. Hakala <tphakala@users.noreply.github.com>",
   "license": "CC-BY-NC-SA-4.0",
+  "birdaCli": {
+    "version": "1.6.2",
+    "repo": "tphakala/birda"
+  },
   "build": {
     "compression": "normal",
     "appId": "com.birda.gui",
@@ -48,6 +53,13 @@
       {
         "from": "THIRD_PARTY_LICENSES.txt",
         "to": "THIRD_PARTY_LICENSES.txt"
+      },
+      {
+        "from": "resources/birda-cli/",
+        "to": "birda-cli",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "extraMetadata": {
@@ -133,6 +145,7 @@
     "svelte-check": "^4.3.6",
     "svelte-maplibre-gl": "^1.0.3",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
