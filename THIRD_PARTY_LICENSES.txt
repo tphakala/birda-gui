@@ -846,7 +846,7 @@ The following npm packages may be included in this product:
  - @types/cacheable-request@6.0.3
  - @types/http-cache-semantics@4.2.0
  - @types/keyv@3.1.4
- - @types/node@24.10.10
+ - @types/node@25.2.3
  - @types/responselike@1.0.3
 
 These packages each contain the following license:
@@ -1191,8 +1191,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The following npm packages may be included in this product:
 
+ - isexe@3.1.5
  - path-scurry@1.11.1
- - tar@7.5.7
+ - tar@7.5.9
 
 These packages each contain the following license:
 
@@ -3048,30 +3049,6 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 The following npm package may be included in this product:
 
- - isexe@3.1.1
-
-This package contains the following license:
-
-The ISC License
-
-Copyright (c) 2016-2022 Isaac Z. Schlueter and Contributors
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
-IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
------------
-
-The following npm package may be included in this product:
-
  - minipass@3.3.6
 
 This package contains the following license:
@@ -3202,7 +3179,7 @@ The following npm packages may be included in this product:
  - minipass-sized@1.0.3
  - nopt@8.1.0
  - once@1.4.0
- - semver@7.7.3
+ - semver@7.7.4
  - which@2.0.2
  - which@5.0.0
  - wrappy@1.0.2
@@ -3966,7 +3943,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm packages may be included in this product:
 
- - music-metadata@11.11.2
+ - music-metadata@11.12.0
  - token-types@6.1.2
  - win-guid@0.2.1
 
