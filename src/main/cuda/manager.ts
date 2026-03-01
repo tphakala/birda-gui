@@ -152,7 +152,7 @@ function httpsGet(
   });
 }
 
-export async function fetchManifest(version: string): Promise<BirdaManifest> {
+async function fetchManifest(version: string): Promise<BirdaManifest> {
   validateVersion(version);
   const url = `https://github.com/${BIRDA_REPO}/releases/download/v${version}/manifest.json`;
   const { res } = await httpsGet(url);
