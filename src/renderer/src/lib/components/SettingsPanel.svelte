@@ -258,12 +258,12 @@
 
   async function handleSetDefault(modelId: string) {
     saving = true;
-    error = null;
+    modelsError = null;
     try {
       await setDefaultModel(modelId);
       await refreshModels();
     } catch (e) {
-      error = (e as Error).message;
+      modelsError = (e as Error).message;
     } finally {
       saving = false;
     }
@@ -276,7 +276,6 @@
     modelsError = null;
     try {
       await removeModel(id);
-      removeConfirmModel = null;
       await refreshModels();
     } catch (e) {
       modelsError = m.settings_models_failedRemove({ modelId: id, error: (e as Error).message });
