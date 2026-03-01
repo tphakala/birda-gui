@@ -179,7 +179,7 @@ async function getBirdaVersion(birdaPath: string): Promise<string> {
 
     return match[1];
   } catch (err) {
-    throw new Error(`Failed to get birda version: ${(err as Error).message}`);
+    throw new Error(`Failed to get birda version: ${(err as Error).message}`, { cause: err });
   }
 }
 

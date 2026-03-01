@@ -133,7 +133,7 @@ function loadTranslations(lang) {
     const content = readFileSync(filePath, 'utf-8');
     return JSON.parse(content);
   } catch (error) {
-    throw new Error(`Failed to load ${lang}.json: ${error.message}`);
+    throw new Error(`Failed to load ${lang}.json: ${error.message}`, { cause: error });
   }
 }
 

@@ -427,7 +427,7 @@ export function registerAnalysisHandlers(): void {
         if (stderrLog) {
           sendLog(win, 'error', 'analysis', `stderr output:\n${stderrLog}`);
         }
-        throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`);
+        throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`, { cause: err });
       } finally {
         currentAnalysis = null;
 
