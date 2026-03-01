@@ -12,6 +12,7 @@ logs/
 *.db-wal
 *.db-shm
 src/renderer/src/paraglide/
+resources/birda-cli/
 .env
 .env.*
 nul

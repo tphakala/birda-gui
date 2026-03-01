@@ -5,6 +5,7 @@ const execFile = promisify(execFileCallback);
 import { createInterface } from 'readline';
 import path from 'path';
 import fs from 'fs';
+import { app } from 'electron';
 import type { BirdaEventEnvelope } from './types';
 import { BIRDA_GITHUB_URL } from '$shared/constants';
 
@@ -124,7 +125,21 @@ function compareVersions(
   return v1.patch - v2.patch;
 }
 
+/**
+ * Returns the path to the bundled birda CLI binary.
+ * In packaged mode, this is inside the app's resources directory.
+ * In dev mode, this is in the project's resources/ directory (if fetch-cli was run).
+ */
+function getBundledBirdaPath(): string {
+  const binaryName = process.platform === 'win32' ? 'birda.exe' : 'birda';
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'birda-cli', binaryName);
+  }
+  return path.join(app.getAppPath(), 'resources', 'birda-cli', binaryName);
+}
+
 export async function findBirda(): Promise<string> {
+  // 1. User-configured path (highest priority)
   if (configuredBirdaPath) {
     const basename = path.basename(configuredBirdaPath).toLowerCase();
     if (basename !== 'birda' && basename !== 'birda.exe') {
@@ -138,6 +153,16 @@ export async function findBirda(): Promise<string> {
     }
   }
 
+  // 2. Bundled binary (ships with packaged app)
+  const bundledPath = getBundledBirdaPath();
+  try {
+    await fs.promises.access(bundledPath, fs.constants.X_OK);
+    return bundledPath;
+  } catch {
+    // Not found — fall through to PATH lookup
+  }
+
+  // 3. System PATH fallback
   const binaryName = process.platform === 'win32' ? 'birda.exe' : 'birda';
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
 

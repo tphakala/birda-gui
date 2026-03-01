@@ -19,8 +19,15 @@ tasks:
 
   # === Building ===
 
+  fetch-cli:
+    desc: Download birda CLI embeddable artifact for current platform
+    cmds:
+      - npx tsx scripts/fetch-birda-cli.ts
+
   build:
     desc: Build all targets (main + preload + renderer)
+    deps:
+      - fetch-cli
     cmds:
       - npx electron-vite build
 
