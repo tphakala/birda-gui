@@ -7,16 +7,13 @@
   "common_button_back": "Terug",
   "status_ready": "Klaar",
   "status_analyzing": "Analyseren...",
-
   "settings_title": "Instellingen",
   "settings_tab_preferences": "Voorkeuren",
   "settings_tab_models": "Modellen",
   "settings_tab_data": "Gegevens",
-
   "settings_cli_title": "birda CLI-status",
   "settings_cli_checking": "Controleren...",
   "settings_cli_availableAt": "Beschikbaar op {path}",
-
   "settings_general_title": "Algemeen",
   "settings_general_theme": "Thema",
   "settings_general_themeSystem": "Systeemstandaard",
@@ -26,16 +23,32 @@
   "settings_general_uiLanguage": "Interfacetaal",
   "settings_general_birdaPath": "birda-binair pad",
   "settings_general_birdaPathPlaceholder": "Laat leeg om PATH te gebruiken",
-
   "settings_analysis_title": "Analysestandaarden",
   "settings_analysis_confidence": "Standaard betrouwbaarheidsdrempel",
   "settings_analysis_executionProvider": "Uitvoeringsprovider",
   "settings_analysis_epAuto": "Automatisch (aanbevolen)",
   "settings_analysis_epDescription": "Regelt hardwareversnelling voor inferentie. Automatisch selecteert de beste beschikbare optie.",
-
   "settings_gpu_librariesMissing_title": "GPU-versnelling beschikbaar",
   "settings_gpu_librariesMissing_description": "Een Nvidia GPU is gedetecteerd, maar CUDA/TensorRT-bibliotheken zijn niet geïnstalleerd. Installeer ze om GPU-versnelling in te schakelen:",
-
+  "settings_cuda_title": "GPU-versnelling",
+  "settings_cuda_notSupported": "CUDA GPU-versnelling is alleen beschikbaar op Linux en Windows met NVIDIA GPU's.",
+  "settings_cuda_noGpu": "Geen NVIDIA GPU gedetecteerd. CUDA-versnelling vereist een NVIDIA GPU.",
+  "settings_cuda_notInstalled": "CUDA-bibliotheken zijn niet geïnstalleerd. Download ze om GPU-versnelling in te schakelen.",
+  "settings_cuda_installed": "CUDA-bibliotheken geïnstalleerd",
+  "settings_cuda_version": "Versie: {version}",
+  "settings_cuda_diskUsage": "Schijfgebruik: {size}",
+  "settings_cuda_downloadButton": "CUDA-bibliotheken downloaden",
+  "settings_cuda_downloadSize": "Downloadgrootte: ~{size}",
+  "settings_cuda_downloading": "CUDA-bibliotheken worden gedownload...",
+  "settings_cuda_extracting": "CUDA-bibliotheken worden uitgepakt...",
+  "settings_cuda_verifying": "Installatie wordt gecontroleerd...",
+  "settings_cuda_downloadComplete": "CUDA-bibliotheken succesvol geïnstalleerd.",
+  "settings_cuda_downloadFailed": "Download mislukt: {error}",
+  "settings_cuda_removeButton": "CUDA-bibliotheken verwijderen",
+  "settings_cuda_removeFailed": "Verwijderen van CUDA-bibliotheken mislukt: {error}",
+  "settings_cuda_removeConfirm": "Gedownloade CUDA-bibliotheken verwijderen? Dit maakt {size} schijfruimte vrij. Je kunt ze later opnieuw downloaden.",
+  "settings_cuda_cancelButton": "Download annuleren",
+  "settings_cuda_requiresRestart": "Herstart de analyse om GPU-versnelling te gebruiken.",
   "settings_spectrogram_title": "Spectrogram",
   "settings_spectrogram_maxFreq": "Standaard maximale frequentie",
   "settings_spectrogram_height": "Standaard spectrogramhoogte",
@@ -43,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Gemiddeld",
   "settings_spectrogram_heightLarge": "Groot",
   "settings_spectrogram_heightXL": "Extra groot",
-
   "settings_storage_title": "Opslag",
   "settings_storage_clipDir": "Uitvoermap voor clips",
   "settings_storage_openClipDir": "Clipmap openen",
   "settings_storage_dbLocation": "Databaselocatie",
-
   "settings_saved": "Opgeslagen",
   "settings_unsavedModal_title": "Niet-opgeslagen wijzigingen",
   "settings_unsavedModal_warning": "Je hebt niet-opgeslagen wijzigingen in de instellingen. Als je nu weggaat, gaan je wijzigingen verloren.",
   "settings_unsavedModal_discard": "Wijzigingen verwerpen",
   "settings_unsavedModal_stayOnPage": "Op pagina blijven",
-
   "settings_models_installed": "Geïnstalleerd",
   "settings_models_catalog": "Catalogus",
   "settings_models_refresh": "Vernieuwen",
@@ -75,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Dit verwijdert het model uit je configuratie en wist de modelbestanden van schijf.",
   "settings_models_failedRemove": "Verwijderen van {modelId} mislukt: {error}",
   "settings_models_failedInstall": "Installeren van {modelId} mislukt: {error}",
-
   "settings_data_dbContent": "Database-inhoud",
   "settings_data_detections": "{count} detecties",
   "settings_data_species": "{count} soorten",
@@ -83,13 +92,11 @@
   "settings_data_clearAll": "Alle gegevens wissen",
   "settings_data_cleared": "{detections} detecties, {runs} analyses, {locations} locaties gewist",
   "settings_data_birdaConfig": "birda-configuratie (alleen-lezen)",
-
   "settings_clearModal_title": "Database wissen",
   "settings_clearModal_warning": "Dit verwijdert permanent alle detecties, analyseresultaten en locaties uit de database. Deze actie kan niet ongedaan worden gemaakt.",
   "settings_clearModal_detectionsRemoved": "{count} detecties worden verwijderd",
   "settings_clearModal_locationsRemoved": "{count} locaties worden verwijderd",
   "settings_clearModal_deleteAll": "Alle gegevens verwijderen",
-
   "settings_licenseModal_title": "Licentieovereenkomst",
   "settings_licenseModal_license": "Licentie",
   "settings_licenseModal_commercialUse": "Commercieel gebruik",
@@ -97,25 +104,19 @@
   "settings_licenseModal_notAllowed": "Niet toegestaan",
   "settings_licenseModal_agree": "Door dit model te installeren, ga je akkoord met de voorwaarden van de {license}-licentie.",
   "settings_licenseModal_acceptInstall": "Accepteren en installeren",
-
   "licenses_title": "Licenties van derden",
   "licenses_notFound": "Licentie-informatie is niet beschikbaar.",
-
   "common_button_close": "Sluiten",
-
   "sidebar_analysis": "Analyse",
   "sidebar_detections": "Detecties",
   "sidebar_map": "Kaart",
   "sidebar_species": "Soorten",
   "sidebar_settings": "Instellingen",
-
   "status_detections": "{count} detecties",
   "status_species": "{count} soorten",
   "status_locations": "{count} locaties",
-
   "audio_pause": "Pauzeren",
   "audio_playClip": "Clip afspelen",
-
   "log_title": "Logboek",
   "log_expand": "Uitklappen",
   "log_collapse": "Inklappen",
@@ -123,11 +124,9 @@
   "log_clear": "Logboek wissen",
   "log_close": "Logboekpaneel sluiten",
   "log_empty": "Nog geen logboekitems. Voer een analyse uit om hier uitvoer te zien.",
-
   "progress_complete": "Analyse voltooid",
   "progress_failed": "Analyse mislukt",
   "progress_status": "{processed}/{total} bestanden · {detections} detecties",
-
   "filter_title": "Filters",
   "filter_collapse": "Filters inklappen",
   "filter_species": "Soorten",
@@ -135,7 +134,6 @@
   "filter_minConfidence": "Minimale betrouwbaarheid",
   "filter_show": "Filters weergeven",
   "filter_all": "Alle",
-
   "table_columnOffset": "Offset",
   "table_columnTime": "Tijd",
   "table_columnSpecies": "Soort",
@@ -146,12 +144,10 @@
   "table_columnClip": "Clip",
   "table_loadingDetections": "Detecties laden...",
   "table_noDetections": "Geen detecties gevonden",
-
   "pagination_detectionCount": "{count} detecties",
   "pagination_detectionCountSingular": "{count} detectie",
   "pagination_totalDetections": "{count} detecties totaal",
   "pagination_pageOf": "Pagina {current} van {total}",
-
   "detail_audioLoadFailed": "Audio laden mislukt: {message}",
   "detail_freqMax": "Max frequentie",
   "detail_height": "Hoogte",
@@ -165,7 +161,6 @@
   "detail_exporting": "Exporteren...",
   "detail_exportAsWav": "Selectie als WAV exporteren",
   "detail_clearSelection": "Selectie wissen",
-
   "sourceFiles_scanning": "Bestanden scannen...",
   "sourceFiles_sourceFile": "Bronbestand",
   "sourceFiles_duration": "Duur",
@@ -185,7 +180,6 @@
   "sourceFiles_statusSkip": "overgeslagen",
   "sourceFiles_noAudioFiles": "Geen audiobestanden gevonden",
   "sourceFiles_supportedFormats": "Ondersteund: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Coördinaten",
   "coords_autoDetected": "automatisch gedetecteerd",
   "coords_pickOnMap": "Coördinaten op kaart kiezen",
@@ -196,12 +190,9 @@
   "coords_longitudePlaceholder": "-180 tot 180",
   "coords_pickTitle": "Coördinaten kiezen",
   "coords_clickToSet": "Klik op de kaart om coördinaten in te stellen",
-
   "speciesSearch_placeholder": "Soorten op kaart zoeken...",
   "speciesSearch_detCount": "{count} det.",
-
   "map_unknownLocation": "Onbekende locatie",
-
   "runs_title": "Analyses",
   "runs_empty": "Nog geen analyses",
   "runs_emptyHint": "Ga naar het tabblad Analyse om je eerste analyse te starten.",
@@ -214,7 +205,6 @@
   "runs_status_failed": "Mislukt",
   "runs_deleteRun": "Analyse verwijderen",
   "runs_status_pending": "In afwachting",
-
   "analysis_title": "Analyse",
   "analysis_selectFile": "Bestand selecteren",
   "analysis_selectFileDesc": "Selecteer een audiobestand om te analyseren",
@@ -243,7 +233,6 @@
   "analysis_filterByName": "Op soort filteren...",
   "analysis_conf": "Betr.",
   "analysis_allConfidences": "Alle",
-
   "calendar_datePlaceholder": "DD/MM/JJJJ",
   "calendar_today": "Vandaag",
   "calendar_month_january": "januari",
@@ -265,16 +254,13 @@
   "calendar_weekday_fr": "vr",
   "calendar_weekday_sa": "za",
   "calendar_weekday_su": "zo",
-
   "wizard_welcome_title": "Welkom bij Birda GUI",
   "wizard_welcome_subtitle": "Laten we je in een paar snelle stappen instellen.",
   "wizard_welcome_getStarted": "Aan de slag",
   "wizard_welcome_skip": "Installatie overslaan",
-
   "wizard_uiLanguage_title": "Kies je taal",
   "wizard_uiLanguage_subtitle": "Selecteer de taal voor de Birda GUI-interface.",
   "wizard_uiLanguage_detected": "We hebben {language} gedetecteerd op basis van je systeeminstellingen.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI heeft de birda-commandoregeltool nodig om audiobestanden te analyseren.",
   "wizard_cli_checking": "Controleren op birda...",
@@ -283,22 +269,18 @@
   "wizard_cli_notFoundHint": "Je kunt het pad handmatig instellen als birda is geïnstalleerd, of het downloaden via de onderstaande link.",
   "wizard_cli_download": "birda downloaden",
   "wizard_cli_setPath": "Pad handmatig instellen",
-
   "wizard_model_title": "Model installeren",
   "wizard_model_subtitle": "Je hebt minstens één model nodig om vogelgeluiden te analyseren. Kies er een om te installeren.",
   "wizard_model_installing": "{name} installeren...",
   "wizard_model_installed": "geïnstalleerd",
   "wizard_model_hasModels": "Je hebt {count} model(len) geïnstalleerd. Je kunt later meer installeren via Instellingen.",
   "wizard_model_noCli": "birda CLI is niet beschikbaar. Ga terug naar de vorige stap om de CLI in te stellen voordat je modellen installeert.",
-
   "wizard_language_title": "Soorttaal",
   "wizard_language_subtitle": "Kies de taal voor vogelsoortnamen die in detectieresultaten worden weergegeven.",
-
   "wizard_finish": "Installatie voltooien",
   "wizard_next": "Volgende",
   "wizard_back": "Terug",
   "wizard_stepOf": "Stap {current} van {total}",
-
   "species_title": "Soortenlijsten",
   "species_fetchNew": "Nieuwe ophalen",
   "species_customList": "Aangepaste maken",
@@ -312,7 +294,6 @@
   "species_selectList": "Selecteer een soortenlijst om de inhoud te bekijken.",
   "species_useAsFilter": "Als detectiefilter gebruiken",
   "species_searchInList": "Soorten in lijst filteren...",
-
   "species_fetch_title": "Soortenlijst ophalen",
   "species_fetch_subtitle": "Krijg verwachte vogelsoorten voor een locatie en tijd van het jaar.",
   "species_fetch_week": "Week",
@@ -326,7 +307,6 @@
   "species_fetch_listName": "Lijstnaam",
   "species_fetch_listNamePlaceholder": "bijv. Helsinki, Week 24",
   "species_fetch_save": "Lijst opslaan",
-
   "species_custom_title": "Aangepaste soortenlijst maken",
   "species_custom_name": "Lijstnaam",
   "species_custom_namePlaceholder": "Mijn soortenlijst...",
@@ -335,24 +315,19 @@
   "species_custom_searchAdd": "Soorten zoeken en toevoegen...",
   "species_custom_selectedCount": "{count} geselecteerd",
   "species_custom_create": "Lijst maken",
-
   "species_table_commonName": "Nederlandse naam",
   "species_table_scientificName": "Wetenschappelijke naam",
   "species_table_frequency": "Frequentie",
-
   "species_detail_location": "Locatie",
   "species_detail_week": "Week {week}",
   "species_detail_threshold": "Drempel: {threshold}%",
-
   "species_fetch_weekError": "Week moet tussen 1 en 48 zijn",
   "species_fetch_coordsError": "Stel coördinaten in",
   "species_fetch_moreSpecies": "...en {count} meer",
   "species_loading": "Laden...",
-
   "view_table": "Tabel",
   "view_species": "Soorten",
   "view_grid": "Rooster",
-
   "species_card_detections": "{count} detecties",
   "species_card_detectionsSingular": "{count} detectie",
   "species_card_avgConfidence": "Gem {value}",
@@ -363,7 +338,6 @@
   "species_card_sortCount": "Aantal",
   "species_card_sortName": "Naam",
   "species_card_sortConfidence": "Betrouwbaarheid",
-
   "grid_noResults": "Geen gegevens voor heatmap",
   "grid_daylight": "Daglicht",
   "grid_phase_night": "Nacht",
@@ -374,6 +348,5 @@
   "grid_detectionCountSingular": "{count} detectie",
   "grid_less": "Minder",
   "grid_more": "Meer",
-
   "pagination_speciesCount": "{count} soorten"
 }

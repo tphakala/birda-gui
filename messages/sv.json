@@ -7,16 +7,13 @@
   "common_button_back": "Tillbaka",
   "status_ready": "Klar",
   "status_analyzing": "Analyserar...",
-
   "settings_title": "Inställningar",
   "settings_tab_preferences": "Inställningar",
   "settings_tab_models": "Modeller",
   "settings_tab_data": "Data",
-
   "settings_cli_title": "birda CLI-status",
   "settings_cli_checking": "Kontrollerar...",
   "settings_cli_availableAt": "Tillgänglig vid {path}",
-
   "settings_general_title": "Allmänt",
   "settings_general_theme": "Tema",
   "settings_general_themeSystem": "Systemstandard",
@@ -26,16 +23,32 @@
   "settings_general_uiLanguage": "Gränssnittsspråk",
   "settings_general_birdaPath": "Sökväg till birda-binär",
   "settings_general_birdaPathPlaceholder": "Lämna tomt för att använda PATH",
-
   "settings_analysis_title": "Analysstandarder",
   "settings_analysis_confidence": "Standard säkerhetströskel",
   "settings_analysis_executionProvider": "Exekveringsleverantör",
   "settings_analysis_epAuto": "Auto (Rekommenderas)",
   "settings_analysis_epDescription": "Styr hårdvaruacceleration för inferens. Auto väljer det bästa tillgängliga alternativet.",
-
   "settings_gpu_librariesMissing_title": "GPU-acceleration tillgänglig",
   "settings_gpu_librariesMissing_description": "En Nvidia GPU detekterades, men CUDA/TensorRT-bibliotek är inte installerade. Installera dem för att aktivera GPU-acceleration:",
-
+  "settings_cuda_title": "GPU-acceleration",
+  "settings_cuda_notSupported": "CUDA GPU-acceleration är endast tillgängligt på Linux och Windows med NVIDIA GPU:er.",
+  "settings_cuda_noGpu": "Inget NVIDIA-grafikkort hittades. CUDA-acceleration kräver ett NVIDIA-grafikkort.",
+  "settings_cuda_notInstalled": "CUDA-bibliotek är inte installerade. Ladda ner dem för att aktivera GPU-acceleration.",
+  "settings_cuda_installed": "CUDA-bibliotek installerade",
+  "settings_cuda_version": "Version: {version}",
+  "settings_cuda_diskUsage": "Diskanvändning: {size}",
+  "settings_cuda_downloadButton": "Ladda ner CUDA-bibliotek",
+  "settings_cuda_downloadSize": "Nedladdningsstorlek: ~{size}",
+  "settings_cuda_downloading": "Laddar ner CUDA-bibliotek...",
+  "settings_cuda_extracting": "Packar upp CUDA-bibliotek...",
+  "settings_cuda_verifying": "Verifierar installation...",
+  "settings_cuda_downloadComplete": "CUDA-bibliotek har installerats.",
+  "settings_cuda_downloadFailed": "Nedladdning misslyckades: {error}",
+  "settings_cuda_removeButton": "Ta bort CUDA-bibliotek",
+  "settings_cuda_removeFailed": "Kunde inte ta bort CUDA-bibliotek: {error}",
+  "settings_cuda_removeConfirm": "Ta bort nedladdade CUDA-bibliotek? Detta frigör {size} diskutrymme. Du kan ladda ner dem igen senare.",
+  "settings_cuda_cancelButton": "Avbryt nedladdning",
+  "settings_cuda_requiresRestart": "Starta om analysen för att använda GPU-acceleration.",
   "settings_spectrogram_title": "Spektrogram",
   "settings_spectrogram_maxFreq": "Standard maxfrekvens",
   "settings_spectrogram_height": "Standard spektrogramhöjd",
@@ -43,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Medium",
   "settings_spectrogram_heightLarge": "Stor",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Lagring",
   "settings_storage_clipDir": "Katalog för klippoutput",
   "settings_storage_openClipDir": "Öppna klippkatalog",
   "settings_storage_dbLocation": "Databasplats",
-
   "settings_saved": "Sparat",
   "settings_unsavedModal_title": "Osparade ändringar",
   "settings_unsavedModal_warning": "Du har osparade inställningsändringar. Om du lämnar nu kommer dina ändringar att förloras.",
   "settings_unsavedModal_discard": "Kasta ändringar",
   "settings_unsavedModal_stayOnPage": "Stanna på sidan",
-
   "settings_models_installed": "Installerade",
   "settings_models_catalog": "Katalog",
   "settings_models_refresh": "Uppdatera",
@@ -75,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Detta tar bort modellen från din konfiguration och raderar modellfilerna från disken.",
   "settings_models_failedRemove": "Misslyckades med att ta bort {modelId}: {error}",
   "settings_models_failedInstall": "Misslyckades med att installera {modelId}: {error}",
-
   "settings_data_dbContent": "Databasinnehåll",
   "settings_data_detections": "{count} detektioner",
   "settings_data_species": "{count} arter",
@@ -83,13 +92,11 @@
   "settings_data_clearAll": "Rensa all data",
   "settings_data_cleared": "Rensade {detections} detektioner, {runs} körningar, {locations} platser",
   "settings_data_birdaConfig": "birda-konfiguration (skrivskyddad)",
-
   "settings_clearModal_title": "Rensa databas",
   "settings_clearModal_warning": "Detta kommer permanent ta bort alla detektioner, analyskörningar och platser från databasen. Denna åtgärd kan inte ångras.",
   "settings_clearModal_detectionsRemoved": "{count} detektioner kommer att tas bort",
   "settings_clearModal_locationsRemoved": "{count} platser kommer att tas bort",
   "settings_clearModal_deleteAll": "Ta bort all data",
-
   "settings_licenseModal_title": "Licensavtal",
   "settings_licenseModal_license": "Licens",
   "settings_licenseModal_commercialUse": "Kommersiell användning",
@@ -97,25 +104,19 @@
   "settings_licenseModal_notAllowed": "Ej tillåten",
   "settings_licenseModal_agree": "Genom att installera denna modell godkänner du villkoren för {license}-licensen.",
   "settings_licenseModal_acceptInstall": "Acceptera & installera",
-
   "licenses_title": "Tredjepartslicenser",
   "licenses_notFound": "Licensinformation är inte tillgänglig.",
-
   "common_button_close": "Stäng",
-
   "sidebar_analysis": "Analys",
   "sidebar_detections": "Detektioner",
   "sidebar_map": "Karta",
   "sidebar_species": "Arter",
   "sidebar_settings": "Inställningar",
-
   "status_detections": "{count} detektioner",
   "status_species": "{count} arter",
   "status_locations": "{count} platser",
-
   "audio_pause": "Pausa",
   "audio_playClip": "Spela klipp",
-
   "log_title": "Logg",
   "log_expand": "Expandera",
   "log_collapse": "Kollapsa",
@@ -123,11 +124,9 @@
   "log_clear": "Rensa logg",
   "log_close": "Stäng loggpanel",
   "log_empty": "Inga loggposter ännu. Kör en analys för att se output här.",
-
   "progress_complete": "Analys slutförd",
   "progress_failed": "Analys misslyckades",
   "progress_status": "{processed}/{total} filer · {detections} detektioner",
-
   "filter_title": "Filter",
   "filter_collapse": "Kollapsa filter",
   "filter_species": "Arter",
@@ -135,7 +134,6 @@
   "filter_minConfidence": "Min säkerhet",
   "filter_show": "Visa filter",
   "filter_all": "Alla",
-
   "table_columnOffset": "Offset",
   "table_columnTime": "Tid",
   "table_columnSpecies": "Art",
@@ -146,12 +144,10 @@
   "table_columnClip": "Klipp",
   "table_loadingDetections": "Laddar detektioner...",
   "table_noDetections": "Inga detektioner hittades",
-
   "pagination_detectionCount": "{count} detektioner",
   "pagination_detectionCountSingular": "{count} detektion",
   "pagination_totalDetections": "{count} detektioner totalt",
   "pagination_pageOf": "Sida {current} av {total}",
-
   "detail_audioLoadFailed": "Ljudladdning misslyckades: {message}",
   "detail_freqMax": "Frekv max",
   "detail_height": "Höjd",
@@ -165,7 +161,6 @@
   "detail_exporting": "Exporterar...",
   "detail_exportAsWav": "Exportera markering som WAV",
   "detail_clearSelection": "Rensa markering",
-
   "sourceFiles_scanning": "Skannar filer...",
   "sourceFiles_sourceFile": "Källfil",
   "sourceFiles_duration": "Längd",
@@ -185,7 +180,6 @@
   "sourceFiles_statusSkip": "överhoppad",
   "sourceFiles_noAudioFiles": "Inga ljudfiler hittades",
   "sourceFiles_supportedFormats": "Stödda: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Koordinater",
   "coords_autoDetected": "autodetekterad",
   "coords_pickOnMap": "Välj koordinater från kartan",
@@ -196,12 +190,9 @@
   "coords_longitudePlaceholder": "-180 till 180",
   "coords_pickTitle": "Välj koordinater",
   "coords_clickToSet": "Klicka på kartan för att sätta koordinater",
-
   "speciesSearch_placeholder": "Sök arter på kartan...",
   "speciesSearch_detCount": "{count} det.",
-
   "map_unknownLocation": "Okänd plats",
-
   "runs_title": "Körningar",
   "runs_empty": "Inga analyskörningar ännu",
   "runs_emptyHint": "Gå till analysfliken för att starta din första analys.",
@@ -214,7 +205,6 @@
   "runs_status_failed": "Misslyckades",
   "runs_deleteRun": "Ta bort körning",
   "runs_status_pending": "Väntar",
-
   "analysis_title": "Analys",
   "analysis_selectFile": "Välj fil",
   "analysis_selectFileDesc": "Välj en ljudfil att analysera",
@@ -243,7 +233,6 @@
   "analysis_filterByName": "Filtrera på art...",
   "analysis_conf": "Säk",
   "analysis_allConfidences": "Alla",
-
   "calendar_datePlaceholder": "DD/MM/ÅÅÅÅ",
   "calendar_today": "Idag",
   "calendar_month_january": "januari",
@@ -265,7 +254,6 @@
   "calendar_weekday_fr": "Fr",
   "calendar_weekday_sa": "Lö",
   "calendar_weekday_su": "Sö",
-
   "wizard_welcome_title": "Välkommen till Birda GUI",
   "wizard_welcome_subtitle": "Låt oss konfigurera dig på några snabba steg.",
   "wizard_welcome_getStarted": "Kom igång",
@@ -273,7 +261,6 @@
   "wizard_uiLanguage_title": "Välj ditt språk",
   "wizard_uiLanguage_subtitle": "Välj språk för Birda GUI-gränssnittet.",
   "wizard_uiLanguage_detected": "Vi detekterade {language} baserat på dina systeminställningar.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI behöver kommandoradsverktyget birda för att analysera ljudfiler.",
   "wizard_cli_checking": "Letar efter birda...",
@@ -282,22 +269,18 @@
   "wizard_cli_notFoundHint": "Du kan ange sökvägen manuellt om birda är installerad, eller ladda ner den via länken nedan.",
   "wizard_cli_download": "Ladda ner birda",
   "wizard_cli_setPath": "Ange sökväg manuellt",
-
   "wizard_model_title": "Installera en modell",
   "wizard_model_subtitle": "Du behöver minst en modell för att analysera fågelljud. Välj en att installera.",
   "wizard_model_installing": "Installerar {name}...",
   "wizard_model_installed": "installerad",
   "wizard_model_hasModels": "Du har {count} modell(er) installerade. Du kan installera fler senare från inställningar.",
   "wizard_model_noCli": "birda CLI är inte tillgänglig. Gå tillbaka till föregående steg för att konfigurera CLI innan du installerar modeller.",
-
   "wizard_language_title": "Artspråk",
   "wizard_language_subtitle": "Välj språk för fåglartsnamn som visas i detektionsresultat.",
-
   "wizard_finish": "Slutför inställning",
   "wizard_next": "Nästa",
   "wizard_back": "Tillbaka",
   "wizard_stepOf": "Steg {current} av {total}",
-
   "species_title": "Artlistor",
   "species_fetchNew": "Hämta ny",
   "species_customList": "Skapa anpassad",
@@ -311,7 +294,6 @@
   "species_selectList": "Välj en artlista för att visa dess innehåll.",
   "species_useAsFilter": "Använd som detektionsfilter",
   "species_searchInList": "Filtrera arter i listan...",
-
   "species_fetch_title": "Hämta artlista",
   "species_fetch_subtitle": "Få förväntade fågelarter för en plats och årstid.",
   "species_fetch_week": "Vecka",
@@ -325,7 +307,6 @@
   "species_fetch_listName": "Listnamn",
   "species_fetch_listNamePlaceholder": "t.ex. Helsingfors, vecka 24",
   "species_fetch_save": "Spara lista",
-
   "species_custom_title": "Skapa anpassad artlista",
   "species_custom_name": "Listnamn",
   "species_custom_namePlaceholder": "Min artlista...",
@@ -334,24 +315,19 @@
   "species_custom_searchAdd": "Sök och lägg till arter...",
   "species_custom_selectedCount": "{count} valda",
   "species_custom_create": "Skapa lista",
-
   "species_table_commonName": "Trivialnamn",
   "species_table_scientificName": "Vetenskapligt namn",
   "species_table_frequency": "Frekvens",
-
   "species_detail_location": "Plats",
   "species_detail_week": "Vecka {week}",
   "species_detail_threshold": "Tröskel: {threshold}%",
-
   "species_fetch_weekError": "Vecka måste vara mellan 1 och 48",
   "species_fetch_coordsError": "Vänligen ange koordinater",
   "species_fetch_moreSpecies": "...och {count} till",
   "species_loading": "Laddar...",
-
   "view_table": "Tabell",
   "view_species": "Arter",
   "view_grid": "Rutnät",
-
   "species_card_detections": "{count} detektioner",
   "species_card_detectionsSingular": "{count} detektion",
   "species_card_avgConfidence": "Medel {value}",
@@ -362,7 +338,6 @@
   "species_card_sortCount": "Antal",
   "species_card_sortName": "Namn",
   "species_card_sortConfidence": "Säkerhet",
-
   "grid_noResults": "Ingen data för värmekarta",
   "grid_daylight": "Dagsljus",
   "grid_phase_night": "Natt",
@@ -373,6 +348,5 @@
   "grid_detectionCountSingular": "{count} detektion",
   "grid_less": "Mindre",
   "grid_more": "Mer",
-
   "pagination_speciesCount": "{count} arter"
 }

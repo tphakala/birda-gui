@@ -7,16 +7,13 @@
   "common_button_back": "Volver",
   "status_ready": "Listo",
   "status_analyzing": "Analizando...",
-
   "settings_title": "Configuración",
   "settings_tab_preferences": "Preferencias",
   "settings_tab_models": "Modelos",
   "settings_tab_data": "Datos",
-
   "settings_cli_title": "Estado de birda CLI",
   "settings_cli_checking": "Verificando...",
   "settings_cli_availableAt": "Disponible en {path}",
-
   "settings_general_title": "General",
   "settings_general_theme": "Tema",
   "settings_general_themeSystem": "Predeterminado del sistema",
@@ -26,16 +23,32 @@
   "settings_general_uiLanguage": "Idioma de interfaz",
   "settings_general_birdaPath": "Ruta del binario birda",
   "settings_general_birdaPathPlaceholder": "Dejar vacío para usar PATH",
-
   "settings_analysis_title": "Valores predeterminados de análisis",
   "settings_analysis_confidence": "Umbral de confianza predeterminado",
   "settings_analysis_executionProvider": "Proveedor de ejecución",
   "settings_analysis_epAuto": "Automático (recomendado)",
   "settings_analysis_epDescription": "Controla la aceleración por hardware para inferencia. Automático selecciona la mejor opción disponible.",
-
   "settings_gpu_librariesMissing_title": "Aceleración GPU disponible",
   "settings_gpu_librariesMissing_description": "Se detectó una GPU Nvidia, pero las bibliotecas CUDA/TensorRT no están instaladas. Instálalas para habilitar la aceleración por GPU:",
-
+  "settings_cuda_title": "Aceleración GPU",
+  "settings_cuda_notSupported": "La aceleración GPU con CUDA solo está disponible en Linux y Windows con GPUs NVIDIA.",
+  "settings_cuda_noGpu": "No se detectó ninguna GPU NVIDIA. La aceleración CUDA requiere una GPU NVIDIA.",
+  "settings_cuda_notInstalled": "Las bibliotecas CUDA no están instaladas. Descárgalas para habilitar la aceleración GPU.",
+  "settings_cuda_installed": "Bibliotecas CUDA instaladas",
+  "settings_cuda_version": "Versión: {version}",
+  "settings_cuda_diskUsage": "Uso de disco: {size}",
+  "settings_cuda_downloadButton": "Descargar bibliotecas CUDA",
+  "settings_cuda_downloadSize": "Tamaño de descarga: ~{size}",
+  "settings_cuda_downloading": "Descargando bibliotecas CUDA...",
+  "settings_cuda_extracting": "Extrayendo bibliotecas CUDA...",
+  "settings_cuda_verifying": "Verificando instalación...",
+  "settings_cuda_downloadComplete": "Bibliotecas CUDA instaladas correctamente.",
+  "settings_cuda_downloadFailed": "Descarga fallida: {error}",
+  "settings_cuda_removeButton": "Eliminar bibliotecas CUDA",
+  "settings_cuda_removeFailed": "Error al eliminar las bibliotecas CUDA: {error}",
+  "settings_cuda_removeConfirm": "¿Eliminar las bibliotecas CUDA descargadas? Esto liberará {size} de espacio en disco. Puedes volver a descargarlas más tarde.",
+  "settings_cuda_cancelButton": "Cancelar descarga",
+  "settings_cuda_requiresRestart": "Reinicia el análisis para usar la aceleración GPU.",
   "settings_spectrogram_title": "Espectrograma",
   "settings_spectrogram_maxFreq": "Frecuencia máxima predeterminada",
   "settings_spectrogram_height": "Altura de espectrograma predeterminada",
@@ -43,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Mediano",
   "settings_spectrogram_heightLarge": "Grande",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Almacenamiento",
   "settings_storage_clipDir": "Directorio de salida de clips",
   "settings_storage_openClipDir": "Abrir directorio de clips",
   "settings_storage_dbLocation": "Ubicación de base de datos",
-
   "settings_saved": "Guardado",
   "settings_unsavedModal_title": "Cambios sin guardar",
   "settings_unsavedModal_warning": "Tienes cambios de configuración sin guardar. Si sales ahora, tus cambios se perderán.",
   "settings_unsavedModal_discard": "Descartar cambios",
   "settings_unsavedModal_stayOnPage": "Permanecer en la página",
-
   "settings_models_installed": "Instalados",
   "settings_models_catalog": "Catálogo",
   "settings_models_refresh": "Actualizar",
@@ -75,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Esto eliminará el modelo de tu configuración y borrará los archivos del modelo del disco.",
   "settings_models_failedRemove": "Error al eliminar {modelId}: {error}",
   "settings_models_failedInstall": "Error al instalar {modelId}: {error}",
-
   "settings_data_dbContent": "Contenido de base de datos",
   "settings_data_detections": "{count} detecciones",
   "settings_data_species": "{count} especies",
@@ -83,13 +92,11 @@
   "settings_data_clearAll": "Limpiar todos los datos",
   "settings_data_cleared": "Se eliminaron {detections} detecciones, {runs} ejecuciones, {locations} ubicaciones",
   "settings_data_birdaConfig": "Configuración de birda (solo lectura)",
-
   "settings_clearModal_title": "Limpiar base de datos",
   "settings_clearModal_warning": "Esto eliminará permanentemente todas las detecciones, ejecuciones de análisis y ubicaciones de la base de datos. Esta acción no se puede deshacer.",
   "settings_clearModal_detectionsRemoved": "Se eliminarán {count} detecciones",
   "settings_clearModal_locationsRemoved": "Se eliminarán {count} ubicaciones",
   "settings_clearModal_deleteAll": "Eliminar todos los datos",
-
   "settings_licenseModal_title": "Acuerdo de licencia",
   "settings_licenseModal_license": "Licencia",
   "settings_licenseModal_commercialUse": "Uso comercial",
@@ -97,25 +104,19 @@
   "settings_licenseModal_notAllowed": "No permitido",
   "settings_licenseModal_agree": "Al instalar este modelo, aceptas los términos de la licencia {license}.",
   "settings_licenseModal_acceptInstall": "Aceptar e instalar",
-
   "licenses_title": "Licencias de terceros",
   "licenses_notFound": "La información de licencia no está disponible.",
-
   "common_button_close": "Cerrar",
-
   "sidebar_analysis": "Análisis",
   "sidebar_detections": "Detecciones",
   "sidebar_map": "Mapa",
   "sidebar_species": "Especies",
   "sidebar_settings": "Configuración",
-
   "status_detections": "{count} detecciones",
   "status_species": "{count} especies",
   "status_locations": "{count} ubicaciones",
-
   "audio_pause": "Pausar",
   "audio_playClip": "Reproducir clip",
-
   "log_title": "Registro",
   "log_expand": "Expandir",
   "log_collapse": "Contraer",
@@ -123,11 +124,9 @@
   "log_clear": "Limpiar registro",
   "log_close": "Cerrar panel de registro",
   "log_empty": "No hay entradas de registro todavía. Ejecuta un análisis para ver la salida aquí.",
-
   "progress_complete": "Análisis completado",
   "progress_failed": "Análisis fallido",
   "progress_status": "{processed}/{total} archivos · {detections} detecciones",
-
   "filter_title": "Filtros",
   "filter_collapse": "Contraer filtros",
   "filter_species": "Especies",
@@ -135,7 +134,6 @@
   "filter_minConfidence": "Confianza mínima",
   "filter_show": "Mostrar filtros",
   "filter_all": "Todas",
-
   "table_columnOffset": "Desplazamiento",
   "table_columnTime": "Hora",
   "table_columnSpecies": "Especies",
@@ -146,12 +144,10 @@
   "table_columnClip": "Clip",
   "table_loadingDetections": "Cargando detecciones...",
   "table_noDetections": "No se encontraron detecciones",
-
   "pagination_detectionCount": "{count} detecciones",
   "pagination_detectionCountSingular": "{count} detección",
   "pagination_totalDetections": "{count} detecciones totales",
   "pagination_pageOf": "Página {current} de {total}",
-
   "detail_audioLoadFailed": "Error al cargar audio: {message}",
   "detail_freqMax": "Frec. máx.",
   "detail_height": "Altura",
@@ -165,7 +161,6 @@
   "detail_exporting": "Exportando...",
   "detail_exportAsWav": "Exportar selección como WAV",
   "detail_clearSelection": "Limpiar selección",
-
   "sourceFiles_scanning": "Escaneando archivos...",
   "sourceFiles_sourceFile": "Archivo de origen",
   "sourceFiles_duration": "Duración",
@@ -185,7 +180,6 @@
   "sourceFiles_statusSkip": "omitido",
   "sourceFiles_noAudioFiles": "No se encontraron archivos de audio",
   "sourceFiles_supportedFormats": "Soportados: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Coordenadas",
   "coords_autoDetected": "auto-detectado",
   "coords_pickOnMap": "Seleccionar coordenadas del mapa",
@@ -196,12 +190,9 @@
   "coords_longitudePlaceholder": "-180 a 180",
   "coords_pickTitle": "Seleccionar coordenadas",
   "coords_clickToSet": "Haz clic en el mapa para establecer coordenadas",
-
   "speciesSearch_placeholder": "Buscar especies en el mapa...",
   "speciesSearch_detCount": "{count} det.",
-
   "map_unknownLocation": "Ubicación desconocida",
-
   "runs_title": "Ejecuciones",
   "runs_empty": "No hay ejecuciones de análisis todavía",
   "runs_emptyHint": "Ve a la pestaña Análisis para iniciar tu primer análisis.",
@@ -214,7 +205,6 @@
   "runs_status_failed": "Fallido",
   "runs_deleteRun": "Eliminar ejecución",
   "runs_status_pending": "Pendiente",
-
   "analysis_title": "Análisis",
   "analysis_selectFile": "Seleccionar archivo",
   "analysis_selectFileDesc": "Selecciona un archivo de audio para analizar",
@@ -243,7 +233,6 @@
   "analysis_filterByName": "Filtrar por especies...",
   "analysis_conf": "Conf.",
   "analysis_allConfidences": "Todas",
-
   "calendar_datePlaceholder": "DD/MM/AAAA",
   "calendar_today": "Hoy",
   "calendar_month_january": "Enero",
@@ -265,16 +254,13 @@
   "calendar_weekday_fr": "Vi",
   "calendar_weekday_sa": "Sa",
   "calendar_weekday_su": "Do",
-
   "wizard_welcome_title": "Bienvenido a Birda GUI",
   "wizard_welcome_subtitle": "Configuremos todo en unos pocos pasos rápidos.",
   "wizard_welcome_getStarted": "Comenzar",
   "wizard_welcome_skip": "Omitir configuración",
-
   "wizard_uiLanguage_title": "Elige tu idioma",
   "wizard_uiLanguage_subtitle": "Selecciona el idioma para la interfaz de Birda GUI.",
   "wizard_uiLanguage_detected": "Detectamos {language} según la configuración de tu sistema.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI necesita la herramienta de línea de comandos birda para analizar archivos de audio.",
   "wizard_cli_checking": "Buscando birda...",
@@ -283,22 +269,18 @@
   "wizard_cli_notFoundHint": "Puedes establecer la ruta manualmente si birda está instalado, o descargarlo desde el enlace de abajo.",
   "wizard_cli_download": "Descargar birda",
   "wizard_cli_setPath": "Establecer ruta manualmente",
-
   "wizard_model_title": "Instalar un modelo",
   "wizard_model_subtitle": "Necesitas al menos un modelo para analizar sonidos de aves. Elige uno para instalar.",
   "wizard_model_installing": "Instalando {name}...",
   "wizard_model_installed": "instalado",
   "wizard_model_hasModels": "Tienes {count} modelo(s) instalado(s). Puedes instalar más después desde Configuración.",
   "wizard_model_noCli": "birda CLI no está disponible. Vuelve al paso anterior para configurar el CLI antes de instalar modelos.",
-
   "wizard_language_title": "Idioma de especies",
   "wizard_language_subtitle": "Elige el idioma para los nombres de especies de aves que se muestran en los resultados de detección.",
-
   "wizard_finish": "Finalizar configuración",
   "wizard_next": "Siguiente",
   "wizard_back": "Atrás",
   "wizard_stepOf": "Paso {current} de {total}",
-
   "species_title": "Listas de especies",
   "species_fetchNew": "Obtener nueva",
   "species_customList": "Crear personalizada",
@@ -312,7 +294,6 @@
   "species_selectList": "Selecciona una lista de especies para ver su contenido.",
   "species_useAsFilter": "Usar como filtro de detección",
   "species_searchInList": "Filtrar especies en la lista...",
-
   "species_fetch_title": "Obtener lista de especies",
   "species_fetch_subtitle": "Obtén las especies de aves esperadas para una ubicación y época del año.",
   "species_fetch_week": "Semana",
@@ -326,7 +307,6 @@
   "species_fetch_listName": "Nombre de lista",
   "species_fetch_listNamePlaceholder": "ej. Helsinki, Semana 24",
   "species_fetch_save": "Guardar lista",
-
   "species_custom_title": "Crear lista de especies personalizada",
   "species_custom_name": "Nombre de lista",
   "species_custom_namePlaceholder": "Mi lista de especies...",
@@ -335,24 +315,19 @@
   "species_custom_searchAdd": "Buscar y agregar especies...",
   "species_custom_selectedCount": "{count} seleccionadas",
   "species_custom_create": "Crear lista",
-
   "species_table_commonName": "Nombre común",
   "species_table_scientificName": "Nombre científico",
   "species_table_frequency": "Frecuencia",
-
   "species_detail_location": "Ubicación",
   "species_detail_week": "Semana {week}",
   "species_detail_threshold": "Umbral: {threshold}%",
-
   "species_fetch_weekError": "La semana debe estar entre 1 y 48",
   "species_fetch_coordsError": "Por favor establece las coordenadas",
   "species_fetch_moreSpecies": "...y {count} más",
   "species_loading": "Cargando...",
-
   "view_table": "Tabla",
   "view_species": "Especies",
   "view_grid": "Cuadrícula",
-
   "species_card_detections": "{count} detecciones",
   "species_card_detectionsSingular": "{count} detección",
   "species_card_avgConfidence": "Prom. {value}",
@@ -363,7 +338,6 @@
   "species_card_sortCount": "Cantidad",
   "species_card_sortName": "Nombre",
   "species_card_sortConfidence": "Confianza",
-
   "grid_noResults": "No hay datos para el mapa de calor",
   "grid_daylight": "Luz del día",
   "grid_phase_night": "Noche",
@@ -374,6 +348,5 @@
   "grid_detectionCountSingular": "{count} detección",
   "grid_less": "Menos",
   "grid_more": "Más",
-
   "pagination_speciesCount": "{count} especies"
 }

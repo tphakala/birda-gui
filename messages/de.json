@@ -7,16 +7,13 @@
   "common_button_back": "Zurück",
   "status_ready": "Bereit",
   "status_analyzing": "Analysiere...",
-
   "settings_title": "Einstellungen",
   "settings_tab_preferences": "Präferenzen",
   "settings_tab_models": "Modelle",
   "settings_tab_data": "Daten",
-
   "settings_cli_title": "birda CLI Status",
   "settings_cli_checking": "Überprüfe...",
   "settings_cli_availableAt": "Verfügbar unter {path}",
-
   "settings_general_title": "Allgemein",
   "settings_general_theme": "Design",
   "settings_general_themeSystem": "Systemstandard",
@@ -26,16 +23,32 @@
   "settings_general_uiLanguage": "Oberflächensprache",
   "settings_general_birdaPath": "birda Programmpfad",
   "settings_general_birdaPathPlaceholder": "Leer lassen, um PATH zu verwenden",
-
   "settings_analysis_title": "Analyse-Standards",
   "settings_analysis_confidence": "Standard-Konfidenzschwelle",
   "settings_analysis_executionProvider": "Ausführungsanbieter",
   "settings_analysis_epAuto": "Automatisch (Empfohlen)",
   "settings_analysis_epDescription": "Steuert die Hardwarebeschleunigung für Inferenz. Automatisch wählt die beste verfügbare Option.",
-
   "settings_gpu_librariesMissing_title": "GPU-Beschleunigung Verfügbar",
   "settings_gpu_librariesMissing_description": "Eine Nvidia-GPU wurde erkannt, aber CUDA/TensorRT-Bibliotheken sind nicht installiert. Installieren Sie diese, um GPU-Beschleunigung zu aktivieren:",
-
+  "settings_cuda_title": "GPU-Beschleunigung",
+  "settings_cuda_notSupported": "CUDA-GPU-Beschleunigung ist nur unter Linux und Windows mit NVIDIA-GPUs verfügbar.",
+  "settings_cuda_noGpu": "Keine NVIDIA-GPU erkannt. CUDA-Beschleunigung erfordert eine NVIDIA-GPU.",
+  "settings_cuda_notInstalled": "CUDA-Bibliotheken sind nicht installiert. Laden Sie sie herunter, um GPU-Beschleunigung zu aktivieren.",
+  "settings_cuda_installed": "CUDA-Bibliotheken installiert",
+  "settings_cuda_version": "Version: {version}",
+  "settings_cuda_diskUsage": "Speicherverbrauch: {size}",
+  "settings_cuda_downloadButton": "CUDA-Bibliotheken herunterladen",
+  "settings_cuda_downloadSize": "Downloadgröße: ~{size}",
+  "settings_cuda_downloading": "CUDA-Bibliotheken werden heruntergeladen...",
+  "settings_cuda_extracting": "CUDA-Bibliotheken werden entpackt...",
+  "settings_cuda_verifying": "Installation wird überprüft...",
+  "settings_cuda_downloadComplete": "CUDA-Bibliotheken erfolgreich installiert.",
+  "settings_cuda_downloadFailed": "Download fehlgeschlagen: {error}",
+  "settings_cuda_removeButton": "CUDA-Bibliotheken entfernen",
+  "settings_cuda_removeFailed": "Entfernen der CUDA-Bibliotheken fehlgeschlagen: {error}",
+  "settings_cuda_removeConfirm": "Heruntergeladene CUDA-Bibliotheken entfernen? Dies gibt {size} Speicherplatz frei. Sie können sie später erneut herunterladen.",
+  "settings_cuda_cancelButton": "Download abbrechen",
+  "settings_cuda_requiresRestart": "Starten Sie die Analyse neu, um GPU-Beschleunigung zu nutzen.",
   "settings_spectrogram_title": "Spektrogramm",
   "settings_spectrogram_maxFreq": "Standard-Maximalfrequenz",
   "settings_spectrogram_height": "Standard-Spektrogrammhöhe",
@@ -43,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Mittel",
   "settings_spectrogram_heightLarge": "Groß",
   "settings_spectrogram_heightXL": "Sehr Groß",
-
   "settings_storage_title": "Speicherort",
   "settings_storage_clipDir": "Clip-Ausgabeverzeichnis",
   "settings_storage_openClipDir": "Clip-Verzeichnis öffnen",
   "settings_storage_dbLocation": "Datenbankstandort",
-
   "settings_saved": "Gespeichert",
   "settings_unsavedModal_title": "Nicht Gespeicherte Änderungen",
   "settings_unsavedModal_warning": "Sie haben nicht gespeicherte Einstellungsänderungen. Wenn Sie jetzt fortfahren, gehen Ihre Änderungen verloren.",
   "settings_unsavedModal_discard": "Änderungen Verwerfen",
   "settings_unsavedModal_stayOnPage": "Auf Seite Bleiben",
-
   "settings_models_installed": "Installiert",
   "settings_models_catalog": "Katalog",
   "settings_models_refresh": "Aktualisieren",
@@ -75,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Das Modell wird aus der Konfiguration entfernt und die Modelldateien werden von der Festplatte gelöscht.",
   "settings_models_failedRemove": "Entfernen von {modelId} fehlgeschlagen: {error}",
   "settings_models_failedInstall": "Installation von {modelId} fehlgeschlagen: {error}",
-
   "settings_data_dbContent": "Datenbankinhalt",
   "settings_data_detections": "{count} Erkennungen",
   "settings_data_species": "{count} Arten",
@@ -83,13 +92,11 @@
   "settings_data_clearAll": "Alle Daten Löschen",
   "settings_data_cleared": "{detections} Erkennungen, {runs} Durchläufe, {locations} Standorte gelöscht",
   "settings_data_birdaConfig": "birda-Konfiguration (schreibgeschützt)",
-
   "settings_clearModal_title": "Datenbank Löschen",
   "settings_clearModal_warning": "Dadurch werden alle Erkennungen, Analysedurchläufe und Standorte dauerhaft aus der Datenbank gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
   "settings_clearModal_detectionsRemoved": "{count} Erkennungen werden entfernt",
   "settings_clearModal_locationsRemoved": "{count} Standorte werden entfernt",
   "settings_clearModal_deleteAll": "Alle Daten Löschen",
-
   "settings_licenseModal_title": "Lizenzvereinbarung",
   "settings_licenseModal_license": "Lizenz",
   "settings_licenseModal_commercialUse": "Kommerzielle Nutzung",
@@ -97,25 +104,19 @@
   "settings_licenseModal_notAllowed": "Nicht erlaubt",
   "settings_licenseModal_agree": "Mit der Installation dieses Modells stimmen Sie den Bedingungen der {license}-Lizenz zu.",
   "settings_licenseModal_acceptInstall": "Akzeptieren & Installieren",
-
   "licenses_title": "Drittanbieter-Lizenzen",
   "licenses_notFound": "Lizenzinformationen sind nicht verfügbar.",
-
   "common_button_close": "Schließen",
-
   "sidebar_analysis": "Analyse",
   "sidebar_detections": "Erkennungen",
   "sidebar_map": "Karte",
   "sidebar_species": "Arten",
   "sidebar_settings": "Einstellungen",
-
   "status_detections": "{count} Erkennungen",
   "status_species": "{count} Arten",
   "status_locations": "{count} Standorte",
-
   "audio_pause": "Pause",
   "audio_playClip": "Clip abspielen",
-
   "log_title": "Protokoll",
   "log_expand": "Erweitern",
   "log_collapse": "Einklappen",
@@ -123,11 +124,9 @@
   "log_clear": "Protokoll löschen",
   "log_close": "Protokollbereich schließen",
   "log_empty": "Noch keine Protokolleinträge. Führen Sie eine Analyse aus, um hier Ausgaben zu sehen.",
-
   "progress_complete": "Analyse Abgeschlossen",
   "progress_failed": "Analyse Fehlgeschlagen",
   "progress_status": "{processed}/{total} Dateien · {detections} Erkennungen",
-
   "filter_title": "Filter",
   "filter_collapse": "Filter einklappen",
   "filter_species": "Arten",
@@ -135,7 +134,6 @@
   "filter_minConfidence": "Min. Konfidenz",
   "filter_show": "Filter anzeigen",
   "filter_all": "Alle",
-
   "table_columnOffset": "Zeitversatz",
   "table_columnTime": "Zeit",
   "table_columnSpecies": "Art",
@@ -146,12 +144,10 @@
   "table_columnClip": "Clip",
   "table_loadingDetections": "Lade Erkennungen...",
   "table_noDetections": "Keine Erkennungen gefunden",
-
   "pagination_detectionCount": "{count} Erkennungen",
   "pagination_detectionCountSingular": "{count} Erkennung",
   "pagination_totalDetections": "{count} Erkennungen insgesamt",
   "pagination_pageOf": "Seite {current} von {total}",
-
   "detail_audioLoadFailed": "Laden der Audiodatei fehlgeschlagen: {message}",
   "detail_freqMax": "Max. Frequenz",
   "detail_height": "Höhe",
@@ -165,7 +161,6 @@
   "detail_exporting": "Exportiere...",
   "detail_exportAsWav": "Auswahl als WAV exportieren",
   "detail_clearSelection": "Auswahl löschen",
-
   "sourceFiles_scanning": "Scanne Dateien...",
   "sourceFiles_sourceFile": "Quelldatei",
   "sourceFiles_duration": "Dauer",
@@ -185,7 +180,6 @@
   "sourceFiles_statusSkip": "übersprungen",
   "sourceFiles_noAudioFiles": "Keine Audiodateien gefunden",
   "sourceFiles_supportedFormats": "Unterstützt: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Koordinaten",
   "coords_autoDetected": "automatisch erkannt",
   "coords_pickOnMap": "Koordinaten von Karte wählen",
@@ -196,12 +190,9 @@
   "coords_longitudePlaceholder": "-180 bis 180",
   "coords_pickTitle": "Koordinaten Wählen",
   "coords_clickToSet": "Klicken Sie auf die Karte, um Koordinaten festzulegen",
-
   "speciesSearch_placeholder": "Arten auf Karte suchen...",
   "speciesSearch_detCount": "{count} Erk.",
-
   "map_unknownLocation": "Unbekannter Standort",
-
   "runs_title": "Durchläufe",
   "runs_empty": "Noch keine Analysedurchläufe",
   "runs_emptyHint": "Gehen Sie zum Analyse-Tab, um Ihre erste Analyse zu starten.",
@@ -214,7 +205,6 @@
   "runs_status_failed": "Fehlgeschlagen",
   "runs_deleteRun": "Durchlauf löschen",
   "runs_status_pending": "Ausstehend",
-
   "analysis_title": "Analyse",
   "analysis_selectFile": "Datei Auswählen",
   "analysis_selectFileDesc": "Wählen Sie eine Audiodatei zur Analyse aus",
@@ -243,7 +233,6 @@
   "analysis_filterByName": "Nach Arten filtern...",
   "analysis_conf": "Konf",
   "analysis_allConfidences": "Alle",
-
   "calendar_datePlaceholder": "TT.MM.JJJJ",
   "calendar_today": "Heute",
   "calendar_month_january": "Januar",
@@ -265,7 +254,6 @@
   "calendar_weekday_fr": "Fr",
   "calendar_weekday_sa": "Sa",
   "calendar_weekday_su": "So",
-
   "wizard_welcome_title": "Willkommen bei Birda GUI",
   "wizard_welcome_subtitle": "Lassen Sie uns die Einrichtung in wenigen Schritten durchführen.",
   "wizard_welcome_getStarted": "Los Geht's",
@@ -273,7 +261,6 @@
   "wizard_uiLanguage_title": "Wählen Sie Ihre Sprache",
   "wizard_uiLanguage_subtitle": "Wählen Sie die Sprache für die Birda GUI-Oberfläche.",
   "wizard_uiLanguage_detected": "Wir haben {language} basierend auf Ihren Systemeinstellungen erkannt.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI benötigt das birda-Kommandozeilentool zur Analyse von Audiodateien.",
   "wizard_cli_checking": "Suche nach birda...",
@@ -282,22 +269,18 @@
   "wizard_cli_notFoundHint": "Sie können den Pfad manuell festlegen, falls birda installiert ist, oder es über den Link unten herunterladen.",
   "wizard_cli_download": "birda Herunterladen",
   "wizard_cli_setPath": "Pfad manuell festlegen",
-
   "wizard_model_title": "Modell Installieren",
   "wizard_model_subtitle": "Sie benötigen mindestens ein Modell zur Analyse von Vogelstimmen. Wählen Sie eines zur Installation aus.",
   "wizard_model_installing": "Installiere {name}...",
   "wizard_model_installed": "installiert",
   "wizard_model_hasModels": "Sie haben {count} Modell(e) installiert. Sie können später weitere aus den Einstellungen installieren.",
   "wizard_model_noCli": "birda CLI ist nicht verfügbar. Kehren Sie zum vorherigen Schritt zurück, um das CLI einzurichten, bevor Sie Modelle installieren.",
-
   "wizard_language_title": "Artensprache",
   "wizard_language_subtitle": "Wählen Sie die Sprache für Vogelartennamen, die in Erkennungsergebnissen angezeigt werden.",
-
   "wizard_finish": "Einrichtung Abschließen",
   "wizard_next": "Weiter",
   "wizard_back": "Zurück",
   "wizard_stepOf": "Schritt {current} von {total}",
-
   "species_title": "Artenlisten",
   "species_fetchNew": "Neue Abrufen",
   "species_customList": "Benutzerdefiniert Erstellen",
@@ -311,7 +294,6 @@
   "species_selectList": "Wählen Sie eine Artenliste aus, um deren Inhalt anzuzeigen.",
   "species_useAsFilter": "Als Erkennungsfilter Verwenden",
   "species_searchInList": "Arten in Liste filtern...",
-
   "species_fetch_title": "Artenliste Abrufen",
   "species_fetch_subtitle": "Erwartete Vogelarten für einen Standort und eine Jahreszeit abrufen.",
   "species_fetch_week": "Woche",
@@ -325,7 +307,6 @@
   "species_fetch_listName": "Listenname",
   "species_fetch_listNamePlaceholder": "z.B. Helsinki, Woche 24",
   "species_fetch_save": "Liste Speichern",
-
   "species_custom_title": "Benutzerdefinierte Artenliste Erstellen",
   "species_custom_name": "Listenname",
   "species_custom_namePlaceholder": "Meine Artenliste...",
@@ -334,24 +315,19 @@
   "species_custom_searchAdd": "Arten suchen und hinzufügen...",
   "species_custom_selectedCount": "{count} ausgewählt",
   "species_custom_create": "Liste Erstellen",
-
   "species_table_commonName": "Deutscher Name",
   "species_table_scientificName": "Wissenschaftlicher Name",
   "species_table_frequency": "Häufigkeit",
-
   "species_detail_location": "Standort",
   "species_detail_week": "Woche {week}",
   "species_detail_threshold": "Schwelle: {threshold}%",
-
   "species_fetch_weekError": "Woche muss zwischen 1 und 48 liegen",
   "species_fetch_coordsError": "Bitte Koordinaten festlegen",
   "species_fetch_moreSpecies": "...und {count} weitere",
   "species_loading": "Lade...",
-
   "view_table": "Tabelle",
   "view_species": "Arten",
   "view_grid": "Raster",
-
   "species_card_detections": "{count} Erkennungen",
   "species_card_detectionsSingular": "{count} Erkennung",
   "species_card_avgConfidence": "Ø {value}",
@@ -362,7 +338,6 @@
   "species_card_sortCount": "Anzahl",
   "species_card_sortName": "Name",
   "species_card_sortConfidence": "Konfidenz",
-
   "grid_noResults": "Keine Daten für Heatmap",
   "grid_daylight": "Tageslicht",
   "grid_phase_night": "Nacht",
@@ -373,6 +348,5 @@
   "grid_detectionCountSingular": "{count} Erkennung",
   "grid_less": "Weniger",
   "grid_more": "Mehr",
-
   "pagination_speciesCount": "{count} Arten"
 }
