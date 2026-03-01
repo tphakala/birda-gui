@@ -276,7 +276,11 @@
     modelsError = null;
     try {
       await removeModel(id);
-      await refreshModels();
+      try {
+        await refreshModels();
+      } catch (refreshError) {
+        console.error('Failed to refresh model list after removal:', refreshError);
+      }
     } catch (e) {
       modelsError = m.settings_models_failedRemove({ modelId: id, error: (e as Error).message });
     } finally {
