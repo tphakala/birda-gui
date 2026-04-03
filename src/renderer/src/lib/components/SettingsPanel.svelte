@@ -153,7 +153,7 @@
   let cudaProgress = $state<CudaDownloadProgress | null>(null);
   let cudaError = $state<string | null>(null);
   let cudaRemoveError = $state<string | null>(null);
-  let cudaDownloadSizeBytes = $state<number>(0);
+  let cudaDownloadSizeBytes = $state(0);
   let showCudaRemoveConfirm = $state(false);
   let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
 
