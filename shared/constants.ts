@@ -12,7 +12,7 @@ export const CUDA_VERSION_FILE = '.cuda-version';
  * Update this when bumping the bundled CLI version (see scripts/fetch-birda-cli.sh).
  * Used by: cuda/manager.ts (download), birda/runner.ts (LD_LIBRARY_PATH), gpu/detection.ts (availability).
  */
-export const BIRDA_CLI_VERSION = '1.7.0';
+export const BIRDA_CLI_VERSION = '1.8.0';
 
 /** Nvidia PCI vendor ID */
 export const NVIDIA_VENDOR_ID = 0x10de;

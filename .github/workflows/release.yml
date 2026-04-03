@@ -213,6 +213,4 @@ jobs:
             | Linux | `birda-gui_${{ needs.validate.outputs.version }}_amd64.deb` | Debian package |
             | macOS | `Birda GUI-${{ needs.validate.outputs.version }}.dmg` | Disk image |
 
-            ### Prerequisites
-
-            [birda](https://github.com/tphakala/birda) CLI must be installed and available on your PATH.
+            The birda CLI is bundled with all release builds. No separate installation required.
