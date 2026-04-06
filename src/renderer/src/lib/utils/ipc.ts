@@ -331,3 +331,7 @@ export function getSystemLocale(): Promise<string> {
 export function getAppVersion(): Promise<string> {
   return window.birda.invoke('app:get-version') as Promise<string>;
 }
+
+export function getDataPath(): Promise<string> {
+  return window.birda.invoke('app:get-data-path') as Promise<string>;
+}

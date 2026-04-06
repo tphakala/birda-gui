@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Detta tar bort modellen från din konfiguration och raderar modellfilerna från disken.",
   "settings_models_failedRemove": "Misslyckades med att ta bort {modelId}: {error}",
   "settings_models_failedInstall": "Misslyckades med att installera {modelId}: {error}",
+
+  "settings_data_dataPath": "Datasökväg",
+  "settings_data_dataPathDescription": "Applikationsdata, databas och konfigurationsfiler lagras här.",
+  "settings_data_openFolder": "Öppna mapp",
   "settings_data_dbContent": "Databasinnehåll",
   "settings_data_detections": "{count} detektioner",
   "settings_data_species": "{count} arter",

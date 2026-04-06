@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Isto irá remover o modelo da sua configuração e eliminar os ficheiros do modelo do disco.",
   "settings_models_failedRemove": "Falha ao remover {modelId}: {error}",
   "settings_models_failedInstall": "Falha ao instalar {modelId}: {error}",
+
+  "settings_data_dataPath": "Caminho dos Dados",
+  "settings_data_dataPathDescription": "Dados da aplicação, base de dados e ficheiros de configuração são armazenados aqui.",
+  "settings_data_openFolder": "Abrir Pasta",
   "settings_data_dbContent": "Conteúdo da Base de Dados",
   "settings_data_detections": "{count} deteções",
   "settings_data_species": "{count} espécies",

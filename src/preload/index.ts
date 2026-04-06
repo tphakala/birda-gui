@@ -56,6 +56,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'cuda:remove',
   'system:get-locale',
   'app:get-version',
+  'app:get-data-path',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([

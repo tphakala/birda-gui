@@ -96,6 +96,9 @@
   "settings_models_failedRemove": "Failed to remove {modelId}: {error}",
   "settings_models_failedInstall": "Failed to install {modelId}: {error}",
 
+  "settings_data_dataPath": "Data Path",
+  "settings_data_dataPathDescription": "Application data, database, and configuration files are stored here.",
+  "settings_data_openFolder": "Open Folder",
   "settings_data_dbContent": "Database Content",
   "settings_data_detections": "{count} detections",
   "settings_data_species": "{count} species",

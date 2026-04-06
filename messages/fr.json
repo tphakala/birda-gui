@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Cela supprimera le modèle de votre configuration et effacera les fichiers du modèle du disque.",
   "settings_models_failedRemove": "Échec de la suppression de {modelId} : {error}",
   "settings_models_failedInstall": "Échec de l'installation de {modelId} : {error}",
+
+  "settings_data_dataPath": "Chemin des données",
+  "settings_data_dataPathDescription": "Les données de l'application, la base de données et les fichiers de configuration sont stockés ici.",
+  "settings_data_openFolder": "Ouvrir le dossier",
   "settings_data_dbContent": "Contenu de la base de données",
   "settings_data_detections": "{count} détections",
   "settings_data_species": "{count} espèces",

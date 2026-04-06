@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Das Modell wird aus der Konfiguration entfernt und die Modelldateien werden von der Festplatte gelöscht.",
   "settings_models_failedRemove": "Entfernen von {modelId} fehlgeschlagen: {error}",
   "settings_models_failedInstall": "Installation von {modelId} fehlgeschlagen: {error}",
+
+  "settings_data_dataPath": "Datenpfad",
+  "settings_data_dataPathDescription": "Anwendungsdaten, Datenbank und Konfigurationsdateien werden hier gespeichert.",
+  "settings_data_openFolder": "Ordner öffnen",
   "settings_data_dbContent": "Datenbankinhalt",
   "settings_data_detections": "{count} Erkennungen",
   "settings_data_species": "{count} Arten",

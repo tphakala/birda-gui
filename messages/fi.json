@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Tämä poistaa mallin asetuksistasi ja poistaa mallitiedostot levyltä.",
   "settings_models_failedRemove": "Mallin {modelId} poistaminen epäonnistui: {error}",
   "settings_models_failedInstall": "Mallin {modelId} asennus epäonnistui: {error}",
+
+  "settings_data_dataPath": "Tietopolku",
+  "settings_data_dataPathDescription": "Sovellustiedot, tietokanta ja asetustiedostot tallennetaan tänne.",
+  "settings_data_openFolder": "Avaa kansio",
   "settings_data_dbContent": "Tietokannan sisältö",
   "settings_data_detections": "{count} havaintoa",
   "settings_data_species": "{count} lajia",

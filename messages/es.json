@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Esto eliminará el modelo de tu configuración y borrará los archivos del modelo del disco.",
   "settings_models_failedRemove": "Error al eliminar {modelId}: {error}",
   "settings_models_failedInstall": "Error al instalar {modelId}: {error}",
+
+  "settings_data_dataPath": "Ruta de datos",
+  "settings_data_dataPathDescription": "Los datos de la aplicación, la base de datos y los archivos de configuración se almacenan aquí.",
+  "settings_data_openFolder": "Abrir carpeta",
   "settings_data_dbContent": "Contenido de base de datos",
   "settings_data_detections": "{count} detecciones",
   "settings_data_species": "{count} especies",

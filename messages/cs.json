@@ -96,6 +96,9 @@
   "settings_models_failedRemove": "Odebrání {modelId} selhalo: {error}",
   "settings_models_failedInstall": "Instalace {modelId} selhala: {error}",
 
+  "settings_data_dataPath": "Cesta k datům",
+  "settings_data_dataPathDescription": "Data aplikace, databáze a konfigurační soubory jsou uloženy zde.",
+  "settings_data_openFolder": "Otevřít složku",
   "settings_data_dbContent": "Obsah databáze",
   "settings_data_detections": "{count} detekce",
   "settings_data_species": "{count} druhy",

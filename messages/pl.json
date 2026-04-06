@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "To usunie model z konfiguracji i usunie pliki modelu z dysku.",
   "settings_models_failedRemove": "Nie udało się usunąć {modelId}: {error}",
   "settings_models_failedInstall": "Nie udało się zainstalować {modelId}: {error}",
+
+  "settings_data_dataPath": "Ścieżka danych",
+  "settings_data_dataPathDescription": "Dane aplikacji, baza danych i pliki konfiguracyjne są przechowywane tutaj.",
+  "settings_data_openFolder": "Otwórz folder",
   "settings_data_dbContent": "Zawartość bazy danych",
   "settings_data_detections": "{count} detekcji",
   "settings_data_species": "{count} gatunków",

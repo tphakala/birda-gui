@@ -96,6 +96,9 @@
   "settings_models_failedRemove": "Kunne ikke fjerne {modelId}: {error}",
   "settings_models_failedInstall": "Kunne ikke installere {modelId}: {error}",
 
+  "settings_data_dataPath": "Datasti",
+  "settings_data_dataPathDescription": "Applikationsdata, database og konfigurationsfiler gemmes her.",
+  "settings_data_openFolder": "Åbn mappe",
   "settings_data_dbContent": "Databaseindhold",
   "settings_data_detections": "{count} registreringer",
   "settings_data_species": "{count} arter",

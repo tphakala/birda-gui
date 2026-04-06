@@ -27,6 +27,7 @@
     openExecutableDialog,
     openFolderDialog,
     openInExplorer,
+    getDataPath,
     getAvailableLanguages,
     getCatalogStats,
     clearDatabase,
@@ -119,6 +120,8 @@
   let error = $state<string | null>(null);
   let savedTimer: ReturnType<typeof setTimeout> | null = null;
 
+  let dataPath = $state('');
+
   let showClearConfirm = $state(false);
   let clearing = $state(false);
   let clearResult = $state<{ detections: number; runs: number; locations: number } | null>(null);
@@ -208,6 +211,7 @@
 
       settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
+      dataPath = await getDataPath();
       birdaStatus = await checkBirda();
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
@@ -1003,6 +1007,23 @@
 
       <!-- ==================== DATA ==================== -->
     {:else if activeSubTab === 'data'}
+      <div class="card bg-base-200">
+        <div class="card-body gap-4 p-4">
+          <div class="flex items-center gap-2">
+            <FolderOpen size={16} class="text-base-content/50" />
+            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dataPath()}</h3>
+          </div>
+          <p class="text-base-content/50 text-xs">{m.settings_data_dataPathDescription()}</p>
+          <div class="flex items-center gap-3">
+            <code class="bg-base-300/50 border-base-300 rounded border px-2 py-1 text-xs">{dataPath}</code>
+            <button onclick={() => openInExplorer(dataPath)} disabled={!dataPath} class="btn btn-sm gap-1.5">
+              <FolderOpen size={14} />
+              {m.settings_data_openFolder()}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
           <div class="flex items-center gap-2">

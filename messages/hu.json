@@ -96,6 +96,9 @@
   "settings_models_failedRemove": "{modelId} eltávolítása sikertelen: {error}",
   "settings_models_failedInstall": "{modelId} telepítése sikertelen: {error}",
 
+  "settings_data_dataPath": "Adatok elérési útja",
+  "settings_data_dataPathDescription": "Az alkalmazásadatok, az adatbázis és a konfigurációs fájlok itt vannak tárolva.",
+  "settings_data_openFolder": "Mappa megnyitása",
   "settings_data_dbContent": "Adatbázis tartalma",
   "settings_data_detections": "{count} észlelés",
   "settings_data_species": "{count} faj",

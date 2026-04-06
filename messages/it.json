@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Questo rimuoverà il modello dalla configurazione ed eliminerà i file del modello dal disco.",
   "settings_models_failedRemove": "Rimozione di {modelId} fallita: {error}",
   "settings_models_failedInstall": "Installazione di {modelId} fallita: {error}",
+
+  "settings_data_dataPath": "Percorso Dati",
+  "settings_data_dataPathDescription": "I dati dell'applicazione, il database e i file di configurazione sono archiviati qui.",
+  "settings_data_openFolder": "Apri Cartella",
   "settings_data_dbContent": "Contenuto Database",
   "settings_data_detections": "{count} rilevamenti",
   "settings_data_species": "{count} specie",

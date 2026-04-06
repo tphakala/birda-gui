@@ -85,6 +85,10 @@
   "settings_models_confirmRemoveDescription": "Dit verwijdert het model uit je configuratie en wist de modelbestanden van schijf.",
   "settings_models_failedRemove": "Verwijderen van {modelId} mislukt: {error}",
   "settings_models_failedInstall": "Installeren van {modelId} mislukt: {error}",
+
+  "settings_data_dataPath": "Gegevenspad",
+  "settings_data_dataPathDescription": "Applicatiegegevens, database en configuratiebestanden worden hier opgeslagen.",
+  "settings_data_openFolder": "Map openen",
   "settings_data_dbContent": "Database-inhoud",
   "settings_data_detections": "{count} detecties",
   "settings_data_species": "{count} soorten",
