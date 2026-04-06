@@ -32,6 +32,9 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'catalog:get-locations-with-counts',
   'catalog:stats',
   'catalog:clear-database',
+  'catalog:db-health',
+  'catalog:db-optimize',
+  'catalog:db-vacuum',
   'labels:resolve-all',
   'labels:search-by-common-name',
   'labels:available-languages',
@@ -56,6 +59,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'cuda:remove',
   'system:get-locale',
   'app:get-version',
+  'app:get-data-path',
 ]);
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([

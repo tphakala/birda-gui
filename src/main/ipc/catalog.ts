@@ -9,7 +9,7 @@ import {
   getLocationSpecies,
   getCatalogStats,
 } from '../db/detections';
-import { clearDatabase } from '../db/database';
+import { clearDatabase, checkDatabaseHealth, optimizeDatabase, vacuumDatabase } from '../db/database';
 import { getLocations, getLocationsWithCounts } from '../db/locations';
 import { getRunsWithStats, deleteRun } from '../db/runs';
 import { resolveAll, searchByCommonName } from '../labels/label-service';
@@ -165,5 +165,17 @@ export function registerCatalogHandlers(): void {
 
   ipcMain.handle('catalog:clear-database', () => {
     return clearDatabase();
+  });
+
+  ipcMain.handle('catalog:db-health', () => {
+    return checkDatabaseHealth();
+  });
+
+  ipcMain.handle('catalog:db-optimize', () => {
+    optimizeDatabase();
+  });
+
+  ipcMain.handle('catalog:db-vacuum', () => {
+    vacuumDatabase();
   });
 }

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import { SCHEMA_SQL } from './schema';
+import type { DatabaseHealthResult } from '$shared/types';
 
 let db: Database.Database | null = null;
 
@@ -417,6 +418,37 @@ export function clearDatabase(): { detections: number; runs: number; locations: 
   })();
   d.exec('VACUUM');
   return counts;
+}
+
+export function checkDatabaseHealth(): DatabaseHealthResult {
+  const d = getDb();
+  const integrityResults = d.pragma('integrity_check') as { integrity_check: string }[];
+  const integrityOk = integrityResults.length === 1 && integrityResults[0].integrity_check === 'ok';
+  const integrityMessage = integrityResults.map((r) => r.integrity_check).join('\n');
+  const pageCount = (d.pragma('page_count') as { page_count: number }[])[0].page_count;
+  const pageSize = (d.pragma('page_size') as { page_size: number }[])[0].page_size;
+  const journalMode = (d.pragma('journal_mode') as { journal_mode: string }[])[0].journal_mode;
+  const freelistCount = (d.pragma('freelist_count') as { freelist_count: number }[])[0].freelist_count;
+
+  return {
+    integrity_ok: integrityOk,
+    integrity_message: integrityMessage,
+    file_size_bytes: pageCount * pageSize,
+    page_count: pageCount,
+    page_size: pageSize,
+    wal_mode: journalMode === 'wal',
+    freelist_count: freelistCount,
+  };
+}
+
+export function optimizeDatabase(): void {
+  const d = getDb();
+  d.pragma('optimize');
+}
+
+export function vacuumDatabase(): void {
+  const d = getDb();
+  d.exec('VACUUM');
 }
 
 export function closeDb(): void {

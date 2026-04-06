@@ -15,6 +15,8 @@
     ExternalLink,
     Cpu,
     Info,
+    ShieldCheck,
+    Wrench,
   } from '@lucide/svelte';
   import logoBirdnet from '../../assets/logo-birdnet.png';
   import logoGoogle from '../../assets/logo-google.png';
@@ -27,6 +29,10 @@
     openExecutableDialog,
     openFolderDialog,
     openInExplorer,
+    getDataPath,
+    checkDatabaseHealth,
+    optimizeDatabase,
+    vacuumDatabase,
     getAvailableLanguages,
     getCatalogStats,
     clearDatabase,
@@ -44,6 +50,7 @@
     onCudaDownloadProgress,
     offCudaDownloadProgress,
   } from '$lib/utils/ipc';
+  import { formatFileSize } from '$lib/utils/format';
   import { appState } from '$lib/stores/app.svelte';
   import type {
     AppSettings,
@@ -52,6 +59,7 @@
     BirdaCheckResponse,
     CudaStatus,
     CudaDownloadProgress,
+    DatabaseHealthResult,
   } from '$shared/types';
   import { BIRDA_RELEASES_URL, BIRDA_CLI_VERSION } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
@@ -118,6 +126,14 @@
   let saved = $state(false);
   let error = $state<string | null>(null);
   let savedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let dataPath = $state('');
+  let dbHealth = $state<DatabaseHealthResult | null>(null);
+  let checkingHealth = $state(false);
+  let optimizing = $state(false);
+  let optimized = $state(false);
+  let vacuuming = $state(false);
+  let vacuumed = $state(false);
 
   let showClearConfirm = $state(false);
   let clearing = $state(false);
@@ -208,6 +224,8 @@
 
       settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
+      dataPath = await getDataPath();
+      dbHealth = await checkDatabaseHealth();
       birdaStatus = await checkBirda();
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
@@ -469,6 +487,57 @@
       error = (e as Error).message;
     } finally {
       clearing = false;
+    }
+  }
+
+  async function runHealthCheck() {
+    checkingHealth = true;
+    try {
+      dbHealth = await checkDatabaseHealth();
+    } catch (e) {
+      dbHealth = {
+        integrity_ok: false,
+        integrity_message: (e as Error).message,
+        file_size_bytes: 0,
+        page_count: 0,
+        page_size: 0,
+        wal_mode: false,
+        freelist_count: 0,
+      };
+    } finally {
+      checkingHealth = false;
+    }
+  }
+
+  async function runOptimize() {
+    optimizing = true;
+    try {
+      await optimizeDatabase();
+      optimized = true;
+      setTimeout(() => (optimized = false), 3000);
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      optimizing = false;
+    }
+  }
+
+  async function runVacuum() {
+    vacuuming = true;
+    try {
+      await vacuumDatabase();
+      vacuumed = true;
+      setTimeout(() => (vacuumed = false), 3000);
+    } catch (e) {
+      error = (e as Error).message;
+    } finally {
+      vacuuming = false;
+      // Refresh health info to show updated size (best-effort, don't overwrite vacuum error)
+      try {
+        dbHealth = await checkDatabaseHealth();
+      } catch {
+        /* ignore — health refresh failure is non-critical */
+      }
     }
   }
 
@@ -1003,6 +1072,114 @@
 
       <!-- ==================== DATA ==================== -->
     {:else if activeSubTab === 'data'}
+      <div class="card bg-base-200">
+        <div class="card-body gap-4 p-4">
+          <div class="flex items-center gap-2">
+            <FolderOpen size={16} class="text-base-content/50" />
+            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dataPath()}</h3>
+          </div>
+          <p class="text-base-content/50 text-xs">{m.settings_data_dataPathDescription()}</p>
+          <div class="flex items-center gap-3">
+            <code class="bg-base-300/50 border-base-300 rounded border px-2 py-1 text-xs">{dataPath}</code>
+            <button onclick={() => openInExplorer(dataPath)} disabled={!dataPath} class="btn btn-outline gap-1.5">
+              <FolderOpen size={14} />
+              {m.settings_data_openFolder()}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Health -->
+      <div class="card bg-base-200">
+        <div class="card-body gap-4 p-4">
+          <div class="flex items-center gap-2">
+            <ShieldCheck size={16} class="text-base-content/50" />
+            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dbHealth()}</h3>
+          </div>
+
+          {#if dbHealth}
+            <div class="flex flex-wrap items-center gap-4 text-sm">
+              {#if dbHealth.integrity_ok}
+                <span class="text-success flex items-center gap-1.5">
+                  <CircleCheckBig size={14} />
+                  {m.settings_data_dbHealthOk()}
+                </span>
+              {:else}
+                <span class="text-error flex items-center gap-1.5">
+                  <CircleX size={14} />
+                  {m.settings_data_dbHealthError({ message: dbHealth.integrity_message })}
+                </span>
+              {/if}
+              <span class="text-base-content/50"
+                >{m.settings_data_dbSize({ size: formatFileSize(dbHealth.file_size_bytes) })}</span
+              >
+              {#if dbHealth.freelist_count > 0}
+                <span class="text-base-content/50"
+                  >{m.settings_data_dbFreePages({ count: dbHealth.freelist_count })}</span
+                >
+              {/if}
+              {#if dbHealth.wal_mode}
+                <span class="badge badge-ghost badge-sm">{m.settings_data_dbWalMode()}</span>
+              {/if}
+            </div>
+          {/if}
+
+          <div>
+            <button onclick={runHealthCheck} disabled={checkingHealth} class="btn btn-outline btn-sm gap-1.5">
+              {#if checkingHealth}
+                <Loader size={14} class="animate-spin" />
+                {m.settings_data_checking()}
+              {:else}
+                <RefreshCw size={14} />
+                {m.settings_data_checkIntegrity()}
+              {/if}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Maintenance -->
+      <div class="card bg-base-200">
+        <div class="card-body gap-4 p-4">
+          <div class="flex items-center gap-2">
+            <Wrench size={16} class="text-base-content/50" />
+            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dbMaintenance()}</h3>
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <button onclick={runOptimize} disabled={optimizing} class="btn btn-outline btn-sm gap-1.5">
+                {#if optimizing}
+                  <Loader size={14} class="animate-spin" />
+                {:else}
+                  <RefreshCw size={14} />
+                {/if}
+                {m.settings_data_optimize()}
+              </button>
+              <span class="text-base-content/50 text-xs">{m.settings_data_optimizeDescription()}</span>
+              {#if optimized}
+                <span class="text-success text-sm">{m.settings_data_optimized()}</span>
+              {/if}
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button onclick={runVacuum} disabled={vacuuming} class="btn btn-outline btn-sm gap-1.5">
+                {#if vacuuming}
+                  <Loader size={14} class="animate-spin" />
+                {:else}
+                  <Database size={14} />
+                {/if}
+                {m.settings_data_vacuum()}
+              </button>
+              <span class="text-base-content/50 text-xs">{m.settings_data_vacuumDescription()}</span>
+              {#if vacuumed}
+                <span class="text-success text-sm">{m.settings_data_vacuumed()}</span>
+              {/if}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
           <div class="flex items-center gap-2">

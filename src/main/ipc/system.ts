@@ -15,4 +15,8 @@ export function registerSystemHandlers(): void {
   ipcMain.handle('app:get-version', () => {
     return app.getVersion();
   });
+
+  ipcMain.handle('app:get-data-path', () => {
+    return app.getPath('userData');
+  });
 }

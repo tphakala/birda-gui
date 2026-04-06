@@ -23,6 +23,7 @@ import type {
   CudaStatus,
   CudaDownloadProgress,
   CudaDownloadResult,
+  DatabaseHealthResult,
 } from '$shared/types';
 
 declare global {
@@ -111,6 +112,18 @@ export function clearDatabase(): Promise<{ detections: number; runs: number; loc
     runs: number;
     locations: number;
   }>;
+}
+
+export function checkDatabaseHealth(): Promise<DatabaseHealthResult> {
+  return window.birda.invoke('catalog:db-health') as Promise<DatabaseHealthResult>;
+}
+
+export function optimizeDatabase(): Promise<void> {
+  return window.birda.invoke('catalog:db-optimize') as Promise<void>;
+}
+
+export function vacuumDatabase(): Promise<void> {
+  return window.birda.invoke('catalog:db-vacuum') as Promise<void>;
 }
 
 // Models
@@ -330,4 +343,8 @@ export function getSystemLocale(): Promise<string> {
 
 export function getAppVersion(): Promise<string> {
   return window.birda.invoke('app:get-version') as Promise<string>;
+}
+
+export function getDataPath(): Promise<string> {
+  return window.birda.invoke('app:get-data-path') as Promise<string>;
 }

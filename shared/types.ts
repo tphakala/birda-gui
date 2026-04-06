@@ -314,6 +314,16 @@ export interface CatalogStats {
   total_locations: number;
 }
 
+export interface DatabaseHealthResult {
+  integrity_ok: boolean;
+  integrity_message: string;
+  file_size_bytes: number;
+  page_count: number;
+  page_size: number;
+  wal_mode: boolean;
+  freelist_count: number;
+}
+
 // === birda NDJSON Events (shared for renderer progress display) ===
 
 export interface BirdaEventEnvelope {
