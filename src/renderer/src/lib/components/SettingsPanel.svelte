@@ -1016,7 +1016,7 @@
           <p class="text-base-content/50 text-xs">{m.settings_data_dataPathDescription()}</p>
           <div class="flex items-center gap-3">
             <code class="bg-base-300/50 border-base-300 rounded border px-2 py-1 text-xs">{dataPath}</code>
-            <button onclick={() => openInExplorer(dataPath)} disabled={!dataPath} class="btn btn-sm gap-1.5">
+            <button onclick={() => openInExplorer(dataPath)} disabled={!dataPath} class="btn btn-outline gap-1.5">
               <FolderOpen size={14} />
               {m.settings_data_openFolder()}
             </button>
