@@ -71,14 +71,14 @@
         "deb"
       ],
       "category": "Science",
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+      "artifactName": "Birda-GUI-${version}-linux-${arch}.${ext}"
     },
     "win": {
       "target": [
         "nsis",
         "portable"
       ],
-      "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
+      "artifactName": "Birda-GUI-${version}-windows-${arch}.${ext}"
     },
     "mac": {
       "target": [
@@ -90,7 +90,7 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "notarize": true,
-      "artifactName": "${productName}-${version}-macos-${arch}.${ext}"
+      "artifactName": "Birda-GUI-${version}-macos-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -103,7 +103,7 @@
       "license": "LICENSE",
       "deleteAppDataOnUninstall": false,
       "include": "build/installer.nsh",
-      "artifactName": "${productName}-Setup-${version}-windows-${arch}.${ext}"
+      "artifactName": "Birda-GUI-Setup-${version}-windows-${arch}.${ext}"
     }
   },
   "dependencies": {
