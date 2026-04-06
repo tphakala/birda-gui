@@ -28,6 +28,9 @@ export const LANGUAGES: LanguageInfo[] = [
   { code: 'pt', nativeName: 'Português', englishName: 'Portuguese', dir: 'ltr' },
   { code: 'nl', nativeName: 'Nederlands', englishName: 'Dutch', dir: 'ltr' },
   { code: 'pl', nativeName: 'Polski', englishName: 'Polish', dir: 'ltr' },
+  { code: 'da', nativeName: 'Dansk', englishName: 'Danish', dir: 'ltr' },
+  { code: 'cs', nativeName: 'Čeština', englishName: 'Czech', dir: 'ltr' },
+  { code: 'hu', nativeName: 'Magyar', englishName: 'Hungarian', dir: 'ltr' },
 ];
 
 /**
