@@ -527,13 +527,17 @@
     try {
       await vacuumDatabase();
       vacuumed = true;
-      // Refresh health info to show updated size
-      dbHealth = await checkDatabaseHealth();
       setTimeout(() => (vacuumed = false), 3000);
     } catch (e) {
       error = (e as Error).message;
     } finally {
       vacuuming = false;
+      // Refresh health info to show updated size (best-effort, don't overwrite vacuum error)
+      try {
+        dbHealth = await checkDatabaseHealth();
+      } catch {
+        /* ignore — health refresh failure is non-critical */
+      }
     }
   }
 

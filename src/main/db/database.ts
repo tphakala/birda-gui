@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import { SCHEMA_SQL } from './schema';
+import type { DatabaseHealthResult } from '$shared/types';
 
 let db: Database.Database | null = null;
 
@@ -419,15 +420,7 @@ export function clearDatabase(): { detections: number; runs: number; locations: 
   return counts;
 }
 
-export function checkDatabaseHealth(): {
-  integrity_ok: boolean;
-  integrity_message: string;
-  file_size_bytes: number;
-  page_count: number;
-  page_size: number;
-  wal_mode: boolean;
-  freelist_count: number;
-} {
+export function checkDatabaseHealth(): DatabaseHealthResult {
   const d = getDb();
   const integrityResults = d.pragma('integrity_check') as { integrity_check: string }[];
   const integrityOk = integrityResults.length === 1 && integrityResults[0].integrity_check === 'ok';
