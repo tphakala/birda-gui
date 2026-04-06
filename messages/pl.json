@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} wolnych stron",
   "settings_data_dbWalMode": "Tryb WAL",
   "settings_data_checkIntegrity": "Sprawdź integralność",
-  "settings_data_checking": "Sprawdzanie…",
+  "settings_data_checking": "Sprawdzanie...",
   "settings_data_dbMaintenance": "Konserwacja bazy danych",
   "settings_data_optimize": "Optymalizuj",
   "settings_data_optimizeDescription": "Zaktualizuj statystyki planera zapytań w celu poprawy wydajności.",

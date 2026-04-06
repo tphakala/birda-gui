@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} lediga sidor",
   "settings_data_dbWalMode": "WAL-läge",
   "settings_data_checkIntegrity": "Kontrollera integritet",
-  "settings_data_checking": "Kontrollerar…",
+  "settings_data_checking": "Kontrollerar...",
   "settings_data_dbMaintenance": "Databasunderhåll",
   "settings_data_optimize": "Optimera",
   "settings_data_optimizeDescription": "Uppdatera frågeplaneringsstatistik för bättre prestanda.",

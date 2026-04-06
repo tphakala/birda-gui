@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} freie Seiten",
   "settings_data_dbWalMode": "WAL-Modus",
   "settings_data_checkIntegrity": "Integrität prüfen",
-  "settings_data_checking": "Prüfe…",
+  "settings_data_checking": "Prüfe...",
   "settings_data_dbMaintenance": "Datenbankwartung",
   "settings_data_optimize": "Optimieren",
   "settings_data_optimizeDescription": "Abfrageplaner-Statistiken für bessere Leistung aktualisieren.",

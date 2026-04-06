@@ -112,7 +112,7 @@
   "settings_data_dbFreePages": "{count} free pages",
   "settings_data_dbWalMode": "WAL mode",
   "settings_data_checkIntegrity": "Check Integrity",
-  "settings_data_checking": "Checking…",
+  "settings_data_checking": "Checking...",
   "settings_data_dbMaintenance": "Database Maintenance",
   "settings_data_optimize": "Optimize",
   "settings_data_optimizeDescription": "Update query planner statistics for better performance.",

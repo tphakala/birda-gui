@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} vapaata sivua",
   "settings_data_dbWalMode": "WAL-tila",
   "settings_data_checkIntegrity": "Tarkista eheys",
-  "settings_data_checking": "Tarkistetaan…",
+  "settings_data_checking": "Tarkistetaan...",
   "settings_data_dbMaintenance": "Tietokannan ylläpito",
   "settings_data_optimize": "Optimoi",
   "settings_data_optimizeDescription": "Päivitä kyselysuunnittelijan tilastot paremman suorituskyvyn saavuttamiseksi.",

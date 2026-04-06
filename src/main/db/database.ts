@@ -429,15 +429,17 @@ export function checkDatabaseHealth(): {
   freelist_count: number;
 } {
   const d = getDb();
-  const integrityResult = (d.pragma('integrity_check') as { integrity_check: string }[])[0].integrity_check;
+  const integrityResults = d.pragma('integrity_check') as { integrity_check: string }[];
+  const integrityOk = integrityResults.length === 1 && integrityResults[0].integrity_check === 'ok';
+  const integrityMessage = integrityResults.map((r) => r.integrity_check).join('\n');
   const pageCount = (d.pragma('page_count') as { page_count: number }[])[0].page_count;
   const pageSize = (d.pragma('page_size') as { page_size: number }[])[0].page_size;
   const journalMode = (d.pragma('journal_mode') as { journal_mode: string }[])[0].journal_mode;
   const freelistCount = (d.pragma('freelist_count') as { freelist_count: number }[])[0].freelist_count;
 
   return {
-    integrity_ok: integrityResult === 'ok',
-    integrity_message: integrityResult,
+    integrity_ok: integrityOk,
+    integrity_message: integrityMessage,
     file_size_bytes: pageCount * pageSize,
     page_count: pageCount,
     page_size: pageSize,

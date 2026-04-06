@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} páginas libres",
   "settings_data_dbWalMode": "Modo WAL",
   "settings_data_checkIntegrity": "Verificar integridad",
-  "settings_data_checking": "Verificando…",
+  "settings_data_checking": "Verificando...",
   "settings_data_dbMaintenance": "Mantenimiento de la base de datos",
   "settings_data_optimize": "Optimizar",
   "settings_data_optimizeDescription": "Actualizar estadísticas del planificador de consultas para un mejor rendimiento.",

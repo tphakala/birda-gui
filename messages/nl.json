@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} vrije pagina's",
   "settings_data_dbWalMode": "WAL-modus",
   "settings_data_checkIntegrity": "Integriteit controleren",
-  "settings_data_checking": "Controleren…",
+  "settings_data_checking": "Controleren...",
   "settings_data_dbMaintenance": "Database-onderhoud",
   "settings_data_optimize": "Optimaliseren",
   "settings_data_optimizeDescription": "Queryplanner-statistieken bijwerken voor betere prestaties.",

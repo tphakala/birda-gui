@@ -88,7 +88,7 @@
 
   "settings_data_dataPath": "Percorso Dati",
   "settings_data_dataPathDescription": "I dati dell'applicazione, il database e i file di configurazione sono archiviati qui.",
-  "settings_data_openFolder": "Apri Cartella",
+  "settings_data_openFolder": "Apri cartella",
   "settings_data_dbContent": "Contenuto Database",
   "settings_data_detections": "{count} rilevamenti",
   "settings_data_species": "{count} specie",
@@ -102,7 +102,7 @@
   "settings_data_dbFreePages": "{count} pagine libere",
   "settings_data_dbWalMode": "Modalità WAL",
   "settings_data_checkIntegrity": "Controlla integrità",
-  "settings_data_checking": "Controllo in corso…",
+  "settings_data_checking": "Controllo in corso...",
   "settings_data_dbMaintenance": "Manutenzione database",
   "settings_data_optimize": "Ottimizza",
   "settings_data_optimizeDescription": "Aggiorna le statistiche del pianificatore di query per prestazioni migliori.",

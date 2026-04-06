@@ -112,7 +112,7 @@
   "settings_data_dbFreePages": "{count} szabad oldal",
   "settings_data_dbWalMode": "WAL mód",
   "settings_data_checkIntegrity": "Integritás ellenőrzése",
-  "settings_data_checking": "Ellenőrzés…",
+  "settings_data_checking": "Ellenőrzés...",
   "settings_data_dbMaintenance": "Adatbázis karbantartás",
   "settings_data_optimize": "Optimalizálás",
   "settings_data_optimizeDescription": "Lekérdezéstervező statisztikák frissítése a jobb teljesítmény érdekében.",

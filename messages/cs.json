@@ -112,7 +112,7 @@
   "settings_data_dbFreePages": "{count} volných stránek",
   "settings_data_dbWalMode": "Režim WAL",
   "settings_data_checkIntegrity": "Zkontrolovat integritu",
-  "settings_data_checking": "Kontrola…",
+  "settings_data_checking": "Kontrola...",
   "settings_data_dbMaintenance": "Údržba databáze",
   "settings_data_optimize": "Optimalizovat",
   "settings_data_optimizeDescription": "Aktualizovat statistiky plánovače dotazů pro lepší výkon.",

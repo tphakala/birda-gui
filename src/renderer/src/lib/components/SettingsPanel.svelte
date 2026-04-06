@@ -515,6 +515,8 @@
       await optimizeDatabase();
       optimized = true;
       setTimeout(() => (optimized = false), 3000);
+    } catch (e) {
+      error = (e as Error).message;
     } finally {
       optimizing = false;
     }
@@ -528,6 +530,8 @@
       // Refresh health info to show updated size
       dbHealth = await checkDatabaseHealth();
       setTimeout(() => (vacuumed = false), 3000);
+    } catch (e) {
+      error = (e as Error).message;
     } finally {
       vacuuming = false;
     }

@@ -112,7 +112,7 @@
   "settings_data_dbFreePages": "{count} frie sider",
   "settings_data_dbWalMode": "WAL-tilstand",
   "settings_data_checkIntegrity": "Kontrollér integritet",
-  "settings_data_checking": "Kontrollerer…",
+  "settings_data_checking": "Kontrollerer...",
   "settings_data_dbMaintenance": "Databasevedligeholdelse",
   "settings_data_optimize": "Optimér",
   "settings_data_optimizeDescription": "Opdater forespørgselsplanlægningsstatistikker for bedre ydeevne.",
