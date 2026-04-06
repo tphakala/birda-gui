@@ -134,6 +134,8 @@
   let optimized = $state(false);
   let vacuuming = $state(false);
   let vacuumed = $state(false);
+  let optimizeTimer: ReturnType<typeof setTimeout> | null = null;
+  let vacuumTimer: ReturnType<typeof setTimeout> | null = null;
 
   let showClearConfirm = $state(false);
   let clearing = $state(false);
@@ -225,7 +227,7 @@
       settingsLoaded = true; // Mark as loaded - $effect will sync theme
 
       dataPath = await getDataPath();
-      dbHealth = await checkDatabaseHealth();
+      await runHealthCheck();
       birdaStatus = await checkBirda();
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
@@ -514,7 +516,8 @@
     try {
       await optimizeDatabase();
       optimized = true;
-      setTimeout(() => (optimized = false), 3000);
+      if (optimizeTimer) clearTimeout(optimizeTimer);
+      optimizeTimer = setTimeout(() => (optimized = false), 3000);
     } catch (e) {
       error = (e as Error).message;
     } finally {
@@ -527,7 +530,8 @@
     try {
       await vacuumDatabase();
       vacuumed = true;
-      setTimeout(() => (vacuumed = false), 3000);
+      if (vacuumTimer) clearTimeout(vacuumTimer);
+      vacuumTimer = setTimeout(() => (vacuumed = false), 3000);
     } catch (e) {
       error = (e as Error).message;
     } finally {
@@ -545,6 +549,8 @@
   onDestroy(() => {
     if (savedTimer) clearTimeout(savedTimer);
     if (clearResultTimer) clearTimeout(clearResultTimer);
+    if (optimizeTimer) clearTimeout(optimizeTimer);
+    if (vacuumTimer) clearTimeout(vacuumTimer);
     if (cudaPollTimer) clearInterval(cudaPollTimer);
     offCudaDownloadProgress();
     appState.settingsHasUnsavedChanges = false;
