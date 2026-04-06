@@ -419,6 +419,43 @@ export function clearDatabase(): { detections: number; runs: number; locations: 
   return counts;
 }
 
+export function checkDatabaseHealth(): {
+  integrity_ok: boolean;
+  integrity_message: string;
+  file_size_bytes: number;
+  page_count: number;
+  page_size: number;
+  wal_mode: boolean;
+  freelist_count: number;
+} {
+  const d = getDb();
+  const integrityResult = (d.pragma('integrity_check') as { integrity_check: string }[])[0].integrity_check;
+  const pageCount = (d.pragma('page_count') as { page_count: number }[])[0].page_count;
+  const pageSize = (d.pragma('page_size') as { page_size: number }[])[0].page_size;
+  const journalMode = (d.pragma('journal_mode') as { journal_mode: string }[])[0].journal_mode;
+  const freelistCount = (d.pragma('freelist_count') as { freelist_count: number }[])[0].freelist_count;
+
+  return {
+    integrity_ok: integrityResult === 'ok',
+    integrity_message: integrityResult,
+    file_size_bytes: pageCount * pageSize,
+    page_count: pageCount,
+    page_size: pageSize,
+    wal_mode: journalMode === 'wal',
+    freelist_count: freelistCount,
+  };
+}
+
+export function optimizeDatabase(): void {
+  const d = getDb();
+  d.pragma('optimize');
+}
+
+export function vacuumDatabase(): void {
+  const d = getDb();
+  d.exec('VACUUM');
+}
+
 export function closeDb(): void {
   if (db) {
     db.close();
