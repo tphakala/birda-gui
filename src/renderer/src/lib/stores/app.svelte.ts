@@ -1,6 +1,6 @@
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
-export interface AppState {
+interface AppState {
   activeTab: string;
   selectedSpecies: string | null;
   isAnalysisRunning: boolean;
