@@ -69,7 +69,7 @@
       }
       birdaStatus = await checkBirda();
     } catch (e) {
-      birdaStatus = { available: false, error: (e as Error).message } as BirdaCheckResponse;
+      birdaStatus = { available: false, error: (e as Error).message };
     }
   }
 
@@ -81,7 +81,7 @@
         await setSettings({ birda_path: path });
         birdaStatus = await checkBirda();
       } catch (e) {
-        birdaStatus = { available: false, error: (e as Error).message } as BirdaCheckResponse;
+        birdaStatus = { available: false, error: (e as Error).message };
       }
     }
   }
@@ -197,7 +197,9 @@
     if (currentStep === 'language' && availableLanguages.length === 0 && birdaStatus?.available) {
       void getAvailableLanguages()
         .then((langs) => (availableLanguages = langs))
-        .catch(() => {});
+        .catch(() => {
+          /* no-op */
+        });
     }
   });
 

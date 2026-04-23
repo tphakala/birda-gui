@@ -220,6 +220,7 @@ void app.whenReady().then(async () => {
       // Read saved language preference
       let language = 'en';
       try {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const settingsRaw = await fs.promises.readFile(
           path.join(app.getPath('userData'), 'birda-gui-settings.json'),
           'utf-8',

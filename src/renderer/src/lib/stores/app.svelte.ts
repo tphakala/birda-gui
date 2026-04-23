@@ -1,9 +1,7 @@
-import type { CatalogStats } from '$shared/types';
-
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
 export const appState = $state({
-  activeTab: 'analysis' as Tab,
+  activeTab: 'analysis',
   selectedSpecies: null as string | null,
   isAnalysisRunning: false,
   sourcePath: null as string | null,
@@ -14,13 +12,13 @@ export const appState = $state({
     total_detections: 0,
     total_species: 0,
     total_locations: 0,
-  } as CatalogStats,
+  },
   birdaAvailable: null as boolean | null,
   showLogPanel: false,
   lastRunId: null as number | null,
   lastSourceFile: null as string | null,
   selectedRunId: null as number | null,
-  theme: 'system' as 'system' | 'light' | 'dark',
+  theme: 'system',
   settingsHasUnsavedChanges: false,
   selectedSpeciesListId: null as number | null,
 });

@@ -18,6 +18,7 @@
     return { year: d.getFullYear(), month: d.getMonth() };
   }
 
+  // svelte-ignore state_referenced_locally
   const initial = getInitialCalendar(value);
   let calYear = $state(initial.year);
   let calMonth = $state(initial.month);

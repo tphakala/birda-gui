@@ -20,8 +20,8 @@
 
   let wavesurfer: WaveSurfer | null = null;
   let spectrogramPlugin: SpectrogramPlugin | null = null;
-  let waveformEl = $state<HTMLDivElement>(undefined!);
-  let spectrogramEl = $state<HTMLDivElement>(undefined!);
+  let waveformEl = $state<HTMLDivElement>(undefined as unknown as HTMLDivElement);
+  let spectrogramEl = $state<HTMLDivElement>(undefined as unknown as HTMLDivElement);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let playing = $state(false);
@@ -138,16 +138,17 @@
       });
 
       wavesurfer.on('ready', () => {
+        if (!wavesurfer) return;
         loading = false;
-        duration = wavesurfer!.getDuration();
-        sampleRate = wavesurfer!.getDecodedData()?.sampleRate ?? 0;
+        duration = wavesurfer.getDuration();
+        sampleRate = wavesurfer.getDecodedData()?.sampleRate ?? 0;
         requestAnimationFrame(() => {
           cacheCurrentSpectrogram();
         });
 
         // Connect media element through Web Audio GainNode for >1.0 boost
         try {
-          const mediaEl = wavesurfer!.getMediaElement();
+          const mediaEl = wavesurfer.getMediaElement();
           audioContext = new AudioContext();
           const source = audioContext.createMediaElementSource(mediaEl);
           gainNode = audioContext.createGain();
@@ -160,7 +161,7 @@
 
         // Initialize regions plugin for drag-to-select
         regionsPlugin = RegionsPlugin.create();
-        wavesurfer!.registerPlugin(regionsPlugin);
+        wavesurfer.registerPlugin(regionsPlugin);
 
         disableDragSelection = regionsPlugin.enableDragSelection({
           color: 'rgba(16, 185, 129, 0.2)',

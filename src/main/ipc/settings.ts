@@ -178,6 +178,7 @@ export async function registerSettingsHandlers(): Promise<void> {
   ipcMain.handle('fs:read-coordinates', async (_event, folderPath: string) => {
     const coordFile = path.join(folderPath, 'coordinates.txt');
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       const content = await fs.promises.readFile(coordFile, 'utf-8');
       const lines = content.trim().split('\n');
       // Try each line - first one that parses as lat,lon wins

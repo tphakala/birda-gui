@@ -35,5 +35,5 @@ try {
   // Settings may fail on first run — default locale (en) is fine
 }
 
-const app = mount(App, { target: document.getElementById('app')! });
+const app = mount(App, { target: document.getElementById('app') ?? document.body });
 export default app;

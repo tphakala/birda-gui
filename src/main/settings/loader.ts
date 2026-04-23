@@ -26,6 +26,7 @@ export async function loadSettings(): Promise<AppSettings> {
   };
 
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const raw = await fs.promises.readFile(settingsPath, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     // Migration: strip deprecated fields from older config files
@@ -39,6 +40,8 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSettings(settings: AppSettings): Promise<void> {
   const settingsPath = getSettingsPath();
   const tmpPath = settingsPath + '.tmp';
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   await fs.promises.writeFile(tmpPath, JSON.stringify(settings, null, 2));
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   await fs.promises.rename(tmpPath, settingsPath);
 }

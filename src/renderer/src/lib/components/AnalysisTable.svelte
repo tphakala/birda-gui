@@ -29,7 +29,6 @@
     onpage: (newOffset: number) => void;
   } = $props();
 
-  type SortableColumn = 'file_name' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
   type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
   // Derive whether any detection has timestamp metadata

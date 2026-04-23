@@ -35,6 +35,7 @@ export function buildLabelsPath(labelsPath: string, language: string): string {
   const basename = path.basename(labelsPath);
   // Match model prefix before the language suffix (e.g., "birdnet-v24" from "birdnet-v24-en.txt")
   // Language codes can be "en", "pt-BR", etc.
+  // eslint-disable-next-line security/detect-unsafe-regex
   const match = /^(.+)-[a-z]{2}(?:-[A-Za-z]+)?\.\w+$/.exec(basename);
   if (!match) return labelsPath;
   return path.join(dir, `${match[1]}-${language}.txt`);

@@ -10,7 +10,7 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState, type Tab } from '$lib/stores/app.svelte';
+  import { appState } from '$lib/stores/app.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
@@ -138,7 +138,7 @@
     const savedTab = sessionStorage.getItem('activeTabBeforeReload');
     if (savedTab) {
       console.log('[App] Restoring activeTab from sessionStorage:', savedTab);
-      appState.activeTab = savedTab as Tab;
+      appState.activeTab = savedTab;
       sessionStorage.removeItem('activeTabBeforeReload');
     }
 
