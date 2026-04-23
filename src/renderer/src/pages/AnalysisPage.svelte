@@ -92,20 +92,28 @@
       // Scan source files
       scanning = true;
       scanResult = null;
+      const pathAtStart = currentPath;
       void (async () => {
         try {
-          scanResult = await scanSource(currentPath);
+          const res = await scanSource(pathAtStart);
+          if (appState.sourcePath === pathAtStart) {
+            scanResult = res;
+          }
         } catch {
-          scanResult = null;
+          if (appState.sourcePath === pathAtStart) {
+            scanResult = null;
+          }
         } finally {
-          scanning = false;
+          if (appState.sourcePath === pathAtStart) {
+            scanning = false;
+          }
         }
       })();
       // Auto-detect coordinates
       void (async () => {
         try {
-          const coords = await readCoordinates(currentPath);
-          if (coords) {
+          const coords = await readCoordinates(pathAtStart);
+          if (coords && appState.sourcePath === pathAtStart) {
             latitude = coords.latitude;
             longitude = coords.longitude;
             autoDetected = true;

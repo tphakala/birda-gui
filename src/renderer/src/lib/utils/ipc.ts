@@ -268,7 +268,7 @@ export function resolveAllLabels(scientificNames: string[]): Promise<Record<stri
 
 // Model install progress
 export function onModelInstallProgress(callback: (line: string) => void): void {
-  window.birda.on('birda:models-install-progress', callback as (...args: unknown[]) => void);
+  window.birda.on('birda:models-install-progress', callback as unknown as (...args: unknown[]) => void);
 }
 
 export function offModelInstallProgress(): void {

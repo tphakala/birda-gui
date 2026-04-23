@@ -322,7 +322,10 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       registerProcess(child);
 
       if (!child.stdout || !child.stderr) {
-        throw new Error('Failed to initialize child process stdio pipes');
+        reject(new Error('Failed to initialize child process stdio pipes'));
+        child.kill('SIGTERM');
+        unregisterProcess(child);
+        return;
       }
 
       const rl = createInterface({ input: child.stdout });

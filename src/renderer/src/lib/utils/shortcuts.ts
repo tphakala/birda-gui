@@ -3,6 +3,10 @@ import { openFileDialog, openFolderDialog } from '$lib/utils/ipc';
 
 const VALID_TABS = new Set<Tab>(['analysis', 'detections', 'map', 'species', 'settings']);
 
+export function isTab(value: unknown): value is Tab {
+  return typeof value === 'string' && VALID_TABS.has(value as Tab);
+}
+
 export function setupMenuListeners(callbacks: {
   onOpenFile: (path: string) => void;
   onFocusSearch: () => void;
@@ -22,8 +26,8 @@ export function setupMenuListeners(callbacks: {
   };
 
   const handleSwitchTab = (...args: unknown[]) => {
-    const tab = args[0] as string;
-    if (!VALID_TABS.has(tab as Tab)) return;
+    const tab = args[0];
+    if (!isTab(tab)) return;
     if (appState.activeTab === 'settings' && appState.settingsHasUnsavedChanges) return;
     appState.activeTab = tab;
   };

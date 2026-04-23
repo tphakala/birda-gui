@@ -48,9 +48,8 @@ export class FileLabelProvider implements LabelProvider {
   private parseCsv(content: string): void {
     // Perch CSV: one scientific name per line, first line is header
     const lines = content.split('\n');
-    for (let i = 1; i < lines.length; i++) {
-      // eslint-disable-next-line security/detect-object-injection
-      const trimmed = lines[i].trim();
+    for (const line of lines.slice(1)) {
+      const trimmed = line.trim();
       if (!trimmed) continue;
       // No common name available for CSV-only models
       this.sciToCommon.set(trimmed, trimmed);

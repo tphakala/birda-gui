@@ -20,8 +20,8 @@
 
   let wavesurfer: WaveSurfer | null = null;
   let spectrogramPlugin: SpectrogramPlugin | null = null;
-  let waveformEl = $state<HTMLDivElement>(undefined as unknown as HTMLDivElement);
-  let spectrogramEl = $state<HTMLDivElement>(undefined as unknown as HTMLDivElement);
+  let waveformEl = $state<HTMLDivElement | undefined>(undefined);
+  let spectrogramEl = $state<HTMLDivElement | undefined>(undefined);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let playing = $state(false);
@@ -56,6 +56,7 @@
   const nyquist = $derived(sampleRate ? Math.floor(sampleRate / 2) : 0);
 
   function createSpectrogramPlugin() {
+    if (!spectrogramEl) return null;
     return SpectrogramPlugin.create({
       container: spectrogramEl,
       labels: true,
@@ -70,20 +71,20 @@
   }
 
   function updateSpectrogram() {
-    if (!wavesurfer) return;
+    if (!wavesurfer || !spectrogramEl) return;
     if (spectrogramPlugin) {
       spectrogramPlugin.destroy();
     }
     spectrogramEl.innerHTML = ''; // eslint-disable-line svelte/no-dom-manipulating -- wavesurfer plugin cleanup
     spectrogramPlugin = createSpectrogramPlugin();
-    wavesurfer.registerPlugin(spectrogramPlugin);
+    if (spectrogramPlugin) wavesurfer.registerPlugin(spectrogramPlugin);
     requestAnimationFrame(() => {
       cacheCurrentSpectrogram();
     });
   }
 
   function cacheCurrentSpectrogram() {
-    if (!clipFilePath) return;
+    if (!clipFilePath || !spectrogramEl) return;
     const canvas = spectrogramEl.querySelector('canvas');
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
@@ -121,6 +122,7 @@
       const normalizedPath = clipPath.replace(/\\/g, '/');
       const urlPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
 
+      if (!waveformEl || !spectrogramEl) return;
       spectrogramPlugin = createSpectrogramPlugin();
 
       wavesurfer = WaveSurfer.create({
@@ -134,7 +136,7 @@
         barRadius: 2,
         sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
         url: `birda-media://${urlPath}`,
-        plugins: [spectrogramPlugin],
+        plugins: spectrogramPlugin ? [spectrogramPlugin] : [],
       });
 
       wavesurfer.on('ready', () => {

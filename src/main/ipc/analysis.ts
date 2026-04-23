@@ -532,8 +532,10 @@ export function registerAnalysisHandlers(): void {
 
   // Spectrogram cache: check if cached PNG exists, return path or null
   ipcMain.handle('clip:get-spectrogram', async (_event, clipPath: string, freqMax: number, height: number) => {
-    const dir = path.dirname(clipPath);
-    const base = path.basename(clipPath, path.extname(clipPath));
+    if (!path.isAbsolute(clipPath)) return null;
+    const normalizedClipPath = path.normalize(clipPath);
+    const dir = path.dirname(normalizedClipPath);
+    const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
     const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
     try {
       await fs.promises.access(cachePath);

@@ -176,7 +176,10 @@ export async function registerSettingsHandlers(): Promise<void> {
   });
 
   ipcMain.handle('fs:read-coordinates', async (_event, folderPath: string) => {
-    const coordFile = path.join(folderPath, 'coordinates.txt');
+    if (!path.isAbsolute(folderPath)) {
+      return null;
+    }
+    const coordFile = path.normalize(path.join(folderPath, 'coordinates.txt'));
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       const content = await fs.promises.readFile(coordFile, 'utf-8');

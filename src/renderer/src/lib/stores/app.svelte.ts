@@ -1,10 +1,33 @@
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
-export const appState = $state({
+export interface AppState {
+  activeTab: string;
+  selectedSpecies: string | null;
+  isAnalysisRunning: boolean;
+  sourcePath: string | null;
+  selectedModel: string;
+  minConfidence: number;
+  analysisConfidence: number;
+  catalogStats: {
+    total_detections: number;
+    total_species: number;
+    total_locations: number;
+  };
+  birdaAvailable: boolean | null;
+  showLogPanel: boolean;
+  lastRunId: number | null;
+  lastSourceFile: string | null;
+  selectedRunId: number | null;
+  theme: string;
+  settingsHasUnsavedChanges: boolean;
+  selectedSpeciesListId: number | null;
+}
+
+export const appState = $state<AppState>({
   activeTab: 'analysis',
-  selectedSpecies: null as string | null,
+  selectedSpecies: null,
   isAnalysisRunning: false,
-  sourcePath: null as string | null,
+  sourcePath: null,
   selectedModel: 'birdnet-v24',
   minConfidence: 0.5,
   analysisConfidence: 0.1,
@@ -13,12 +36,12 @@ export const appState = $state({
     total_species: 0,
     total_locations: 0,
   },
-  birdaAvailable: null as boolean | null,
+  birdaAvailable: null,
   showLogPanel: false,
-  lastRunId: null as number | null,
-  lastSourceFile: null as string | null,
-  selectedRunId: null as number | null,
+  lastRunId: null,
+  lastSourceFile: null,
+  selectedRunId: null,
   theme: 'system',
   settingsHasUnsavedChanges: false,
-  selectedSpeciesListId: null as number | null,
+  selectedSpeciesListId: null,
 });
