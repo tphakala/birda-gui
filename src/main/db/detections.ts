@@ -88,7 +88,7 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
 }
 
 export function getDetections(filter: DetectionFilter): {
-  detections: (Detection & { audio_file: AudioFile })[];
+  detections: (Detection & { audio_file: AudioFile | null })[];
   total: number;
 } {
   const db = getDb();

@@ -270,7 +270,7 @@
       const wavBytes = encodeWavFromRegion(audioBuffer, activeRegion.start, activeRegion.end);
       const species = detection.common_name.replace(/[<>:"/\\|?*]/g, '_');
       let timestamp: string;
-      if (detection.audio_file.recording_start) {
+      if (detection.audio_file?.recording_start) {
         const recordingStart = new Date(detection.audio_file.recording_start);
         const actual = new Date(recordingStart.getTime() + detection.start_time * 1000);
         const y = actual.getFullYear();

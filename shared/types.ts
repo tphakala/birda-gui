@@ -186,7 +186,7 @@ export interface AudioFileMetadata {
 /** Detection enriched with common_name and audio_file data */
 export interface EnrichedDetection extends Detection {
   common_name: string;
-  audio_file: AudioFile; // NEW: joined audio file data
+  audio_file: AudioFile | null; // NEW: joined audio file data
 }
 
 export interface SpeciesSummary {

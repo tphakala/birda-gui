@@ -32,7 +32,7 @@
   type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
   // Derive whether any detection has timestamp metadata
-  const hasTimestamps = $derived(detections.some((d) => d.audio_file.recording_start !== null));
+  const hasTimestamps = $derived(detections.some((d) => d.audio_file?.recording_start !== null));
 
   // Build columns with visibility logic
   const columns = $derived<{ key: ColumnKey; label: string; class?: string; sortable: boolean; visible: boolean }[]>([
@@ -149,7 +149,7 @@
             </td>
             {#each visibleColumns as col (col.key)}
               {#if col.key === 'file_name'}
-                <td class={col.class ?? ''}>{detection.audio_file.file_name}</td>
+                <td class={col.class ?? ''}>{detection.audio_file?.file_name ?? '--'}</td>
               {:else if col.key === 'date'}
                 <td class="{col.class ?? ''} text-base-content/60 tabular-nums">{formatDetectionDate(detection)}</td>
               {:else if col.key === 'time'}
@@ -168,7 +168,7 @@
           {#if expandedId === detection.id}
             <tr>
               <td colspan={colCount} class="p-0">
-                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} />
+                <DetectionDetail {detection} sourceFile={detection.audio_file?.file_path ?? ''} />
               </td>
             </tr>
           {/if}
