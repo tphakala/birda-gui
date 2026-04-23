@@ -72,6 +72,7 @@
 {:else if scanResult?.files.length === 1}
   <!-- Single file info card -->
   {@const file = scanResult.files[0]}
+  {@const parsedNameStart = parseRecordingStart(file.name)}
   <div class="flex flex-1 flex-col p-6">
     <h3 class="text-base-content/70 mb-4 text-sm font-medium">{m.sourceFiles_sourceFile()}</h3>
     <div class="card border-base-300 bg-base-100 border p-5">
@@ -113,9 +114,10 @@
             >
           </div>
         {/if}
-        {#if file.audiomoth?.recordedAt ?? parseRecordingStart(file.name)}
+        {#if file.audiomoth?.recordedAt ?? parsedNameStart}
           {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
-          {@const recStart = isUtc ? new Date(file.audiomoth!.recordedAt!) : parseRecordingStart(file.name)!}
+          {@const recStart =
+            isUtc && file.audiomoth?.recordedAt ? new Date(file.audiomoth.recordedAt) : (parsedNameStart ?? new Date())}
           {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
           <div class="flex items-center gap-2">
             <Calendar size={14} class="text-base-content/40" />

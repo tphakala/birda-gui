@@ -13,14 +13,12 @@
     onclose: () => void;
   } = $props();
 
-  function getInitialCalendar(val: string) {
-    const d = val ? parseLocalDate(val) : new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
-  }
+  const selectedDateObj = $derived(value ? parseLocalDate(value) : null);
 
-  const initial = getInitialCalendar(value);
-  let calYear = $state(initial.year);
-  let calMonth = $state(initial.month);
+  // svelte-ignore state_referenced_locally
+  let calYear = $state(value ? parseLocalDate(value).getFullYear() : new Date().getFullYear());
+  // svelte-ignore state_referenced_locally
+  let calMonth = $state(value ? parseLocalDate(value).getMonth() : new Date().getMonth());
 
   const MONTH_NAMES = [
     m.calendar_month_january(),
@@ -76,8 +74,6 @@
 
     return days;
   });
-
-  const selectedDateObj = $derived(value ? parseLocalDate(value) : null);
 
   let dateInput = $state('');
   let dateInputError = $state(false);

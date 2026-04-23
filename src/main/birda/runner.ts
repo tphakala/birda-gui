@@ -98,6 +98,7 @@ function getCudaEnv(): Record<string, string> | undefined {
   const cudaLibsDir = path.join(app.getPath('userData'), CUDA_LIBS_DIR_NAME);
   const versionFile = path.join(cudaLibsDir, CUDA_VERSION_FILE);
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const version = fs.readFileSync(versionFile, 'utf-8').trim();
     if (version !== BIRDA_CLI_VERSION) return undefined;
     // Prepend CUDA libs to the platform-appropriate library search path
@@ -320,7 +321,14 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       });
       registerProcess(child);
 
-      const rl = createInterface({ input: child.stdout! });
+      if (!child.stdout || !child.stderr) {
+        reject(new Error('Failed to initialize child process stdio pipes'));
+        child.kill('SIGTERM');
+        unregisterProcess(child);
+        return;
+      }
+
+      const rl = createInterface({ input: child.stdout });
       rl.on('line', (line) => {
         if (!line.trim()) return;
         try {
@@ -334,7 +342,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         }
       });
 
-      child.stderr!.on('data', (chunk: Buffer) => {
+      child.stderr.on('data', (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
         if (stderrLines.length < MAX_STDERR_LINES) {
           stderrLines.push(text);

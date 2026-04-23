@@ -67,10 +67,10 @@ export function parseRecordingStart(filename: string): Date | null {
  * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */
 export function formatDetectionDate(detection: {
-  audio_file: { recording_start: string | null };
+  audio_file: { recording_start: string | null } | null;
   start_time: number;
 }): string {
-  if (!detection.audio_file.recording_start) return '--';
+  if (!detection.audio_file?.recording_start) return '--';
 
   const recordingStart = new Date(detection.audio_file.recording_start);
   const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
@@ -93,10 +93,10 @@ export function formatDetectionDate(detection: {
  * Returns: "14:30:22" (HH:MM:SS) or "--" if no timestamp
  */
 export function formatDetectionTime(detection: {
-  audio_file: { recording_start: string | null };
+  audio_file: { recording_start: string | null } | null;
   start_time: number;
 }): string {
-  if (!detection.audio_file.recording_start) return '--';
+  if (!detection.audio_file?.recording_start) return '--';
 
   const recordingStart = new Date(detection.audio_file.recording_start);
   const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);

@@ -32,12 +32,26 @@ export function resolveAll(scientificNames: string[]): Map<string, string> {
  */
 export function buildLabelsPath(labelsPath: string, language: string): string {
   const dir = path.dirname(labelsPath);
-  const basename = path.basename(labelsPath);
-  // Match model prefix before the language suffix (e.g., "birdnet-v24" from "birdnet-v24-en.txt")
-  // Language codes can be "en", "pt-BR", etc.
-  const match = /^(.+)-[a-z]{2}(?:-[A-Za-z]+)?\.\w+$/.exec(basename);
-  if (!match) return labelsPath;
-  return path.join(dir, `${match[1]}-${language}.txt`);
+  const ext = path.extname(labelsPath);
+  const basename = path.basename(labelsPath, ext);
+
+  const parts = basename.split('-');
+  if (parts.length < 2) return labelsPath;
+
+  const lastPart = parts[parts.length - 1];
+  const secondToLastPart = parts.length >= 3 ? parts[parts.length - 2] : '';
+  let langParts: number;
+
+  if (parts.length >= 3 && /^[a-z]{2}$/.test(secondToLastPart) && /^[A-Za-z]+$/.test(lastPart)) {
+    langParts = 2;
+  } else if (/^[a-z]{2}$/.test(lastPart)) {
+    langParts = 1;
+  } else {
+    return labelsPath; // Doesn't match pattern
+  }
+
+  const prefixStr = parts.slice(0, parts.length - langParts).join('-');
+  return path.join(dir, `${prefixStr}-${language}${ext}`);
 }
 
 /**

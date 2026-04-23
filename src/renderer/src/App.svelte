@@ -10,7 +10,7 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState, type Tab } from '$lib/stores/app.svelte';
+  import { appState } from '$lib/stores/app.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
@@ -33,7 +33,7 @@
     onShowLicenses,
     offShowLicenses,
   } from '$lib/utils/ipc';
-  import { setupMenuListeners } from '$lib/utils/shortcuts';
+  import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
   import { onMount, onDestroy } from 'svelte';
 
   let cleanupMenu: (() => void) | null = null;
@@ -136,9 +136,9 @@
   onMount(() => {
     // Restore active tab after locale change reload
     const savedTab = sessionStorage.getItem('activeTabBeforeReload');
-    if (savedTab) {
+    if (isTab(savedTab)) {
       console.log('[App] Restoring activeTab from sessionStorage:', savedTab);
-      appState.activeTab = savedTab as Tab;
+      appState.activeTab = savedTab;
       sessionStorage.removeItem('activeTabBeforeReload');
     }
 

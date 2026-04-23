@@ -161,9 +161,13 @@ export function registerAnalysisHandlers(): void {
 
     // Lock immediately with placeholder to prevent race condition
     const placeholderHandle: AnalysisHandle = {
-      cancel: () => {},
+      cancel: () => {
+        /* no-op */
+      },
       promise: Promise.resolve(),
-      on: () => {},
+      on: () => {
+        /* no-op */
+      },
       stderrLog: () => '',
     };
     currentAnalysis = placeholderHandle;
@@ -176,6 +180,7 @@ export function registerAnalysisHandlers(): void {
 
     try {
       // Detect if source is directory
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       const sourceStat = await fs.promises.stat(request.source_path);
       const isDirectory = sourceStat.isDirectory();
 
@@ -469,6 +474,7 @@ export function registerAnalysisHandlers(): void {
       const birdaPath = await findBirda();
 
       // Ensure output directory exists
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.promises.mkdir(outputDir, { recursive: true });
 
       const args = [
@@ -518,6 +524,7 @@ export function registerAnalysisHandlers(): void {
       const base = path.basename(clipPath, path.extname(clipPath));
       const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.promises.writeFile(cachePath, Buffer.from(base64, 'base64'));
       return cachePath;
     },
@@ -525,8 +532,10 @@ export function registerAnalysisHandlers(): void {
 
   // Spectrogram cache: check if cached PNG exists, return path or null
   ipcMain.handle('clip:get-spectrogram', async (_event, clipPath: string, freqMax: number, height: number) => {
-    const dir = path.dirname(clipPath);
-    const base = path.basename(clipPath, path.extname(clipPath));
+    if (!path.isAbsolute(clipPath)) return null;
+    const normalizedClipPath = path.normalize(clipPath);
+    const dir = path.dirname(normalizedClipPath);
+    const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
     const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
     try {
       await fs.promises.access(cachePath);
@@ -551,6 +560,7 @@ export function registerAnalysisHandlers(): void {
       return null;
     }
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.promises.writeFile(result.filePath, wavBytes);
     return result.filePath;
   });

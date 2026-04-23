@@ -14,6 +14,7 @@ export class FileLabelProvider implements LabelProvider {
   private loaded = false;
 
   async load(filePath: string): Promise<void> {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const content = await fs.promises.readFile(filePath, 'utf-8');
     const ext = path.extname(filePath).toLowerCase();
 
@@ -47,8 +48,8 @@ export class FileLabelProvider implements LabelProvider {
   private parseCsv(content: string): void {
     // Perch CSV: one scientific name per line, first line is header
     const lines = content.split('\n');
-    for (let i = 1; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
+    for (const line of lines.slice(1)) {
+      const trimmed = line.trim();
       if (!trimmed) continue;
       // No common name available for CSV-only models
       this.sciToCommon.set(trimmed, trimmed);

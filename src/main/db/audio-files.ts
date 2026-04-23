@@ -1,5 +1,5 @@
 import { getDb } from './database';
-import type { AudioFile, AudioFileMetadata } from '$shared/types';
+import type { AudioFileMetadata } from '$shared/types';
 import path from 'path';
 
 /**

@@ -268,7 +268,7 @@ export function resolveAllLabels(scientificNames: string[]): Promise<Record<stri
 
 // Model install progress
 export function onModelInstallProgress(callback: (line: string) => void): void {
-  window.birda.on('birda:models-install-progress', callback as (...args: unknown[]) => void);
+  window.birda.on('birda:models-install-progress', callback as unknown as (...args: unknown[]) => void);
 }
 
 export function offModelInstallProgress(): void {
@@ -277,7 +277,7 @@ export function offModelInstallProgress(): void {
 
 // Menu events
 export function onSetupWizard(callback: () => void): void {
-  window.birda.on('menu:setup-wizard', callback as (...args: unknown[]) => void);
+  window.birda.on('menu:setup-wizard', callback);
 }
 
 export function offSetupWizard(): void {
@@ -295,7 +295,7 @@ export function getLicenses(): Promise<string | null> {
 }
 
 export function onShowLicenses(callback: () => void): void {
-  window.birda.on('menu:show-licenses', callback as (...args: unknown[]) => void);
+  window.birda.on('menu:show-licenses', callback);
 }
 
 export function offShowLicenses(): void {

@@ -20,8 +20,8 @@
 
   let wavesurfer: WaveSurfer | null = null;
   let spectrogramPlugin: SpectrogramPlugin | null = null;
-  let waveformEl = $state<HTMLDivElement>(undefined!);
-  let spectrogramEl = $state<HTMLDivElement>(undefined!);
+  let waveformEl = $state<HTMLDivElement | undefined>(undefined);
+  let spectrogramEl = $state<HTMLDivElement | undefined>(undefined);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let playing = $state(false);
@@ -56,6 +56,7 @@
   const nyquist = $derived(sampleRate ? Math.floor(sampleRate / 2) : 0);
 
   function createSpectrogramPlugin() {
+    if (!spectrogramEl) return null;
     return SpectrogramPlugin.create({
       container: spectrogramEl,
       labels: true,
@@ -70,20 +71,20 @@
   }
 
   function updateSpectrogram() {
-    if (!wavesurfer) return;
+    if (!wavesurfer || !spectrogramEl) return;
     if (spectrogramPlugin) {
       spectrogramPlugin.destroy();
     }
     spectrogramEl.innerHTML = ''; // eslint-disable-line svelte/no-dom-manipulating -- wavesurfer plugin cleanup
     spectrogramPlugin = createSpectrogramPlugin();
-    wavesurfer.registerPlugin(spectrogramPlugin);
+    if (spectrogramPlugin) wavesurfer.registerPlugin(spectrogramPlugin);
     requestAnimationFrame(() => {
       cacheCurrentSpectrogram();
     });
   }
 
   function cacheCurrentSpectrogram() {
-    if (!clipFilePath) return;
+    if (!clipFilePath || !spectrogramEl) return;
     const canvas = spectrogramEl.querySelector('canvas');
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
@@ -121,6 +122,7 @@
       const normalizedPath = clipPath.replace(/\\/g, '/');
       const urlPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
 
+      if (!waveformEl || !spectrogramEl) return;
       spectrogramPlugin = createSpectrogramPlugin();
 
       wavesurfer = WaveSurfer.create({
@@ -134,20 +136,21 @@
         barRadius: 2,
         sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
         url: `birda-media://${urlPath}`,
-        plugins: [spectrogramPlugin],
+        plugins: spectrogramPlugin ? [spectrogramPlugin] : [],
       });
 
       wavesurfer.on('ready', () => {
+        if (!wavesurfer) return;
         loading = false;
-        duration = wavesurfer!.getDuration();
-        sampleRate = wavesurfer!.getDecodedData()?.sampleRate ?? 0;
+        duration = wavesurfer.getDuration();
+        sampleRate = wavesurfer.getDecodedData()?.sampleRate ?? 0;
         requestAnimationFrame(() => {
           cacheCurrentSpectrogram();
         });
 
         // Connect media element through Web Audio GainNode for >1.0 boost
         try {
-          const mediaEl = wavesurfer!.getMediaElement();
+          const mediaEl = wavesurfer.getMediaElement();
           audioContext = new AudioContext();
           const source = audioContext.createMediaElementSource(mediaEl);
           gainNode = audioContext.createGain();
@@ -160,7 +163,7 @@
 
         // Initialize regions plugin for drag-to-select
         regionsPlugin = RegionsPlugin.create();
-        wavesurfer!.registerPlugin(regionsPlugin);
+        wavesurfer.registerPlugin(regionsPlugin);
 
         disableDragSelection = regionsPlugin.enableDragSelection({
           color: 'rgba(16, 185, 129, 0.2)',
@@ -267,7 +270,7 @@
       const wavBytes = encodeWavFromRegion(audioBuffer, activeRegion.start, activeRegion.end);
       const species = detection.common_name.replace(/[<>:"/\\|?*]/g, '_');
       let timestamp: string;
-      if (detection.audio_file.recording_start) {
+      if (detection.audio_file?.recording_start) {
         const recordingStart = new Date(detection.audio_file.recording_start);
         const actual = new Date(recordingStart.getTime() + detection.start_time * 1000);
         const y = actual.getFullYear();

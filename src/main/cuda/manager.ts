@@ -46,6 +46,7 @@ function calculateDirSize(dirPath: string): number {
   let total = 0;
   let entries: fs.Dirent[];
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     entries = fs.readdirSync(dirPath, { withFileTypes: true });
   } catch {
     return 0; // Directory doesn't exist or can't be read
@@ -56,6 +57,7 @@ function calculateDirSize(dirPath: string): number {
       if (entry.isDirectory()) {
         total += calculateDirSize(fullPath);
       } else {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         total += fs.statSync(fullPath).size;
       }
     } catch {
@@ -88,6 +90,7 @@ export async function getCudaStatus(): Promise<CudaStatus> {
 
   try {
     fs.accessSync(versionFile);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     version = fs.readFileSync(versionFile, 'utf-8').trim();
     // Only consider installed if version matches the expected CLI version
     installed = version === BIRDA_CLI_VERSION;
@@ -180,6 +183,7 @@ function getPlatformKey(): 'windows-x64' | 'linux-x64' {
 
 function cleanupArchive(archivePath: string): void {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.unlinkSync(archivePath);
   } catch {
     // File may not exist or already deleted
@@ -208,6 +212,7 @@ export async function downloadCudaLibs(
     if (downloadCancelled) throw new Error('Download cancelled by user');
 
     const platformKey = getPlatformKey();
+    // eslint-disable-next-line security/detect-object-injection
     const assetName = manifest.assets.cuda_libs[platformKey];
 
     if (!assetName) {
@@ -218,6 +223,7 @@ export async function downloadCudaLibs(
 
     const downloadUrl = `https://github.com/${BIRDA_REPO}/releases/download/v${version}/${assetName}`;
     const cudaDir = getCudaLibsDir();
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.mkdirSync(cudaDir, { recursive: true });
 
     archivePath = path.join(cudaDir, assetName);
@@ -241,6 +247,7 @@ export async function downloadCudaLibs(
       onProgress(downloaded, total, 'downloading');
     });
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const fileStream = fs.createWriteStream(archivePath);
     await pipeline(res, progress, fileStream);
     activeRequest = null;
@@ -267,6 +274,7 @@ export async function downloadCudaLibs(
     // Write version file
     onProgress(0, 0, 'verifying');
     const versionFile = path.join(cudaDir, CUDA_VERSION_FILE);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.writeFileSync(versionFile, version, 'utf-8');
 
     const diskUsageBytes = calculateDirSize(cudaDir);
@@ -321,6 +329,7 @@ export async function getCudaDownloadSize(version: string): Promise<number> {
   try {
     const manifest = await fetchManifest(version);
     const platformKey = getPlatformKey();
+    // eslint-disable-next-line security/detect-object-injection
     const assetName = manifest.assets.cuda_libs[platformKey];
 
     if (!assetName) return 0;

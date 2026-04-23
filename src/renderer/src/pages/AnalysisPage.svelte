@@ -86,25 +86,34 @@
   // Auto-detect coordinates and scan files when source path changes
   let prevSourcePath: string | null = null;
   $effect(() => {
-    if (appState.sourcePath && appState.sourcePath !== prevSourcePath) {
-      prevSourcePath = appState.sourcePath;
+    const currentPath = appState.sourcePath;
+    if (currentPath && currentPath !== prevSourcePath) {
+      prevSourcePath = currentPath;
       // Scan source files
       scanning = true;
       scanResult = null;
+      const pathAtStart = currentPath;
       void (async () => {
         try {
-          scanResult = await scanSource(appState.sourcePath!);
+          const res = await scanSource(pathAtStart);
+          if (appState.sourcePath === pathAtStart) {
+            scanResult = res;
+          }
         } catch {
-          scanResult = null;
+          if (appState.sourcePath === pathAtStart) {
+            scanResult = null;
+          }
         } finally {
-          scanning = false;
+          if (appState.sourcePath === pathAtStart) {
+            scanning = false;
+          }
         }
       })();
       // Auto-detect coordinates
       void (async () => {
         try {
-          const coords = await readCoordinates(appState.sourcePath!);
-          if (coords) {
+          const coords = await readCoordinates(pathAtStart);
+          if (coords && appState.sourcePath === pathAtStart) {
             latitude = coords.latitude;
             longitude = coords.longitude;
             autoDetected = true;
@@ -113,7 +122,7 @@
           // No coordinates file found
         }
       })();
-    } else if (!appState.sourcePath) {
+    } else if (!currentPath) {
       prevSourcePath = null;
       scanResult = null;
       scanning = false;

@@ -22,7 +22,9 @@ export function createRun(
     settingsJson ?? null,
     timezoneOffsetMin ?? null,
   );
-  return getRunById(result.lastInsertRowid as number)!;
+  const run = getRunById(result.lastInsertRowid as number);
+  if (!run) throw new Error('Failed to create run');
+  return run;
 }
 
 export function updateRunStatus(id: number, status: AnalysisRun['status']): void {

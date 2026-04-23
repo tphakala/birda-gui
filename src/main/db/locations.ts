@@ -10,7 +10,9 @@ export function createLocation(
   const db = getDb();
   const stmt = db.prepare('INSERT INTO locations (name, latitude, longitude, description) VALUES (?, ?, ?, ?)');
   const result = stmt.run(name ?? null, latitude, longitude, description ?? null);
-  return getLocationById(result.lastInsertRowid as number)!;
+  const location = getLocationById(result.lastInsertRowid as number);
+  if (!location) throw new Error('Failed to create location');
+  return location;
 }
 
 export function getLocations(): Location[] {

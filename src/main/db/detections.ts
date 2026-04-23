@@ -88,7 +88,7 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
 }
 
 export function getDetections(filter: DetectionFilter): {
-  detections: (Detection & { audio_file: AudioFile })[];
+  detections: (Detection & { audio_file: AudioFile | null })[];
   total: number;
 } {
   const db = getDb();
@@ -178,22 +178,25 @@ export function getDetections(filter: DetectionFilter): {
     confidence: row.confidence,
     clip_path: row.clip_path,
     detected_at: row.detected_at,
-    audio_file: {
-      id: row.af_id!,
-      run_id: row.run_id,
-      file_path: row.af_file_path!,
-      file_name: row.af_file_name!,
-      recording_start: row.af_recording_start,
-      timezone_offset_min: row.af_timezone_offset_min,
-      duration_sec: row.af_duration_sec,
-      sample_rate: row.af_sample_rate,
-      channels: row.af_channels,
-      audiomoth_device_id: row.af_audiomoth_device_id,
-      audiomoth_gain: row.af_audiomoth_gain,
-      audiomoth_battery_v: row.af_audiomoth_battery_v,
-      audiomoth_temperature_c: row.af_audiomoth_temperature_c,
-      created_at: row.af_created_at!,
-    },
+    audio_file:
+      row.af_id !== null
+        ? {
+            id: row.af_id,
+            run_id: row.run_id,
+            file_path: row.af_file_path ?? '',
+            file_name: row.af_file_name ?? '',
+            recording_start: row.af_recording_start,
+            timezone_offset_min: row.af_timezone_offset_min,
+            duration_sec: row.af_duration_sec,
+            sample_rate: row.af_sample_rate,
+            channels: row.af_channels,
+            audiomoth_device_id: row.af_audiomoth_device_id,
+            audiomoth_gain: row.af_audiomoth_gain,
+            audiomoth_battery_v: row.af_audiomoth_battery_v,
+            audiomoth_temperature_c: row.af_audiomoth_temperature_c,
+            created_at: row.af_created_at ?? '',
+          }
+        : null,
   }));
 
   return { detections, total };
@@ -347,6 +350,7 @@ export function updateDetectionClipPath(id: number, clipPath: string): void {
 async function readJsonWithRetry(jsonPath: string, maxRetries = JSON_READ_RETRIES): Promise<string> {
   for (let i = 0; i < maxRetries; i++) {
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       return await fs.promises.readFile(jsonPath, 'utf-8');
     } catch (err) {
       if (i === maxRetries - 1) throw err;

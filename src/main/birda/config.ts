@@ -29,6 +29,7 @@ async function readRegistry(): Promise<Registry> {
   const configPath = await getConfigPath();
   const configDir = path.dirname(configPath);
   const registryPath = path.join(configDir, 'registry.json');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const raw = await fs.promises.readFile(registryPath, 'utf-8');
   return JSON.parse(raw) as Registry;
 }

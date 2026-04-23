@@ -69,7 +69,7 @@
       }
       birdaStatus = await checkBirda();
     } catch (e) {
-      birdaStatus = { available: false, error: (e as Error).message } as BirdaCheckResponse;
+      birdaStatus = { available: false, error: (e as Error).message };
     }
   }
 
@@ -81,7 +81,7 @@
         await setSettings({ birda_path: path });
         birdaStatus = await checkBirda();
       } catch (e) {
-        birdaStatus = { available: false, error: (e as Error).message } as BirdaCheckResponse;
+        birdaStatus = { available: false, error: (e as Error).message };
       }
     }
   }
@@ -158,6 +158,7 @@
   // --- Species Language ---
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let selectedLanguage = $state('en');
+  let languagesError = $state<string | null>(null);
 
   // --- Lifecycle ---
   onMount(async () => {
@@ -197,7 +198,9 @@
     if (currentStep === 'language' && availableLanguages.length === 0 && birdaStatus?.available) {
       void getAvailableLanguages()
         .then((langs) => (availableLanguages = langs))
-        .catch(() => {});
+        .catch((e: unknown) => {
+          languagesError = e instanceof Error ? e.message : String(e);
+        });
     }
   });
 
@@ -496,6 +499,12 @@
       <div class="text-center">
         <h2 class="text-xl font-bold">{m.wizard_language_title()}</h2>
         <p class="text-base-content/60 mt-1 text-sm">{m.wizard_language_subtitle()}</p>
+
+        {#if languagesError}
+          <div role="alert" class="alert alert-error mx-auto mt-4 max-w-sm">
+            <span class="text-sm">{languagesError}</span>
+          </div>
+        {/if}
 
         <div class="card bg-base-200 mx-auto mt-8 max-w-sm text-left">
           <div class="card-body p-6">

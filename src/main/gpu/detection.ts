@@ -100,6 +100,7 @@ export async function detectGpuCapabilities(birdaPath?: string): Promise<GpuCapa
     const nvidiaSmiFound = await checkNvidiaSmi();
     let downloadedCudaFound = false;
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       const version = fs.readFileSync(path.join(getCudaLibsDir(), CUDA_VERSION_FILE), 'utf-8').trim();
       downloadedCudaFound = version === BIRDA_CLI_VERSION;
     } catch {

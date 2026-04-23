@@ -9,6 +9,7 @@ export function registerLicenseHandlers(): void {
       : path.join(app.getAppPath(), 'THIRD_PARTY_LICENSES.txt');
 
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       return await fs.promises.readFile(licensePath, 'utf-8');
     } catch {
       return null;

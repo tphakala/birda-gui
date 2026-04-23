@@ -12,6 +12,7 @@ function isAudioFile(filePath: string): boolean {
 /** Parse a timezone suffix like "+3", "-5", "+5:30" into minutes offset from UTC. */
 function parseTimezoneOffset(tz: string | undefined): number {
   if (!tz) return 0; // bare "(UTC)" → offset 0
+  // eslint-disable-next-line security/detect-unsafe-regex
   const m = /^([+-])(\d{1,2})(?::(\d{2}))?$/.exec(tz);
   if (!m) return 0;
   const sign = m[1] === '+' ? 1 : -1;
@@ -51,6 +52,7 @@ function parseAudioMothComment(comment: string | undefined, artist: string | und
 
   if (comment) {
     // "Recorded at 11:38:05 01/01/2025 (UTC)" or "(UTC+3)" or "(UTC-5:30)"
+    // eslint-disable-next-line security/detect-unsafe-regex
     const timeMatch = /Recorded at (\d{2}:\d{2}:\d{2}) (\d{2})\/(\d{2})\/(\d{4}) \(UTC([+-]\d{1,2}(?::\d{2})?)?\)/.exec(
       comment,
     );
@@ -148,11 +150,13 @@ export async function getAudioMetadata(filePath: string): Promise<AudioMeta> {
 
 export function registerFileHandlers(): void {
   ipcMain.handle('fs:scan-source', async (_event, sourcePath: string): Promise<SourceScanResult> => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const stat = await fs.promises.stat(sourcePath);
     const isFolder = stat.isDirectory();
 
     let filePaths: string[];
     if (isFolder) {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       const entries = await fs.promises.readdir(sourcePath, { withFileTypes: true });
       filePaths = entries
         .filter((e) => e.isFile() && isAudioFile(e.name))
@@ -168,6 +172,7 @@ export function registerFileHandlers(): void {
       const batch = filePaths.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         batch.map(async (fp) => {
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           const [fileStat, meta] = await Promise.all([fs.promises.stat(fp), getAudioMetadata(fp)]);
           return {
             path: fp,
