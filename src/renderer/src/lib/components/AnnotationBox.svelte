@@ -21,17 +21,19 @@
 
   const edges = ['left', 'right', 'top', 'bottom'] as const;
 
+  // Bright colors with stronger fills: these sit on top of a dark spectrogram,
+  // where the dark brand primary is nearly invisible (accepted uses info instead).
   const colorClass = $derived(
     box.display === 'suggested'
-      ? 'border-warning bg-warning/10'
+      ? 'border-warning bg-warning/20'
       : box.display === 'manual'
-        ? 'border-success bg-success/10'
-        : 'border-primary bg-primary/10',
+        ? 'border-success bg-success/20'
+        : 'border-info bg-info/20',
   );
 </script>
 
 <div
-  class="absolute box-border cursor-move border-2 {colorClass} {selected ? 'ring-2 ring-offset-1' : ''}"
+  class="absolute box-border cursor-move border-2 {colorClass} {selected ? 'ring-2 ring-white/90' : ''}"
   style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px;"
   role="button"
   tabindex="0"

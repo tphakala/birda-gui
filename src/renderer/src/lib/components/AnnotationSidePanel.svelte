@@ -10,8 +10,24 @@
   } from '$lib/stores/annotation.svelte';
   import SpeciesSearch from './SpeciesSearch.svelte';
   import { formatConfidence } from '$lib/utils/format';
+  import { searchByCommonName, resolveAllLabels } from '$lib/utils/ipc';
   import type { EnrichedSpeciesSummary } from '$shared/types';
   import * as m from '$paraglide/messages';
+
+  /** Search the full model label list (not just detected species) so manual boxes can name any species. */
+  async function searchAllLabels(query: string): Promise<EnrichedSpeciesSummary[]> {
+    const scientific = (await searchByCommonName(query)).slice(0, 20);
+    if (scientific.length === 0) return [];
+    const common = await resolveAllLabels(scientific);
+    return scientific.map((scientific_name) => ({
+      scientific_name,
+      common_name: common[scientific_name] ?? scientific_name,
+      location_count: 0,
+      detection_count: 0,
+      last_detected: '',
+      avg_confidence: 0,
+    }));
+  }
 
   const selected = $derived(getSelectedBox());
 
@@ -35,6 +51,8 @@
             onSpeciesSelect(selected.key, s);
           }}
           onclear={noop}
+          search={searchAllLabels}
+          placeholder={m.annotation_searchSpecies()}
         />
         <div class="text-base-content/70 mt-1">
           {selected.common_name || selected.scientific_name || m.annotation_unnamed()}
@@ -100,7 +118,7 @@
               ? 'bg-warning'
               : box.display === 'manual'
                 ? 'bg-success'
-                : 'bg-primary'}"
+                : 'bg-info'}"
           ></span>
           <span class="truncate">{box.common_name || box.scientific_name || m.annotation_unnamed()}</span>
           <span class="text-base-content/60 ml-auto tabular-nums">{box.start_time.toFixed(1)}s</span>

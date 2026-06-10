@@ -432,5 +432,6 @@
   "annotation_remove": "Remove",
   "annotation_list_title": "Annotations",
   "annotation_annotateFile": "Annotate file",
-  "annotation_annotate": "Annotate"
+  "annotation_annotate": "Annotate",
+  "annotation_searchSpecies": "Search species to assign..."
 }

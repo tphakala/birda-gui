@@ -51,18 +51,20 @@
   });
 
   let zoomPxPerSec = 0; // 0 => fit to width
-  function currentZoomWidth(): number {
-    if (zoomPxPerSec > 0) return zoomPxPerSec * duration;
-    return waveformEl?.clientWidth ?? 0;
-  }
 
   function refreshViewport(): void {
     if (!wavesurfer) return;
-    // wavesurfer v7 exposes getScroll() (pixels). pxPerSecond derives from rendered width / duration.
     scrollLeft = wavesurfer.getScroll();
-    const wrapperWidth = waveformEl?.clientWidth ?? 0;
-    // When zoomed, the rendered content width is duration * minPxPerSec; otherwise it fits the wrapper.
-    pxPerSecond = duration > 0 ? Math.max(wrapperWidth, currentZoomWidth()) / duration : 1;
+    // Anchor the time scale to wavesurfer's actually rendered content width
+    // (scrollWidth covers the zoomed case; clientWidth the fit-to-width case)
+    // instead of estimating from zoom level, so boxes cannot drift from the audio.
+    const wsWrapper = wavesurfer.getWrapper();
+    const contentWidth = Math.max(wsWrapper.scrollWidth, wsWrapper.clientWidth);
+    pxPerSecond = duration > 0 && contentWidth > 0 ? contentWidth / duration : 1;
+    // The spectrogram is mounted outside wavesurfer's scroll container, so it
+    // does not scroll natively; mirror wavesurfer's horizontal scroll onto it.
+    const pluginWrapper = spectrogramEl?.firstElementChild;
+    if (pluginWrapper instanceof HTMLElement) pluginWrapper.scrollLeft = scrollLeft;
   }
 
   /**
@@ -215,9 +217,9 @@
       // The zoom render lands on the next frame; only then is the new scroll width valid.
       requestAnimationFrame(() => {
         if (!wavesurfer) return;
+        refreshViewport(); // pick up the post-zoom content width
         const wrapperWidth = waveformEl?.clientWidth ?? 0;
-        const newPxPerSec = Math.max(wrapperWidth, next * duration) / duration;
-        wavesurfer.setScroll(Math.max(0, anchorTime * newPxPerSec - wrapperWidth / 2));
+        wavesurfer.setScroll(Math.max(0, anchorTime * pxPerSecond - wrapperWidth / 2));
         refreshViewport();
       });
     }
