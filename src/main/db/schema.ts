@@ -63,6 +63,25 @@ CREATE INDEX IF NOT EXISTS idx_audio_files_path ON audio_files(file_path);
 CREATE INDEX IF NOT EXISTS idx_audio_files_device ON audio_files(audiomoth_device_id);
 CREATE INDEX IF NOT EXISTS idx_audio_files_recording_start ON audio_files(recording_start);
 
+CREATE TABLE IF NOT EXISTS annotations (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
+    detection_id    INTEGER REFERENCES detections(id) ON DELETE SET NULL,
+    start_time      REAL NOT NULL,
+    end_time        REAL NOT NULL,
+    low_freq_hz     REAL,
+    high_freq_hz    REAL,
+    scientific_name TEXT NOT NULL,
+    confidence      REAL,
+    source          TEXT NOT NULL CHECK (source IN ('birda', 'manual')),
+    status          TEXT NOT NULL CHECK (status IN ('accepted', 'rejected', 'manual')),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_annotations_audio_file ON annotations(audio_file_id);
+CREATE INDEX IF NOT EXISTS idx_annotations_detection ON annotations(detection_id);
+
 CREATE VIEW IF NOT EXISTS species_summary AS
 SELECT
     scientific_name,

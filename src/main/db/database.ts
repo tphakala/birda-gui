@@ -401,6 +401,32 @@ function runMigrations(db: Database.Database): void {
 
     db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(6);
   }
+
+  // Migration 7: Add annotations table
+  if (!applied.has(7)) {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS annotations (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
+          detection_id    INTEGER REFERENCES detections(id) ON DELETE SET NULL,
+          start_time      REAL NOT NULL,
+          end_time        REAL NOT NULL,
+          low_freq_hz     REAL,
+          high_freq_hz    REAL,
+          scientific_name TEXT NOT NULL,
+          confidence      REAL,
+          source          TEXT NOT NULL CHECK (source IN ('birda', 'manual')),
+          status          TEXT NOT NULL CHECK (status IN ('accepted', 'rejected', 'manual')),
+          created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_annotations_audio_file ON annotations(audio_file_id);
+        CREATE INDEX IF NOT EXISTS idx_annotations_detection ON annotations(detection_id);
+      `);
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(7);
+    })();
+  }
 }
 
 export function clearDatabase(): { detections: number; runs: number; locations: number } {
