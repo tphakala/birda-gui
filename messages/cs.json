@@ -413,5 +413,25 @@
   "grid_less": "Méně",
   "grid_more": "Více",
 
-  "pagination_speciesCount": "{count} druhů"
+  "pagination_speciesCount": "{count} druhů",
+
+  "annotation_editor_title": "Editor anotací",
+  "annotation_overlay_label": "Vrstva anotací",
+  "annotation_play": "Přehrát / pozastavit",
+  "annotation_zoomIn": "Přiblížit",
+  "annotation_zoomOut": "Oddálit",
+  "annotation_drawHint": "Tažením po spektrogramu nakreslíte novou anotaci",
+  "annotation_panel_title": "Vybraná anotace",
+  "annotation_panel_empty": "Vyberte nebo nakreslete anotaci, kterou chcete upravit",
+  "annotation_field_species": "Druh",
+  "annotation_field_time": "Čas: {start} s - {end} s",
+  "annotation_field_freq": "Frekvence: {low} - {high} kHz",
+  "annotation_freq_full": "Frekvence: celý rozsah",
+  "annotation_unnamed": "(beze jména)",
+  "annotation_accept": "Přijmout",
+  "annotation_remove": "Odebrat",
+  "annotation_list_title": "Anotace",
+  "annotation_annotateFile": "Anotovat soubor",
+  "annotation_annotate": "Anotovat",
+  "annotation_searchSpecies": "Vyhledejte druh k přiřazení..."
 }

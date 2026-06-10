@@ -413,5 +413,25 @@
   "grid_less": "Kevesebb",
   "grid_more": "Több",
 
-  "pagination_speciesCount": "{count} faj"
+  "pagination_speciesCount": "{count} faj",
+
+  "annotation_editor_title": "Annotációszerkesztő",
+  "annotation_overlay_label": "Annotációs réteg",
+  "annotation_play": "Lejátszás / szünet",
+  "annotation_zoomIn": "Nagyítás",
+  "annotation_zoomOut": "Kicsinyítés",
+  "annotation_drawHint": "Húzással rajzolhat új annotációt a spektrogramra",
+  "annotation_panel_title": "Kiválasztott annotáció",
+  "annotation_panel_empty": "Válasszon ki vagy rajzoljon egy annotációt a szerkesztéshez",
+  "annotation_field_species": "Faj",
+  "annotation_field_time": "Idő: {start}s - {end}s",
+  "annotation_field_freq": "Frekvencia: {low} - {high} kHz",
+  "annotation_freq_full": "Frekvencia: teljes tartomány",
+  "annotation_unnamed": "(névtelen)",
+  "annotation_accept": "Elfogadás",
+  "annotation_remove": "Eltávolítás",
+  "annotation_list_title": "Annotációk",
+  "annotation_annotateFile": "Fájl annotálása",
+  "annotation_annotate": "Annotálás",
+  "annotation_searchSpecies": "Hozzárendelendő faj keresése..."
 }

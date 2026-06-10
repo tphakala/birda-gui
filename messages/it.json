@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} rilevamento",
   "grid_less": "Meno",
   "grid_more": "Più",
-  "pagination_speciesCount": "{count} specie"
+  "pagination_speciesCount": "{count} specie",
+
+  "annotation_editor_title": "Editor di annotazioni",
+  "annotation_overlay_label": "Livello annotazioni",
+  "annotation_play": "Riproduci / pausa",
+  "annotation_zoomIn": "Ingrandisci",
+  "annotation_zoomOut": "Riduci",
+  "annotation_drawHint": "Trascina sullo spettrogramma per disegnare una nuova annotazione",
+  "annotation_panel_title": "Annotazione selezionata",
+  "annotation_panel_empty": "Seleziona o disegna un'annotazione per modificarla",
+  "annotation_field_species": "Specie",
+  "annotation_field_time": "Tempo: {start}s - {end}s",
+  "annotation_field_freq": "Frequenza: {low} - {high} kHz",
+  "annotation_freq_full": "Frequenza: intervallo completo",
+  "annotation_unnamed": "(senza nome)",
+  "annotation_accept": "Accetta",
+  "annotation_remove": "Rimuovi",
+  "annotation_list_title": "Annotazioni",
+  "annotation_annotateFile": "Annota file",
+  "annotation_annotate": "Annota",
+  "annotation_searchSpecies": "Cerca la specie da assegnare..."
 }

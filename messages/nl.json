@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} detectie",
   "grid_less": "Minder",
   "grid_more": "Meer",
-  "pagination_speciesCount": "{count} soorten"
+  "pagination_speciesCount": "{count} soorten",
+
+  "annotation_editor_title": "Annotatie-editor",
+  "annotation_overlay_label": "Annotatielaag",
+  "annotation_play": "Afspelen / pauzeren",
+  "annotation_zoomIn": "Inzoomen",
+  "annotation_zoomOut": "Uitzoomen",
+  "annotation_drawHint": "Sleep over het spectrogram om een nieuwe annotatie te tekenen",
+  "annotation_panel_title": "Geselecteerde annotatie",
+  "annotation_panel_empty": "Selecteer of teken een annotatie om deze te bewerken",
+  "annotation_field_species": "Soort",
+  "annotation_field_time": "Tijd: {start}s - {end}s",
+  "annotation_field_freq": "Frequentie: {low} - {high} kHz",
+  "annotation_freq_full": "Frequentie: volledig bereik",
+  "annotation_unnamed": "(naamloos)",
+  "annotation_accept": "Accepteren",
+  "annotation_remove": "Verwijderen",
+  "annotation_list_title": "Annotaties",
+  "annotation_annotateFile": "Bestand annoteren",
+  "annotation_annotate": "Annoteren",
+  "annotation_searchSpecies": "Zoek een soort om toe te wijzen..."
 }
