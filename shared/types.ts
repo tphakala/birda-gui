@@ -279,6 +279,7 @@ export interface DetectionFilter {
   location_id?: number | undefined;
   min_confidence?: number | undefined;
   run_id?: number | undefined;
+  audio_file_id?: number | undefined;
   species_list_id?: number | undefined;
   limit?: number | undefined;
   offset?: number | undefined;

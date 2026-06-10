@@ -78,6 +78,10 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
     conditions.push(`${prefix}run_id = ?`);
     params.push(filter.run_id);
   }
+  if (filter.audio_file_id) {
+    conditions.push(`${prefix}audio_file_id = ?`);
+    params.push(filter.audio_file_id);
+  }
   if (filter.species_list_id) {
     conditions.push(`${prefix}scientific_name IN (SELECT scientific_name FROM species_list_entries WHERE list_id = ?)`);
     params.push(filter.species_list_id);
