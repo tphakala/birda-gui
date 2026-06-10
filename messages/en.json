@@ -413,5 +413,24 @@
   "grid_less": "Less",
   "grid_more": "More",
 
-  "pagination_speciesCount": "{count} species"
+  "pagination_speciesCount": "{count} species",
+
+  "annotation_editor_title": "Annotation Editor",
+  "annotation_overlay_label": "Annotation overlay",
+  "annotation_play": "Play / pause",
+  "annotation_zoomIn": "Zoom in",
+  "annotation_zoomOut": "Zoom out",
+  "annotation_drawHint": "Drag on the spectrogram to draw a new annotation",
+  "annotation_panel_title": "Selected annotation",
+  "annotation_panel_empty": "Select or draw an annotation to edit it",
+  "annotation_field_species": "Species",
+  "annotation_field_time": "Time: {start}s - {end}s",
+  "annotation_field_freq": "Frequency: {low} - {high} kHz",
+  "annotation_freq_full": "Frequency: full range",
+  "annotation_unnamed": "(unnamed)",
+  "annotation_accept": "Accept",
+  "annotation_remove": "Remove",
+  "annotation_list_title": "Annotations",
+  "annotation_annotateFile": "Annotate file",
+  "annotation_annotate": "Annotate"
 }
