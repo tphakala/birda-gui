@@ -29,6 +29,12 @@ export function upsertAnnotation(input: AnnotationInput): Annotation {
   const lowFreq = input.low_freq_hz ?? null;
   const highFreq = input.high_freq_hz ?? null;
   const confidence = input.confidence ?? null;
+  if ((lowFreq === null) !== (highFreq === null)) {
+    throw new Error('Invalid annotation: low_freq_hz and high_freq_hz must both be set or both be null');
+  }
+  if (lowFreq !== null && highFreq !== null && lowFreq > highFreq) {
+    throw new Error(`Invalid annotation: low_freq_hz ${lowFreq} must not exceed high_freq_hz ${highFreq}`);
+  }
 
   if (input.id !== undefined) {
     const row = db

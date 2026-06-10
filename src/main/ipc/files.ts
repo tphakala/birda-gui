@@ -18,6 +18,7 @@ function parseTimezoneOffset(tz: string | undefined): number {
   const sign = m[1] === '+' ? 1 : -1;
   const hours = parseInt(m[2], 10);
   const minutes = m[3] ? parseInt(m[3], 10) : 0;
+  if (hours > 14 || minutes > 59) return 0; // real-world offsets max out at +/-14:00
   return sign * (hours * 60 + minutes);
 }
 

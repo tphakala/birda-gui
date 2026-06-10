@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron';
+import { ipcMain, BrowserWindow, dialog, app } from 'electron';
 import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -516,12 +516,26 @@ export function registerAnalysisHandlers(): void {
     },
   );
 
+  // Renderer-supplied clip paths may only point inside the clip output directory
+  // (configured or default); blocks arbitrary filesystem writes from a compromised renderer.
+  async function isClipPathAllowed(normalizedClipPath: string): Promise<boolean> {
+    const settings = await settingsStore.get();
+    const allowedRoots = [path.resolve(settings.clip_output_dir), path.join(app.getPath('userData'), 'clips')];
+    return allowedRoots.some((root) => {
+      const rel = path.relative(root, normalizedClipPath);
+      return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+    });
+  }
+
   // Spectrogram cache: save PNG next to clip
   ipcMain.handle(
     'clip:save-spectrogram',
     async (_event, clipPath: string, freqMax: number, height: number, dataUrl: string) => {
       if (!path.isAbsolute(clipPath)) throw new Error('clipPath must be absolute');
       const normalizedClipPath = path.normalize(clipPath);
+      if (!(await isClipPathAllowed(normalizedClipPath))) {
+        throw new Error('clipPath must be inside the clip output directory');
+      }
       const dir = path.dirname(normalizedClipPath);
       const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
       const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
@@ -536,6 +550,7 @@ export function registerAnalysisHandlers(): void {
   ipcMain.handle('clip:get-spectrogram', async (_event, clipPath: string, freqMax: number, height: number) => {
     if (!path.isAbsolute(clipPath)) return null;
     const normalizedClipPath = path.normalize(clipPath);
+    if (!(await isClipPathAllowed(normalizedClipPath))) return null;
     const dir = path.dirname(normalizedClipPath);
     const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
     const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);

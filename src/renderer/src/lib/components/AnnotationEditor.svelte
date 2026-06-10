@@ -316,20 +316,27 @@
         height: Math.abs(y - drawRectStart.y),
       };
     } else if (drag.mode === 'move' && drag.key && drag.orig) {
-      // Clamp the delta so the box keeps its span instead of inverting at t=0.
+      // Clamp the delta so the box keeps its span instead of inverting at t=0 or sliding past the end.
       const rawDt = xToTime(x, viewport) - xToTime(drag.startX, viewport);
-      const dt = Math.max(rawDt, -drag.orig.s);
+      const maxDt = duration > 0 ? duration - drag.orig.e : Number.POSITIVE_INFINITY;
+      const dt = Math.max(-drag.orig.s, Math.min(rawDt, maxDt));
       updateBoxLocal(drag.key, { start_time: drag.orig.s + dt, end_time: drag.orig.e + dt });
     } else if (drag.mode === 'resize' && drag.key && drag.orig) {
       const t = xToTime(x, viewport);
       const f = yToFreq(y, viewport);
+      const maxT = duration > 0 ? duration : Number.POSITIVE_INFINITY;
       if (drag.edge === 'left')
         updateBoxLocal(drag.key, { start_time: Math.max(0, Math.min(t, drag.orig.e - MIN_RESIZE_SPAN_S)) });
       else if (drag.edge === 'right')
-        updateBoxLocal(drag.key, { end_time: Math.max(t, drag.orig.s + MIN_RESIZE_SPAN_S) });
-      else if (drag.edge === 'top') updateBoxLocal(drag.key, { high_freq_hz: f, low_freq_hz: drag.orig.lo ?? 0 });
+        updateBoxLocal(drag.key, { end_time: Math.min(maxT, Math.max(t, drag.orig.s + MIN_RESIZE_SPAN_S)) });
+      else if (drag.edge === 'top')
+        // Clamp so the top edge cannot cross below the bottom edge (inverted bounds).
+        updateBoxLocal(drag.key, { high_freq_hz: Math.max(f, drag.orig.lo ?? 0), low_freq_hz: drag.orig.lo ?? 0 });
       else if (drag.edge === 'bottom')
-        updateBoxLocal(drag.key, { low_freq_hz: f, high_freq_hz: drag.orig.hi ?? viewport.freqMax });
+        updateBoxLocal(drag.key, {
+          low_freq_hz: Math.min(f, drag.orig.hi ?? viewport.freqMax),
+          high_freq_hz: drag.orig.hi ?? viewport.freqMax,
+        });
     }
   }
 
@@ -340,7 +347,10 @@
       const x = e.clientX - r.left;
       const y = e.clientY - r.top;
       const t1 = Math.max(0, xToTime(Math.min(drawRectStart.x, x), viewport));
-      const t2 = xToTime(Math.max(drawRectStart.x, x), viewport);
+      const t2 = Math.min(
+        duration > 0 ? duration : Number.POSITIVE_INFINITY,
+        xToTime(Math.max(drawRectStart.x, x), viewport),
+      );
       const f1 = yToFreq(Math.max(drawRectStart.y, y), viewport); // bottom => low
       const f2 = yToFreq(Math.min(drawRectStart.y, y), viewport); // top => high
       if (t2 - t1 > MIN_DRAW_SPAN_S) {

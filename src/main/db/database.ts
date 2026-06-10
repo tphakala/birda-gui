@@ -420,7 +420,9 @@ function runMigrations(db: Database.Database): void {
           source          TEXT NOT NULL CHECK (source IN ('birda', 'manual')),
           status          TEXT NOT NULL CHECK (status IN ('accepted', 'rejected', 'manual')),
           created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+          updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+          CHECK (end_time > start_time),
+          CHECK ((low_freq_hz IS NULL) = (high_freq_hz IS NULL))
         );
         CREATE INDEX IF NOT EXISTS idx_annotations_audio_file ON annotations(audio_file_id);
         CREATE INDEX IF NOT EXISTS idx_annotations_detection ON annotations(detection_id);

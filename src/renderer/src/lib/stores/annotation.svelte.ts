@@ -50,6 +50,8 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let manualBoxSeq = 0;
 /** Keys with a persist in flight; blocks duplicate INSERTs from rapid repeat actions on the same box. */
 const persistInFlight = new SvelteSet<string>();
+/** Keys whose latest state still needs persisting once the in-flight call for that key finishes. */
+const pendingPersistKeys = new SvelteSet<string>();
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -193,8 +195,13 @@ function inputFromBox(box: EditorBox, audioFileId: number, status: AnnotationInp
 async function persistBox(box: EditorBox): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
-  if (persistInFlight.has(box.key)) return;
+  if (persistInFlight.has(box.key)) {
+    // Queue instead of dropping: the latest state is re-persisted when the in-flight call finishes.
+    pendingPersistKeys.add(box.key);
+    return;
+  }
   persistInFlight.add(box.key);
+  let reconciledKey = box.key;
   const current = annotationEditor.boxes.find((b) => b.key === box.key);
   const prior = current ? { ...current } : null;
   const status: AnnotationInput['status'] = box.source === 'manual' ? 'manual' : 'accepted';
@@ -207,6 +214,7 @@ async function persistBox(box: EditorBox): Promise<void> {
         : b,
     );
     if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = newKey;
+    reconciledKey = newKey;
   } catch (err) {
     if (prior !== null && (prior.annotationId !== null || prior.detectionId !== null)) {
       annotationEditor.boxes = annotationEditor.boxes.map((b) => (b.key === box.key ? prior : b));
@@ -218,6 +226,12 @@ async function persistBox(box: EditorBox): Promise<void> {
     showToast(errorMessage(err));
   } finally {
     persistInFlight.delete(box.key);
+    if (pendingPersistKeys.delete(box.key)) {
+      // The boxes array already holds the latest local state (updates are applied
+      // optimistically before persisting); re-persist it under the possibly rekeyed entry.
+      const live = annotationEditor.boxes.find((b) => b.key === reconciledKey);
+      if (live) void persistBox(live);
+    }
   }
 }
 

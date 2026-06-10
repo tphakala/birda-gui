@@ -167,10 +167,10 @@
               {/if}
             {/each}
           </tr>
-          {#if expandedId === detection.id}
+          {#if expandedId === detection.id && detection.audio_file}
             <tr>
               <td colspan={colCount} class="p-0">
-                <DetectionDetail {detection} sourceFile={detection.audio_file?.file_path ?? ''} />
+                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} />
               </td>
             </tr>
           {/if}
