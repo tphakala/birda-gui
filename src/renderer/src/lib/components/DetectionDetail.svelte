@@ -363,7 +363,7 @@
           <span>{detection.common_name}</span>
           <span class="text-base-content/40">({formatConfidence(detection.confidence)})</span>
           {#if detection.audio_file}
-            <button class="btn btn-ghost btn-xs" onclick={annotateFile} title={m.annotation_annotateFile()}>
+            <button class="btn btn-primary btn-xs" onclick={annotateFile} title={m.annotation_annotateFile()}>
               {m.annotation_annotateFile()}
             </button>
           {/if}

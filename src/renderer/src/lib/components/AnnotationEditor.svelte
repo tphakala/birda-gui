@@ -183,6 +183,15 @@
     const next = Math.max(1, (zoomPxPerSec || pxPerSecond) / 1.5);
     wavesurfer?.zoom(next);
   }
+  function handleWheel(e: WheelEvent): void {
+    // Wheel over the spectrogram pane zooms. Smaller factor than the buttons
+    // because trackpads emit many small-delta events. Svelte 5 wheel handlers
+    // are passive, but the pane has nothing to scroll so no preventDefault needed.
+    if (loading || !wavesurfer || e.deltaY === 0) return;
+    const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+    const next = Math.max(1, (zoomPxPerSec || pxPerSecond) * factor);
+    wavesurfer.zoom(next);
+  }
 
   function overlayMetrics(e: PointerEvent): { x: number; y: number } | null {
     if (!overlayEl) return null;
@@ -366,7 +375,7 @@
       <!-- Header -->
       <div class="border-base-300 flex items-center gap-3 border-b px-4 py-2">
         <span class="font-medium">{m.annotation_editor_title()}</span>
-        <span class="text-base-content/50 truncate text-xs">{annotationEditor.filePath}</span>
+        <span class="text-base-content/70 truncate text-xs">{annotationEditor.filePath}</span>
         <button
           class="btn btn-ghost btn-sm btn-circle ml-auto"
           onclick={closeAnnotationEditor}
@@ -394,7 +403,7 @@
         <button class="btn btn-ghost btn-sm" onclick={zoomIn} aria-label={m.annotation_zoomIn()}
           ><ZoomIn size={14} /></button
         >
-        <span class="text-base-content/50 ml-2">{m.annotation_drawHint()}</span>
+        <span class="text-base-content/80 ml-2">{m.annotation_drawHint()}</span>
       </div>
 
       {#if loadError}
@@ -406,7 +415,7 @@
 
       <!-- Main: spectrogram + overlay on the left, side panel on the right -->
       <div class="flex min-h-0 flex-1">
-        <div class="relative min-w-0 flex-1 overflow-hidden p-2">
+        <div class="relative min-w-0 flex-1 overflow-hidden p-2" onwheel={handleWheel}>
           <div bind:this={waveformEl} class="bg-base-100"></div>
           <div class="relative">
             <div bind:this={spectrogramEl} class="bg-base-100 overflow-hidden"></div>

@@ -29,7 +29,7 @@
   {#if selected}
     <div class="space-y-3 p-3 text-xs">
       <div>
-        <span class="text-base-content/60 mb-1 block">{m.annotation_field_species()}</span>
+        <span class="text-base-content/70 mb-1 block">{m.annotation_field_species()}</span>
         <SpeciesSearch
           onselect={(s: EnrichedSpeciesSummary) => {
             onSpeciesSelect(selected.key, s);
@@ -54,7 +54,7 @@
         {/if}
       </div>
       {#if selected.confidence !== null}
-        <div class="text-base-content/50">{formatConfidence(selected.confidence)}</div>
+        <div class="text-base-content/70">{formatConfidence(selected.confidence)}</div>
       {/if}
       <div class="flex gap-2">
         {#if selected.display === 'suggested'}
@@ -78,12 +78,12 @@
       </div>
     </div>
   {:else}
-    <div class="text-base-content/50 p-3 text-xs">{m.annotation_panel_empty()}</div>
+    <div class="text-base-content/70 p-3 text-xs">{m.annotation_panel_empty()}</div>
   {/if}
 
   <!-- Annotation list -->
   <div class="border-base-300 mt-auto border-t">
-    <div class="text-base-content/50 px-3 py-1 text-[10px] uppercase">{m.annotation_list_title()}</div>
+    <div class="text-base-content/60 px-3 py-1 text-[10px] uppercase">{m.annotation_list_title()}</div>
     <div class="max-h-48 overflow-y-auto">
       {#each annotationEditor.boxes as box (box.key)}
         <button
@@ -103,7 +103,7 @@
                 : 'bg-primary'}"
           ></span>
           <span class="truncate">{box.common_name || box.scientific_name || m.annotation_unnamed()}</span>
-          <span class="text-base-content/40 ml-auto tabular-nums">{box.start_time.toFixed(1)}s</span>
+          <span class="text-base-content/60 ml-auto tabular-nums">{box.start_time.toFixed(1)}s</span>
         </button>
       {/each}
     </div>

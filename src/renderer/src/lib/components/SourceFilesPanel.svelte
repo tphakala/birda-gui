@@ -245,7 +245,7 @@
               {/if}
               <td class="text-center">
                 <button
-                  class="btn btn-ghost btn-xs"
+                  class="btn btn-outline btn-primary btn-xs"
                   onclick={() => {
                     void annotate(file.path);
                   }}
