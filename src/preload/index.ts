@@ -4,6 +4,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'annotations:list',
   'annotations:upsert',
   'annotations:delete',
+  'annotations:resolve-file',
   'app:get-settings',
   'app:set-settings',
   'app:check-birda',

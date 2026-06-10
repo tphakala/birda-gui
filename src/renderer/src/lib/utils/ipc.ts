@@ -351,6 +351,10 @@ export function deleteAnnotation(id: number): Promise<void> {
   return window.birda.invoke('annotations:delete', id) as Promise<void>;
 }
 
+export function resolveAnnotationFile(filePath: string, runId: number | null): Promise<number | null> {
+  return window.birda.invoke('annotations:resolve-file', filePath, runId) as Promise<number | null>;
+}
+
 // System
 export function getSystemLocale(): Promise<string> {
   return window.birda.invoke('system:get-locale') as Promise<string>;

@@ -20,6 +20,9 @@
   import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
   import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
   import * as m from '$paraglide/messages';
+  import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
+  import { resolveAnnotationFile } from '$lib/utils/ipc';
+  import { appState } from '$lib/stores/app.svelte';
 
   const {
     scanResult,
@@ -61,6 +64,12 @@
       return analysisState.currentFile.percent;
     }
     return 0;
+  }
+
+  async function annotate(filePath: string): Promise<void> {
+    const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
+    const id = await resolveAnnotationFile(filePath, runId);
+    if (id !== null) openAnnotationEditor(id, filePath);
   }
 </script>
 
@@ -196,6 +205,7 @@
             {#if analysisRunning || analysisState.status !== 'idle'}
               <th class="w-20 text-center">{m.sourceFiles_columnStatus()}</th>
             {/if}
+            <th class="w-20"></th>
           </tr>
         </thead>
         <tbody>
@@ -229,6 +239,17 @@
                   {/if}
                 </td>
               {/if}
+              <td class="text-center">
+                <button
+                  class="btn btn-ghost btn-xs"
+                  onclick={() => {
+                    void annotate(file.path);
+                  }}
+                  title={m.annotation_annotateFile()}
+                >
+                  {m.annotation_annotate()}
+                </button>
+              </td>
             </tr>
           {/each}
         </tbody>
