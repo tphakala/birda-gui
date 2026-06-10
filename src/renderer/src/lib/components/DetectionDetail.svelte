@@ -7,6 +7,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { extractClip, getSettings, saveSpectrogram, exportRegionAsWav } from '$lib/utils/ipc';
   import { formatTime, formatConfidence } from '$lib/utils/format';
+  import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
   import type { EnrichedDetection } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -99,6 +100,12 @@
   function handleHeightChange(e: Event) {
     spectrogramHeight = Number((e.target as HTMLSelectElement).value);
     updateSpectrogram();
+  }
+
+  function annotateFile(): void {
+    if (detection.audio_file) {
+      openAnnotationEditor(detection.audio_file.id, detection.audio_file.file_path);
+    }
   }
 
   onMount(async () => {
@@ -359,6 +366,11 @@
           <span class="tabular-nums">{formatTime(detection.start_time)} - {formatTime(detection.end_time)}</span>
           <span>{detection.common_name}</span>
           <span class="text-base-content/40">({formatConfidence(detection.confidence)})</span>
+          {#if detection.audio_file}
+            <button class="btn btn-ghost btn-xs" onclick={annotateFile} title={m.annotation_annotateFile()}>
+              {m.annotation_annotateFile()}
+            </button>
+          {/if}
           {#if !loading}
             <span class="ml-auto tabular-nums">{currentTime.toFixed(1)}s / {duration.toFixed(1)}s</span>
           {/if}
