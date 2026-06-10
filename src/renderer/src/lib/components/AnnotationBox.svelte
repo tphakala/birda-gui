@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { BoxRect } from '$lib/utils/spectrogram-geometry';
   import type { EditorBox } from '$lib/stores/annotation.svelte';
+  import * as m from '$paraglide/messages';
 
   const {
     box,
@@ -34,7 +35,7 @@
   style="left: {rect.left}px; top: {rect.top}px; width: {rect.width}px; height: {rect.height}px;"
   role="button"
   tabindex="0"
-  aria-label={box.common_name || box.scientific_name || 'annotation'}
+  aria-label={box.common_name || box.scientific_name || m.annotation_unnamed()}
   onpointerdown={(e) => {
     e.stopPropagation();
     onselect();
@@ -48,7 +49,7 @@
   }}
 >
   <span class="bg-base-100/80 pointer-events-none absolute -top-4 left-0 truncate px-1 text-[10px] leading-tight">
-    {box.common_name || box.scientific_name || '(unnamed)'}
+    {box.common_name || box.scientific_name || m.annotation_unnamed()}
   </span>
   {#if selected}
     {#each edges as edge (edge)}

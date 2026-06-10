@@ -68,8 +68,12 @@
 
   async function annotate(filePath: string): Promise<void> {
     const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
-    const id = await resolveAnnotationFile(filePath, runId);
-    if (id !== null) openAnnotationEditor(id, filePath);
+    try {
+      const id = await resolveAnnotationFile(filePath, runId);
+      if (id !== null) openAnnotationEditor(id, filePath);
+    } catch (err) {
+      console.error('Failed to resolve audio file for annotation:', err);
+    }
   }
 </script>
 
@@ -205,7 +209,7 @@
             {#if analysisRunning || analysisState.status !== 'idle'}
               <th class="w-20 text-center">{m.sourceFiles_columnStatus()}</th>
             {/if}
-            <th class="w-20"></th>
+            <th class="w-20"><span class="sr-only">{m.annotation_annotate()}</span></th>
           </tr>
         </thead>
         <tbody>

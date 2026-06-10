@@ -10,11 +10,13 @@
     selectBox,
     getSelectedBox,
     acceptBox,
-    updateBox,
+    updateBoxLocal,
+    commitBox,
     createManualBox,
     removeBox,
   } from '$lib/stores/annotation.svelte';
   import { annotationToRect, xToTime, yToFreq, type SpectrogramViewport } from '$lib/utils/spectrogram-geometry';
+  import { toBirdaMediaUrl } from '$lib/utils/media-url';
   import AnnotationBox from './AnnotationBox.svelte';
   import AnnotationSidePanel from './AnnotationSidePanel.svelte';
   import * as m from '$paraglide/messages';
@@ -30,6 +32,10 @@
   let duration = $state(0);
   let freqMax = $state(15000);
   const spectrogramHeight = 256;
+  /** Minimum drag-drawn box width, in seconds; narrower draws are treated as clicks. */
+  const MIN_DRAW_SPAN_S = 0.02;
+  /** Minimum box span preserved while resizing, in seconds. */
+  const MIN_RESIZE_SPAN_S = 0.01;
 
   // Viewport state drives box geometry. Bumped via reactive reassignment to retrigger $derived.
   let pxPerSecond = $state(1);
@@ -59,17 +65,29 @@
     pxPerSecond = duration > 0 ? Math.max(wrapperWidth, currentZoomWidth()) / duration : 1;
   }
 
+  let initializing = false;
+
   async function init(): Promise<void> {
     const filePath = annotationEditor.filePath;
     if (!filePath || !waveformEl || !spectrogramEl) return;
+    if (wavesurfer || initializing) return; // already initialized (or initializing) for this open
+    initializing = true;
     loading = true;
     loadError = null;
 
-    const settings = await getSettings();
+    let settings;
+    try {
+      settings = await getSettings();
+    } catch (err) {
+      loadError = m.detail_audioLoadFailed({ message: err instanceof Error ? err.message : String(err) });
+      loading = false;
+      initializing = false;
+      return;
+    }
+    initializing = false;
+    // The editor may have been closed (or pointed at another file) while settings loaded.
+    if (!annotationEditor.open || annotationEditor.filePath !== filePath) return;
     freqMax = settings.default_freq_max;
-
-    const normalizedPath = filePath.replace(/\\/g, '/');
-    const urlPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
 
     spectrogramPlugin = SpectrogramPlugin.create({
       container: spectrogramEl,
@@ -90,7 +108,7 @@
       progressColor: '#023E8A',
       cursorColor: '#012d65',
       sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
-      url: `birda-media://${urlPath}`,
+      url: toBirdaMediaUrl(filePath),
       plugins: [spectrogramPlugin],
     });
 
@@ -120,11 +138,12 @@
       refreshViewport();
     });
     wavesurfer.on('error', (err: Error) => {
-      loadError = err.message;
+      loadError = m.detail_audioLoadFailed({ message: err.message });
       loading = false;
     });
 
     // ResizeObserver: window resize changes effective px-per-second without a wavesurfer event.
+    resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(() => {
       refreshViewport();
     });
@@ -137,6 +156,8 @@
       void init();
     }
     return () => {
+      removeDragListeners();
+      resetDragState();
       resizeObserver?.disconnect();
       resizeObserver = null;
       wavesurfer?.destroy();
@@ -146,6 +167,7 @@
   });
 
   onDestroy(() => {
+    removeDragListeners();
     resizeObserver?.disconnect();
     wavesurfer?.destroy();
   });
@@ -178,18 +200,37 @@
   } | null = null;
   let drawRectStart: { x: number; y: number } | null = null;
 
+  function addDragListeners(): void {
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerCancel);
+  }
+
+  function removeDragListeners(): void {
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+    window.removeEventListener('pointercancel', handlePointerCancel);
+  }
+
+  function resetDragState(): void {
+    drag = null;
+    drawRectStart = null;
+    liveDraw = null;
+  }
+
   function handleOverlayPointerDown(e: PointerEvent): void {
     // Pointerdown on empty overlay starts a draw; on a box, the box handles it.
+    if (e.button !== 0) return;
     const p = overlayMetrics(e);
     if (!p) return;
     selectBox(null);
     drawRectStart = p;
     drag = { mode: 'draw', startX: p.x, startY: p.y };
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp, { once: true });
+    addDragListeners();
   }
 
   function startMove(key: string, e: PointerEvent): void {
+    if (e.button !== 0) return;
     const p = overlayMetrics(e);
     const box = annotationEditor.boxes.find((b) => b.key === key);
     if (!p || !box) return;
@@ -200,11 +241,11 @@
       startY: p.y,
       orig: { s: box.start_time, e: box.end_time, lo: box.low_freq_hz, hi: box.high_freq_hz },
     };
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp, { once: true });
+    addDragListeners();
   }
 
   function startResize(key: string, edge: 'left' | 'right' | 'top' | 'bottom', e: PointerEvent): void {
+    if (e.button !== 0) return;
     const p = overlayMetrics(e);
     const box = annotationEditor.boxes.find((b) => b.key === key);
     if (!p || !box) return;
@@ -216,8 +257,7 @@
       startY: p.y,
       orig: { s: box.start_time, e: box.end_time, lo: box.low_freq_hz, hi: box.high_freq_hz },
     };
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp, { once: true });
+    addDragListeners();
   }
 
   let liveDraw = $state<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -235,36 +275,55 @@
         height: Math.abs(y - drawRectStart.y),
       };
     } else if (drag.mode === 'move' && drag.key && drag.orig) {
-      const dt = xToTime(x, viewport) - xToTime(drag.startX, viewport);
-      void updateBox(drag.key, { start_time: Math.max(0, drag.orig.s + dt), end_time: drag.orig.e + dt });
+      // Clamp the delta so the box keeps its span instead of inverting at t=0.
+      const rawDt = xToTime(x, viewport) - xToTime(drag.startX, viewport);
+      const dt = Math.max(rawDt, -drag.orig.s);
+      updateBoxLocal(drag.key, { start_time: drag.orig.s + dt, end_time: drag.orig.e + dt });
     } else if (drag.mode === 'resize' && drag.key && drag.orig) {
       const t = xToTime(x, viewport);
       const f = yToFreq(y, viewport);
-      if (drag.edge === 'left') void updateBox(drag.key, { start_time: Math.min(t, drag.orig.e - 0.01) });
-      else if (drag.edge === 'right') void updateBox(drag.key, { end_time: Math.max(t, drag.orig.s + 0.01) });
-      else if (drag.edge === 'top') void updateBox(drag.key, { high_freq_hz: f, low_freq_hz: drag.orig.lo ?? 0 });
+      if (drag.edge === 'left')
+        updateBoxLocal(drag.key, { start_time: Math.max(0, Math.min(t, drag.orig.e - MIN_RESIZE_SPAN_S)) });
+      else if (drag.edge === 'right')
+        updateBoxLocal(drag.key, { end_time: Math.max(t, drag.orig.s + MIN_RESIZE_SPAN_S) });
+      else if (drag.edge === 'top') updateBoxLocal(drag.key, { high_freq_hz: f, low_freq_hz: drag.orig.lo ?? 0 });
       else if (drag.edge === 'bottom')
-        void updateBox(drag.key, { low_freq_hz: f, high_freq_hz: drag.orig.hi ?? viewport.freqMax });
+        updateBoxLocal(drag.key, { low_freq_hz: f, high_freq_hz: drag.orig.hi ?? viewport.freqMax });
     }
   }
 
   function handlePointerUp(e: PointerEvent): void {
-    window.removeEventListener('pointermove', handlePointerMove);
+    removeDragListeners();
     if (drag?.mode === 'draw' && drawRectStart && overlayEl) {
       const r = overlayEl.getBoundingClientRect();
       const x = e.clientX - r.left;
       const y = e.clientY - r.top;
-      const t1 = xToTime(Math.min(drawRectStart.x, x), viewport);
+      const t1 = Math.max(0, xToTime(Math.min(drawRectStart.x, x), viewport));
       const t2 = xToTime(Math.max(drawRectStart.x, x), viewport);
       const f1 = yToFreq(Math.max(drawRectStart.y, y), viewport); // bottom => low
       const f2 = yToFreq(Math.min(drawRectStart.y, y), viewport); // top => high
-      if (t2 - t1 > 0.02) {
+      if (t2 - t1 > MIN_DRAW_SPAN_S) {
         void createManualBox({ start_time: t1, end_time: t2, low_freq_hz: f1, high_freq_hz: f2 });
       }
+    } else if ((drag?.mode === 'move' || drag?.mode === 'resize') && drag.key) {
+      // Geometry was updated locally during the drag; persist once now.
+      void commitBox(drag.key);
     }
-    drag = null;
-    drawRectStart = null;
-    liveDraw = null;
+    resetDragState();
+  }
+
+  function handlePointerCancel(): void {
+    // The OS or browser took over the pointer (context menu, gesture): abandon the drag.
+    removeDragListeners();
+    if ((drag?.mode === 'move' || drag?.mode === 'resize') && drag.key && drag.orig) {
+      updateBoxLocal(drag.key, {
+        start_time: drag.orig.s,
+        end_time: drag.orig.e,
+        low_freq_hz: drag.orig.lo,
+        high_freq_hz: drag.orig.hi,
+      });
+    }
+    resetDragState();
   }
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -340,6 +399,9 @@
 
       {#if loadError}
         <div role="alert" class="alert alert-error mx-4 my-1 py-1 text-xs">{loadError}</div>
+      {/if}
+      {#if annotationEditor.error}
+        <div role="alert" class="alert alert-error mx-4 my-1 py-1 text-xs">{annotationEditor.error}</div>
       {/if}
 
       <!-- Main: spectrogram + overlay on the left, side panel on the right -->

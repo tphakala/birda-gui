@@ -1,5 +1,6 @@
-import type { Annotation, AnnotationInput, AnnotationSource, EnrichedDetection } from '$shared/types';
-import { listAnnotations, upsertAnnotation, deleteAnnotation, getDetections } from '$lib/utils/ipc';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import type { Annotation, AnnotationInput, AnnotationSource } from '$shared/types';
+import { listAnnotations, upsertAnnotation, deleteAnnotation, getDetections, resolveAllLabels } from '$lib/utils/ipc';
 
 /** A box in the editor: either a persisted annotation or an unsaved AI suggestion. */
 export interface EditorBox {
@@ -31,6 +32,9 @@ interface AnnotationEditorState {
   toast: string | null;
 }
 
+const MAX_DETECTION_SUGGESTIONS = 5000;
+const TOAST_DURATION_MS = 4000;
+
 export const annotationEditor = $state<AnnotationEditorState>({
   open: false,
   audioFileId: null,
@@ -42,6 +46,15 @@ export const annotationEditor = $state<AnnotationEditorState>({
   toast: null,
 });
 
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+let manualBoxSeq = 0;
+/** Keys with a persist in flight; blocks duplicate INSERTs from rapid repeat actions on the same box. */
+const persistInFlight = new SvelteSet<string>();
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 export function openAnnotationEditor(audioFileId: number, filePath: string): void {
   annotationEditor.open = true;
   annotationEditor.audioFileId = audioFileId;
@@ -49,6 +62,7 @@ export function openAnnotationEditor(audioFileId: number, filePath: string): voi
   annotationEditor.boxes = [];
   annotationEditor.selectedKey = null;
   annotationEditor.error = null;
+  clearToast();
   void loadBoxes();
 }
 
@@ -58,6 +72,9 @@ export function closeAnnotationEditor(): void {
   annotationEditor.filePath = null;
   annotationEditor.boxes = [];
   annotationEditor.selectedKey = null;
+  annotationEditor.error = null;
+  annotationEditor.loading = false;
+  clearToast();
 }
 
 function annotationToBox(a: Annotation, commonName: string): EditorBox {
@@ -83,16 +100,30 @@ async function loadBoxes(): Promise<void> {
   annotationEditor.loading = true;
   annotationEditor.error = null;
   try {
-    const annotations = await listAnnotations(audioFileId);
     // Detections for this file become unsaved suggestions unless an annotation already references them.
-    const { detections } = await getDetections({ audio_file_id: audioFileId, limit: 5000, offset: 0 });
+    const [annotations, { detections }] = await Promise.all([
+      listAnnotations(audioFileId),
+      getDetections({ audio_file_id: audioFileId, limit: MAX_DETECTION_SUGGESTIONS, offset: 0 }),
+    ]);
     const referencedDetectionIds = new Set(
       annotations.map((a) => a.detection_id).filter((x): x is number => x !== null),
     );
 
+    const commonNames = new SvelteMap(detections.map((d) => [d.scientific_name, d.common_name]));
+    // Manual annotations may name species birda never detected in this file; resolve those labels too.
+    const unresolved = [
+      ...new Set(annotations.map((a) => a.scientific_name).filter((n) => n !== '' && !commonNames.has(n))),
+    ];
+    if (unresolved.length > 0) {
+      const resolved = await resolveAllLabels(unresolved);
+      for (const [scientific, common] of Object.entries(resolved)) {
+        if (common) commonNames.set(scientific, common);
+      }
+    }
+
     const persisted = annotations
       .filter((a) => a.status !== 'rejected')
-      .map((a) => annotationToBox(a, lookupCommonName(detections, a.scientific_name)));
+      .map((a) => annotationToBox(a, commonNames.get(a.scientific_name) ?? a.scientific_name));
 
     const suggestions: EditorBox[] = detections
       .filter((d) => !referencedDetectionIds.has(d.id))
@@ -113,21 +144,27 @@ async function loadBoxes(): Promise<void> {
 
     annotationEditor.boxes = [...persisted, ...suggestions].sort((a, b) => a.start_time - b.start_time);
   } catch (err) {
-    annotationEditor.error = (err as Error).message;
+    annotationEditor.error = errorMessage(err);
   } finally {
     annotationEditor.loading = false;
   }
 }
 
-function lookupCommonName(detections: EnrichedDetection[], scientificName: string): string {
-  return detections.find((d) => d.scientific_name === scientificName)?.common_name ?? scientificName;
+function clearToast(): void {
+  if (toastTimer !== null) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+  annotationEditor.toast = null;
 }
 
 function showToast(message: string): void {
+  if (toastTimer !== null) clearTimeout(toastTimer);
   annotationEditor.toast = message;
-  setTimeout(() => {
+  toastTimer = setTimeout(() => {
     annotationEditor.toast = null;
-  }, 4000);
+    toastTimer = null;
+  }, TOAST_DURATION_MS);
 }
 
 function inputFromBox(box: EditorBox, audioFileId: number, status: AnnotationInput['status']): AnnotationInput {
@@ -148,13 +185,18 @@ function inputFromBox(box: EditorBox, audioFileId: number, status: AnnotationInp
 
 /**
  * Persist a box (insert or update). On success, reconcile the box with the saved row.
- * On failure, restore the prior boxes snapshot and toast. Status defaults to the
- * box's current display ('manual' -> manual, otherwise 'accepted').
+ * On failure, roll back only the affected box (concurrent edits to other boxes survive)
+ * and toast. Status follows the box's source ('manual' -> manual, otherwise 'accepted').
+ * Re-entrant calls for the same key are dropped while a persist is in flight, so a
+ * not-yet-persisted box can never insert twice.
  */
 async function persistBox(box: EditorBox): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
-  const snapshot = annotationEditor.boxes.map((b) => ({ ...b }));
+  if (persistInFlight.has(box.key)) return;
+  persistInFlight.add(box.key);
+  const current = annotationEditor.boxes.find((b) => b.key === box.key);
+  const prior = current ? { ...current } : null;
   const status: AnnotationInput['status'] = box.source === 'manual' ? 'manual' : 'accepted';
   try {
     const saved = await upsertAnnotation(inputFromBox(box, audioFileId, status));
@@ -166,8 +208,16 @@ async function persistBox(box: EditorBox): Promise<void> {
     );
     if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = newKey;
   } catch (err) {
-    annotationEditor.boxes = snapshot;
-    showToast((err as Error).message);
+    if (prior !== null && (prior.annotationId !== null || prior.detectionId !== null)) {
+      annotationEditor.boxes = annotationEditor.boxes.map((b) => (b.key === box.key ? prior : b));
+    } else {
+      // Unsaved manual box that never persisted: drop it.
+      annotationEditor.boxes = annotationEditor.boxes.filter((b) => b.key !== box.key);
+      if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = null;
+    }
+    showToast(errorMessage(err));
+  } finally {
+    persistInFlight.delete(box.key);
   }
 }
 
@@ -186,12 +236,26 @@ export async function acceptBox(key: string): Promise<void> {
   await persistBox({ ...box, display: 'accepted' });
 }
 
+/** Update a box locally without persisting; used for live drag geometry. Commit with commitBox. */
+export function updateBoxLocal(key: string, patch: Partial<EditorBox>): void {
+  const idx = annotationEditor.boxes.findIndex((b) => b.key === key);
+  if (idx === -1) return;
+  annotationEditor.boxes[idx] = { ...annotationEditor.boxes[idx], ...patch };
+}
+
+/** Persist a box's current state; called once at drag end after updateBoxLocal calls. */
+export async function commitBox(key: string): Promise<void> {
+  const box = annotationEditor.boxes.find((b) => b.key === key);
+  if (!box) return;
+  await persistBox(box);
+}
+
 /** Update geometry/species of a box and persist. Editing a suggestion promotes it to accepted. */
 export async function updateBox(key: string, patch: Partial<EditorBox>): Promise<void> {
   const idx = annotationEditor.boxes.findIndex((b) => b.key === key);
   if (idx === -1) return;
   const updated = { ...annotationEditor.boxes[idx], ...patch };
-  annotationEditor.boxes[idx] = updated; // optimistic local update for snappy drag
+  annotationEditor.boxes[idx] = updated; // optimistic local update
   await persistBox(updated);
 }
 
@@ -204,7 +268,7 @@ export async function createManualBox(bounds: {
 }): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
-  const tempKey = `new-${annotationEditor.boxes.length}-${annotationEditor.boxes.reduce((n, b) => n + b.start_time, 0)}`;
+  const tempKey = `new-${++manualBoxSeq}`;
   const box: EditorBox = {
     key: tempKey,
     annotationId: null,
@@ -230,7 +294,7 @@ export async function removeBox(key: string): Promise<void> {
   if (audioFileId === null) return;
   const box = annotationEditor.boxes.find((b) => b.key === key);
   if (!box) return;
-  const snapshot = annotationEditor.boxes.map((b) => ({ ...b }));
+  const removed = { ...box };
   annotationEditor.boxes = annotationEditor.boxes.filter((b) => b.key !== key);
   if (annotationEditor.selectedKey === key) annotationEditor.selectedKey = null;
   try {
@@ -242,7 +306,8 @@ export async function removeBox(key: string): Promise<void> {
     }
     // Unsaved manual box with no id and no detection: nothing to persist.
   } catch (err) {
-    annotationEditor.boxes = snapshot;
-    showToast((err as Error).message);
+    // Re-insert only the removed box so concurrent edits to other boxes survive.
+    annotationEditor.boxes = [...annotationEditor.boxes, removed].sort((a, b) => a.start_time - b.start_time);
+    showToast(errorMessage(err));
   }
 }

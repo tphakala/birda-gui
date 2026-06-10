@@ -16,9 +16,9 @@
   const selectedDateObj = $derived(value ? parseLocalDate(value) : null);
 
   // svelte-ignore state_referenced_locally
-  let calYear = $state(value ? parseLocalDate(value).getFullYear() : new Date().getFullYear());
-  // svelte-ignore state_referenced_locally
-  let calMonth = $state(value ? parseLocalDate(value).getMonth() : new Date().getMonth());
+  const initialCalDate = value ? parseLocalDate(value) : new Date();
+  let calYear = $state(initialCalDate.getFullYear());
+  let calMonth = $state(initialCalDate.getMonth());
 
   const MONTH_NAMES = [
     m.calendar_month_january(),

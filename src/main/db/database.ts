@@ -229,7 +229,7 @@ function runMigrations(db: Database.Database): void {
 
         for (const { run_id, source_file } of uniqueFiles) {
           // Extract file name from path
-          const fileName = source_file.split('/').pop() ?? source_file;
+          const fileName = source_file.replace(/\\/g, '/').split('/').pop() ?? source_file;
 
           // Try to parse AudioMoth timestamp from filename (YYYYMMDD_HHMMSS)
           let recordingStart: string | null = null;
@@ -404,6 +404,7 @@ function runMigrations(db: Database.Database): void {
 
   // Migration 7: Add annotations table
   if (!applied.has(7)) {
+    console.log('Migrating to version 7: Add annotations table');
     db.transaction(() => {
       db.exec(`
         CREATE TABLE IF NOT EXISTS annotations (

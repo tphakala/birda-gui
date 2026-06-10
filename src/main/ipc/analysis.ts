@@ -520,8 +520,10 @@ export function registerAnalysisHandlers(): void {
   ipcMain.handle(
     'clip:save-spectrogram',
     async (_event, clipPath: string, freqMax: number, height: number, dataUrl: string) => {
-      const dir = path.dirname(clipPath);
-      const base = path.basename(clipPath, path.extname(clipPath));
+      if (!path.isAbsolute(clipPath)) throw new Error('clipPath must be absolute');
+      const normalizedClipPath = path.normalize(clipPath);
+      const dir = path.dirname(normalizedClipPath);
+      const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
       const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
       // eslint-disable-next-line security/detect-non-literal-fs-filename

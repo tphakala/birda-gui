@@ -8,7 +8,7 @@
 
 **Tech Stack:** Electron, Svelte 5 runes, TypeScript (strict, exactOptionalPropertyTypes), better-sqlite3, wavesurfer.js v7 (waveform + spectrogram plugins), Tailwind v4 + daisyUI v5, Paraglide i18n.
 
-**Source spec:** `docs/superpowers/specs/2026-06-10-spectrogram-annotation-editor-design.md` (Forgejo issue tphakala/birda-gui#1).
+**Source spec:** `docs/superpowers/specs/2026-06-10-spectrogram-annotation-editor-design.md`
 
 **Testing note:** This project has no unit-test framework by convention (CLAUDE.md, spec testing section). Per-task verification uses the project's real gates: `task typecheck:main` (main process), `task lint` (ESLint + svelte-check + tsc), `task build`, and explicit manual checks via `task dev`. Do not introduce a test framework.
 

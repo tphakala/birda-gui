@@ -1,7 +1,7 @@
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
 interface AppState {
-  activeTab: string;
+  activeTab: Tab;
   selectedSpecies: string | null;
   isAnalysisRunning: boolean;
   sourcePath: string | null;
@@ -18,7 +18,7 @@ interface AppState {
   lastRunId: number | null;
   lastSourceFile: string | null;
   selectedRunId: number | null;
-  theme: string;
+  theme: 'system' | 'light' | 'dark';
   settingsHasUnsavedChanges: boolean;
   selectedSpeciesListId: number | null;
 }

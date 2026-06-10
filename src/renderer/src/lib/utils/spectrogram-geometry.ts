@@ -22,16 +22,19 @@ function timeToX(time: number, vp: SpectrogramViewport): number {
 }
 
 export function xToTime(x: number, vp: SpectrogramViewport): number {
+  if (vp.pxPerSecond <= 0) return 0; // degenerate viewport; avoid Infinity/NaN reaching the DB
   return (x + vp.scrollLeft) / vp.pxPerSecond;
 }
 
 /** 0 Hz is at the bottom (y = height); freqMax is at the top (y = 0). */
 function freqToY(freqHz: number, vp: SpectrogramViewport): number {
+  if (vp.freqMax <= 0) return 0;
   const clamped = Math.max(0, Math.min(freqHz, vp.freqMax));
   return vp.height * (1 - clamped / vp.freqMax);
 }
 
 export function yToFreq(y: number, vp: SpectrogramViewport): number {
+  if (vp.height <= 0 || vp.freqMax <= 0) return 0; // degenerate viewport; avoid Infinity/NaN reaching the DB
   const clampedY = Math.max(0, Math.min(y, vp.height));
   return (1 - clampedY / vp.height) * vp.freqMax;
 }
