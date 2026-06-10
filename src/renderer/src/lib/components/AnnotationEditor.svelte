@@ -76,6 +76,7 @@
   function ensureSpectrogramMount(): void {
     const wrapper = (spectrogramPlugin as unknown as { wrapper?: HTMLElement } | null)?.wrapper;
     if (wrapper && spectrogramEl && wrapper.parentElement !== spectrogramEl) {
+      // eslint-disable-next-line svelte/no-dom-manipulating -- spectrogramEl's children are owned by the wavesurfer plugin, not Svelte
       spectrogramEl.appendChild(wrapper);
     }
   }
