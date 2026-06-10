@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} Erkennung",
   "grid_less": "Weniger",
   "grid_more": "Mehr",
-  "pagination_speciesCount": "{count} Arten"
+  "pagination_speciesCount": "{count} Arten",
+
+  "annotation_editor_title": "Annotationseditor",
+  "annotation_overlay_label": "Annotationsebene",
+  "annotation_play": "Wiedergabe / Pause",
+  "annotation_zoomIn": "Vergrößern",
+  "annotation_zoomOut": "Verkleinern",
+  "annotation_drawHint": "Auf dem Spektrogramm ziehen, um eine neue Annotation zu zeichnen",
+  "annotation_panel_title": "Ausgewählte Annotation",
+  "annotation_panel_empty": "Annotation auswählen oder zeichnen, um sie zu bearbeiten",
+  "annotation_field_species": "Art",
+  "annotation_field_time": "Zeit: {start}s - {end}s",
+  "annotation_field_freq": "Frequenz: {low} - {high} kHz",
+  "annotation_freq_full": "Frequenz: gesamter Bereich",
+  "annotation_unnamed": "(unbenannt)",
+  "annotation_accept": "Übernehmen",
+  "annotation_remove": "Entfernen",
+  "annotation_list_title": "Annotationen",
+  "annotation_annotateFile": "Datei annotieren",
+  "annotation_annotate": "Annotieren",
+  "annotation_searchSpecies": "Art zum Zuweisen suchen..."
 }

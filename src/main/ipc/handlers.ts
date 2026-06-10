@@ -1,4 +1,5 @@
 import { registerAnalysisHandlers } from './analysis';
+import { registerAnnotationHandlers } from './annotations';
 import { registerCatalogHandlers } from './catalog';
 import { registerCudaHandlers } from './cuda';
 import { registerFileHandlers } from './files';
@@ -12,6 +13,7 @@ import { registerSystemHandlers } from './system';
 
 export async function registerHandlers(): Promise<void> {
   registerAnalysisHandlers();
+  registerAnnotationHandlers();
   registerCatalogHandlers();
   registerCudaHandlers();
   registerFileHandlers();

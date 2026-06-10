@@ -58,7 +58,7 @@ export function deleteRun(id: number): void {
   })();
 }
 
-/** Mark any runs left in 'running' state as 'failed' — they are stale from a previous session. */
+/** Mark any runs left in 'running' state as 'failed'; they are stale from a previous session. */
 export function markStaleRunsAsFailed(): number {
   const db = getDb();
   const result = db

@@ -225,7 +225,7 @@ Usage in components:
 <h1>{m.settings_title()}</h1>
 ```
 
-Currently English only. Message keys follow pattern: `{section}_{element}_{descriptor}`.
+13 locales live in `messages/` (en is the reference; cs, da, de, es, fi, fr, hu, it, nl, pl, pt, sv). Every new key added to `en.json` MUST be added to all locales; CI enforces this via `npm run validate:translations`. Message keys follow pattern: `{section}_{element}_{descriptor}`.
 
 ## Testing
 

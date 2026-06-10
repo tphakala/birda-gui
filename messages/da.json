@@ -413,5 +413,25 @@
   "grid_less": "Færre",
   "grid_more": "Flere",
 
-  "pagination_speciesCount": "{count} arter"
+  "pagination_speciesCount": "{count} arter",
+
+  "annotation_editor_title": "Annotationseditor",
+  "annotation_overlay_label": "Annotationslag",
+  "annotation_play": "Afspil / pause",
+  "annotation_zoomIn": "Zoom ind",
+  "annotation_zoomOut": "Zoom ud",
+  "annotation_drawHint": "Træk på spektrogrammet for at tegne en ny annotation",
+  "annotation_panel_title": "Valgt annotation",
+  "annotation_panel_empty": "Vælg eller tegn en annotation for at redigere den",
+  "annotation_field_species": "Art",
+  "annotation_field_time": "Tid: {start}s - {end}s",
+  "annotation_field_freq": "Frekvens: {low} - {high} kHz",
+  "annotation_freq_full": "Frekvens: fuldt område",
+  "annotation_unnamed": "(unavngivet)",
+  "annotation_accept": "Accepter",
+  "annotation_remove": "Fjern",
+  "annotation_list_title": "Annotationer",
+  "annotation_annotateFile": "Annotér fil",
+  "annotation_annotate": "Annotér",
+  "annotation_searchSpecies": "Søg efter art at tildele..."
 }

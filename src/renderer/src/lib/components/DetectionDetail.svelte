@@ -7,6 +7,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { extractClip, getSettings, saveSpectrogram, exportRegionAsWav } from '$lib/utils/ipc';
   import { formatTime, formatConfidence } from '$lib/utils/format';
+  import { toBirdaMediaUrl } from '$lib/utils/media-url';
+  import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
   import type { EnrichedDetection } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -101,6 +103,12 @@
     updateSpectrogram();
   }
 
+  function annotateFile(): void {
+    if (detection.audio_file) {
+      openAnnotationEditor(detection.audio_file.id, detection.audio_file.file_path);
+    }
+  }
+
   onMount(async () => {
     try {
       const settings = await getSettings();
@@ -117,11 +125,6 @@
       );
       clipFilePath = clipPath;
 
-      // Normalize Windows backslashes and ensure proper URL format
-      // Windows paths like D:\clips\file.wav must become birda-media:///D:/clips/file.wav
-      const normalizedPath = clipPath.replace(/\\/g, '/');
-      const urlPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
-
       if (!waveformEl || !spectrogramEl) return;
       spectrogramPlugin = createSpectrogramPlugin();
 
@@ -135,7 +138,7 @@
         barGap: 1,
         barRadius: 2,
         sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
-        url: `birda-media://${urlPath}`,
+        url: toBirdaMediaUrl(clipPath),
         plugins: spectrogramPlugin ? [spectrogramPlugin] : [],
       });
 
@@ -359,6 +362,11 @@
           <span class="tabular-nums">{formatTime(detection.start_time)} - {formatTime(detection.end_time)}</span>
           <span>{detection.common_name}</span>
           <span class="text-base-content/40">({formatConfidence(detection.confidence)})</span>
+          {#if detection.audio_file}
+            <button class="btn btn-primary btn-xs" onclick={annotateFile} title={m.annotation_annotateFile()}>
+              {m.annotation_annotateFile()}
+            </button>
+          {/if}
           {#if !loading}
             <span class="ml-auto tabular-nums">{currentTime.toFixed(1)}s / {duration.toFixed(1)}s</span>
           {/if}

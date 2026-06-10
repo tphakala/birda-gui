@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} havainto",
   "grid_less": "Vähemmän",
   "grid_more": "Enemmän",
-  "pagination_speciesCount": "{count} lajia"
+  "pagination_speciesCount": "{count} lajia",
+
+  "annotation_editor_title": "Annotaatioeditori",
+  "annotation_overlay_label": "Annotaatiokerros",
+  "annotation_play": "Toista / tauko",
+  "annotation_zoomIn": "Lähennä",
+  "annotation_zoomOut": "Loitonna",
+  "annotation_drawHint": "Piirrä uusi annotaatio vetämällä spektrogrammilla",
+  "annotation_panel_title": "Valittu annotaatio",
+  "annotation_panel_empty": "Valitse tai piirrä annotaatio muokataksesi sitä",
+  "annotation_field_species": "Laji",
+  "annotation_field_time": "Aika: {start} s - {end} s",
+  "annotation_field_freq": "Taajuus: {low} - {high} kHz",
+  "annotation_freq_full": "Taajuus: koko alue",
+  "annotation_unnamed": "(nimetön)",
+  "annotation_accept": "Hyväksy",
+  "annotation_remove": "Poista",
+  "annotation_list_title": "Annotaatiot",
+  "annotation_annotateFile": "Annotoi tiedosto",
+  "annotation_annotate": "Annotoi",
+  "annotation_searchSpecies": "Hae liitettävä laji..."
 }

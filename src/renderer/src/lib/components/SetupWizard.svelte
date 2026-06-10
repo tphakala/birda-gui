@@ -197,7 +197,10 @@
     }
     if (currentStep === 'language' && availableLanguages.length === 0 && birdaStatus?.available) {
       void getAvailableLanguages()
-        .then((langs) => (availableLanguages = langs))
+        .then((langs) => {
+          availableLanguages = langs;
+          languagesError = null;
+        })
         .catch((e: unknown) => {
           languagesError = e instanceof Error ? e.message : String(e);
         });

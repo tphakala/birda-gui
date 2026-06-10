@@ -189,6 +189,42 @@ export interface EnrichedDetection extends Detection {
   audio_file: AudioFile | null; // NEW: joined audio file data
 }
 
+export type AnnotationSource = 'birda' | 'manual';
+export type AnnotationStatus = 'accepted' | 'rejected' | 'manual';
+
+/** A human-curated annotation, stored separately from immutable detections. */
+export interface Annotation {
+  id: number;
+  audio_file_id: number;
+  detection_id: number | null;
+  start_time: number;
+  end_time: number;
+  /** null means time-only (full spectrogram height). */
+  low_freq_hz: number | null;
+  high_freq_hz: number | null;
+  scientific_name: string;
+  confidence: number | null;
+  source: AnnotationSource;
+  status: AnnotationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Upsert payload. Omit `id` to insert; provide it to update. */
+export interface AnnotationInput {
+  id?: number | undefined;
+  audio_file_id: number;
+  detection_id?: number | null | undefined;
+  start_time: number;
+  end_time: number;
+  low_freq_hz?: number | null | undefined;
+  high_freq_hz?: number | null | undefined;
+  scientific_name: string;
+  confidence?: number | null | undefined;
+  source: AnnotationSource;
+  status: AnnotationStatus;
+}
+
 export interface SpeciesSummary {
   scientific_name: string;
   location_count: number;
@@ -243,6 +279,7 @@ export interface DetectionFilter {
   location_id?: number | undefined;
   min_confidence?: number | undefined;
   run_id?: number | undefined;
+  audio_file_id?: number | undefined;
   species_list_id?: number | undefined;
   limit?: number | undefined;
   offset?: number | undefined;

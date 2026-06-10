@@ -1,5 +1,7 @@
 import type {
   AnalysisRequest,
+  Annotation,
+  AnnotationInput,
   EnrichedDetection,
   DetectionFilter,
   EnrichedSpeciesSummary,
@@ -334,6 +336,23 @@ export function deleteSpeciesListById(id: number): Promise<void> {
 // Spectrogram cache
 export function saveSpectrogram(clipPath: string, freqMax: number, height: number, dataUrl: string): Promise<string> {
   return window.birda.invoke('clip:save-spectrogram', clipPath, freqMax, height, dataUrl) as Promise<string>;
+}
+
+// Annotations
+export function listAnnotations(audioFileId: number): Promise<Annotation[]> {
+  return window.birda.invoke('annotations:list', audioFileId) as Promise<Annotation[]>;
+}
+
+export function upsertAnnotation(input: AnnotationInput): Promise<Annotation> {
+  return window.birda.invoke('annotations:upsert', input) as Promise<Annotation>;
+}
+
+export function deleteAnnotation(id: number): Promise<void> {
+  return window.birda.invoke('annotations:delete', id) as Promise<void>;
+}
+
+export function resolveAnnotationFile(filePath: string, runId: number | null): Promise<number | null> {
+  return window.birda.invoke('annotations:resolve-file', filePath, runId) as Promise<number | null>;
 }
 
 // System

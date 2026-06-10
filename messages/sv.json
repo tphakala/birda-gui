@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} detektion",
   "grid_less": "Mindre",
   "grid_more": "Mer",
-  "pagination_speciesCount": "{count} arter"
+  "pagination_speciesCount": "{count} arter",
+
+  "annotation_editor_title": "Annoteringsredigerare",
+  "annotation_overlay_label": "Annoteringslager",
+  "annotation_play": "Spela / pausa",
+  "annotation_zoomIn": "Zooma in",
+  "annotation_zoomOut": "Zooma ut",
+  "annotation_drawHint": "Dra på spektrogrammet för att rita en ny annotering",
+  "annotation_panel_title": "Vald annotering",
+  "annotation_panel_empty": "Välj eller rita en annotering för att redigera den",
+  "annotation_field_species": "Art",
+  "annotation_field_time": "Tid: {start}s - {end}s",
+  "annotation_field_freq": "Frekvens: {low} - {high} kHz",
+  "annotation_freq_full": "Frekvens: hela området",
+  "annotation_unnamed": "(namnlös)",
+  "annotation_accept": "Acceptera",
+  "annotation_remove": "Ta bort",
+  "annotation_list_title": "Annoteringar",
+  "annotation_annotateFile": "Annotera fil",
+  "annotation_annotate": "Annotera",
+  "annotation_searchSpecies": "Sök art att tilldela..."
 }

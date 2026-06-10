@@ -42,7 +42,9 @@ export function buildLabelsPath(labelsPath: string, language: string): string {
   const secondToLastPart = parts.length >= 3 ? parts[parts.length - 2] : '';
   let langParts: number;
 
-  if (parts.length >= 3 && /^[a-z]{2}$/.test(secondToLastPart) && /^[A-Za-z]+$/.test(lastPart)) {
+  // A two-part language suffix is a lowercase code plus an uppercase region (BCP 47, e.g. pt-BR).
+  // Requiring uppercase keeps 2-lowercase-letter model segments (e.g. "go") out of the suffix.
+  if (parts.length >= 3 && /^[a-z]{2}$/.test(secondToLastPart) && /^[A-Z]{2}$/.test(lastPart)) {
     langParts = 2;
   } else if (/^[a-z]{2}$/.test(lastPart)) {
     langParts = 1;

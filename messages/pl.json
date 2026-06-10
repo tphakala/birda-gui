@@ -367,5 +367,25 @@
   "grid_detectionCountSingular": "{count} detekcja",
   "grid_less": "Mniej",
   "grid_more": "Więcej",
-  "pagination_speciesCount": "{count} gatunków"
+  "pagination_speciesCount": "{count} gatunków",
+
+  "annotation_editor_title": "Edytor adnotacji",
+  "annotation_overlay_label": "Warstwa adnotacji",
+  "annotation_play": "Odtwórz / wstrzymaj",
+  "annotation_zoomIn": "Przybliż",
+  "annotation_zoomOut": "Oddal",
+  "annotation_drawHint": "Przeciągnij po spektrogramie, aby narysować nową adnotację",
+  "annotation_panel_title": "Wybrana adnotacja",
+  "annotation_panel_empty": "Wybierz lub narysuj adnotację, aby ją edytować",
+  "annotation_field_species": "Gatunek",
+  "annotation_field_time": "Czas: {start} s - {end} s",
+  "annotation_field_freq": "Częstotliwość: {low} - {high} kHz",
+  "annotation_freq_full": "Częstotliwość: pełny zakres",
+  "annotation_unnamed": "(bez nazwy)",
+  "annotation_accept": "Zatwierdź",
+  "annotation_remove": "Usuń",
+  "annotation_list_title": "Adnotacje",
+  "annotation_annotateFile": "Adnotuj plik",
+  "annotation_annotate": "Adnotuj",
+  "annotation_searchSpecies": "Wyszukaj gatunek do przypisania..."
 }

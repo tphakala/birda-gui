@@ -20,6 +20,9 @@
   import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
   import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
   import * as m from '$paraglide/messages';
+  import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
+  import { resolveAnnotationFile } from '$lib/utils/ipc';
+  import { appState } from '$lib/stores/app.svelte';
 
   const {
     scanResult,
@@ -61,6 +64,16 @@
       return analysisState.currentFile.percent;
     }
     return 0;
+  }
+
+  async function annotate(filePath: string): Promise<void> {
+    const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
+    try {
+      const id = await resolveAnnotationFile(filePath, runId);
+      if (id !== null) openAnnotationEditor(id, filePath);
+    } catch (err) {
+      console.error('Failed to resolve audio file for annotation:', err);
+    }
   }
 </script>
 
@@ -116,8 +129,9 @@
         {/if}
         {#if file.audiomoth?.recordedAt ?? parsedNameStart}
           {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
-          {@const recStart =
-            isUtc && file.audiomoth?.recordedAt ? new Date(file.audiomoth.recordedAt) : (parsedNameStart ?? new Date())}
+          {@const recStart = file.audiomoth?.recordedAt
+            ? new Date(file.audiomoth.recordedAt)
+            : (parsedNameStart ?? new Date())}
           {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
           <div class="flex items-center gap-2">
             <Calendar size={14} class="text-base-content/40" />
@@ -196,6 +210,7 @@
             {#if analysisRunning || analysisState.status !== 'idle'}
               <th class="w-20 text-center">{m.sourceFiles_columnStatus()}</th>
             {/if}
+            <th class="w-20"><span class="sr-only">{m.annotation_annotate()}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -229,6 +244,17 @@
                   {/if}
                 </td>
               {/if}
+              <td class="text-center">
+                <button
+                  class="btn btn-outline btn-primary btn-xs"
+                  onclick={() => {
+                    void annotate(file.path);
+                  }}
+                  title={m.annotation_annotateFile()}
+                >
+                  {m.annotation_annotate()}
+                </button>
+              </td>
             </tr>
           {/each}
         </tbody>

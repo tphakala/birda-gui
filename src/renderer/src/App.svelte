@@ -5,6 +5,7 @@
   import LogPanel from '$lib/components/LogPanel.svelte';
   import SetupWizard from '$lib/components/SetupWizard.svelte';
   import LicenseViewer from '$lib/components/LicenseViewer.svelte';
+  import AnnotationEditor from '$lib/components/AnnotationEditor.svelte';
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
   import MapPage from './pages/MapPage.svelte';
@@ -265,3 +266,4 @@
 {/if}
 
 <LicenseViewer bind:open={showLicenses} />
+<AnnotationEditor />

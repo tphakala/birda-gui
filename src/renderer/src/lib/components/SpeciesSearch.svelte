@@ -7,9 +7,15 @@
   const {
     onselect,
     onclear,
+    placeholder = m.speciesSearch_placeholder(),
+    search = searchSpecies,
   }: {
     onselect: (species: EnrichedSpeciesSummary) => void;
     onclear: () => void;
+    /** Input placeholder; defaults to the map page wording. */
+    placeholder?: string;
+    /** Search backend; defaults to the catalog (detected species) search. */
+    search?: (query: string) => Promise<EnrichedSpeciesSummary[]>;
   } = $props();
 
   let query = $state('');
@@ -27,7 +33,7 @@
     debounceTimer = setTimeout(() => {
       void (async () => {
         try {
-          results = await searchSpecies(query);
+          results = await search(query);
           showDropdown = results.length > 0;
         } catch {
           results = [];
@@ -61,7 +67,7 @@
         if (results.length) showDropdown = true;
       }}
       onblur={() => setTimeout(() => (showDropdown = false), 200)}
-      placeholder={m.speciesSearch_placeholder()}
+      {placeholder}
       class="input input-bordered input-sm w-full pr-8 pl-8"
     />
     {#if query}
@@ -86,9 +92,11 @@
             <span class="text-base-content font-medium">{species.common_name}</span>
             <span class="text-base-content/50 ml-1 italic">{species.scientific_name}</span>
           </div>
-          <span class="text-base-content/50 text-xs"
-            >{m.speciesSearch_detCount({ count: String(species.detection_count) })}</span
-          >
+          {#if species.detection_count > 0}
+            <span class="text-base-content/50 text-xs"
+              >{m.speciesSearch_detCount({ count: String(species.detection_count) })}</span
+            >
+          {/if}
         </button>
       {/each}
     </div>
