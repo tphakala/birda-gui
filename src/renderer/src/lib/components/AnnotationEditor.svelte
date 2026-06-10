@@ -65,6 +65,21 @@
     pxPerSecond = duration > 0 ? Math.max(wrapperWidth, currentZoomWidth()) / duration : 1;
   }
 
+  /**
+   * Some environments ignore the spectrogram plugin's container option and mount
+   * its wrapper inside wavesurfer's own waveform wrapper instead. There the
+   * spectrogram sits under wavesurfer's click-to-seek and our overlay measures
+   * zero height. Re-parent the wrapper into our container so the overlay
+   * geometry and pointer handling always line up, regardless of where the
+   * plugin decided to mount.
+   */
+  function ensureSpectrogramMount(): void {
+    const wrapper = (spectrogramPlugin as unknown as { wrapper?: HTMLElement } | null)?.wrapper;
+    if (wrapper && spectrogramEl && wrapper.parentElement !== spectrogramEl) {
+      spectrogramEl.appendChild(wrapper);
+    }
+  }
+
   let initializing = false;
 
   async function init(): Promise<void> {
@@ -116,6 +131,7 @@
       if (!wavesurfer) return;
       loading = false;
       duration = wavesurfer.getDuration();
+      ensureSpectrogramMount();
       refreshViewport();
     });
     wavesurfer.on('play', () => {
@@ -128,6 +144,7 @@
       playing = false;
     });
     wavesurfer.on('redraw', () => {
+      ensureSpectrogramMount();
       refreshViewport();
     });
     wavesurfer.on('zoom', (px: number) => {
