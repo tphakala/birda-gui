@@ -17,8 +17,12 @@ import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
 import { killAll as killAllBirdaProcesses } from './birda/runner';
 
-// Must be called before app.whenReady() — tells Chromium the scheme supports fetch()
-protocol.registerSchemesAsPrivileged([{ scheme: 'birda-media', privileges: { supportFetchAPI: true, stream: true } }]);
+// Must be called before app.whenReady(); tells Chromium the scheme supports fetch().
+// secure + corsEnabled are required for cross-origin fetch from the dev server origin
+// (http://localhost:5173) on Electron >= 41.4, where Chromium tightened custom-scheme CORS.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'birda-media', privileges: { secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+]);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -163,7 +167,7 @@ function registerBirdaMediaProtocol() {
     const url = new URL(request.url);
     let filePath = decodeURIComponent(url.pathname);
 
-    // On Windows, pathname starts with /D:/... — strip the leading slash before drive letter
+    // On Windows, pathname starts with /D:/... so strip the leading slash before the drive letter
     if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) {
       filePath = filePath.slice(1);
     }
@@ -181,7 +185,12 @@ function registerBirdaMediaProtocol() {
       return new Response('Not Found', { status: 404 });
     }
 
-    return net.fetch(`file:///${filePath.replace(/\\/g, '/')}`);
+    const response = await net.fetch(`file:///${filePath.replace(/\\/g, '/')}`);
+    // With corsEnabled the renderer's cross-origin fetch performs a CORS check;
+    // the response must carry an explicit allow-origin header.
+    const headers = new Headers(response.headers);
+    headers.set('Access-Control-Allow-Origin', '*');
+    return new Response(response.body, { status: response.status, headers });
   });
 }
 
