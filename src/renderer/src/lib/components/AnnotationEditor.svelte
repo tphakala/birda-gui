@@ -1,0 +1,396 @@
+<script lang="ts">
+  import { Play, Pause, LoaderCircle, ZoomIn, ZoomOut, X } from '@lucide/svelte';
+  import WaveSurfer from 'wavesurfer.js';
+  import SpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram.esm.js';
+  import { onDestroy } from 'svelte';
+  import { getSettings } from '$lib/utils/ipc';
+  import {
+    annotationEditor,
+    closeAnnotationEditor,
+    selectBox,
+    getSelectedBox,
+    acceptBox,
+    updateBox,
+    createManualBox,
+    removeBox,
+  } from '$lib/stores/annotation.svelte';
+  import { annotationToRect, xToTime, yToFreq, type SpectrogramViewport } from '$lib/utils/spectrogram-geometry';
+  import AnnotationBox from './AnnotationBox.svelte';
+  import AnnotationSidePanel from './AnnotationSidePanel.svelte';
+  import * as m from '$paraglide/messages';
+
+  let wavesurfer: WaveSurfer | null = null;
+  let spectrogramPlugin: SpectrogramPlugin | null = null;
+  let waveformEl = $state<HTMLDivElement | undefined>(undefined);
+  let spectrogramEl = $state<HTMLDivElement | undefined>(undefined);
+  let overlayEl = $state<HTMLDivElement | undefined>(undefined);
+  let loading = $state(true);
+  let loadError = $state<string | null>(null);
+  let playing = $state(false);
+  let duration = $state(0);
+  let freqMax = $state(15000);
+  const spectrogramHeight = 256;
+
+  // Viewport state drives box geometry. Bumped via reactive reassignment to retrigger $derived.
+  let pxPerSecond = $state(1);
+  let scrollLeft = $state(0);
+
+  let resizeObserver: ResizeObserver | null = null;
+
+  const viewport = $derived<SpectrogramViewport>({
+    pxPerSecond,
+    scrollLeft,
+    freqMax,
+    height: spectrogramHeight,
+  });
+
+  let zoomPxPerSec = 0; // 0 => fit to width
+  function currentZoomWidth(): number {
+    if (zoomPxPerSec > 0) return zoomPxPerSec * duration;
+    return waveformEl?.clientWidth ?? 0;
+  }
+
+  function refreshViewport(): void {
+    if (!wavesurfer) return;
+    // wavesurfer v7 exposes getScroll() (pixels). pxPerSecond derives from rendered width / duration.
+    scrollLeft = wavesurfer.getScroll();
+    const wrapperWidth = waveformEl?.clientWidth ?? 0;
+    // When zoomed, the rendered content width is duration * minPxPerSec; otherwise it fits the wrapper.
+    pxPerSecond = duration > 0 ? Math.max(wrapperWidth, currentZoomWidth()) / duration : 1;
+  }
+
+  async function init(): Promise<void> {
+    const filePath = annotationEditor.filePath;
+    if (!filePath || !waveformEl || !spectrogramEl) return;
+    loading = true;
+    loadError = null;
+
+    const settings = await getSettings();
+    freqMax = settings.default_freq_max;
+
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    const urlPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
+
+    spectrogramPlugin = SpectrogramPlugin.create({
+      container: spectrogramEl,
+      labels: true,
+      labelsColor: '#9ca3af',
+      labelsHzColor: '#9ca3af',
+      labelsBackground: 'rgba(0,0,0,0)',
+      height: spectrogramHeight,
+      fftSamples: 1024,
+      windowFunc: 'hann',
+      frequencyMax: freqMax,
+    });
+
+    wavesurfer = WaveSurfer.create({
+      container: waveformEl,
+      height: 48,
+      waveColor: '#93c5fd',
+      progressColor: '#023E8A',
+      cursorColor: '#012d65',
+      sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
+      url: `birda-media://${urlPath}`,
+      plugins: [spectrogramPlugin],
+    });
+
+    wavesurfer.on('ready', () => {
+      if (!wavesurfer) return;
+      loading = false;
+      duration = wavesurfer.getDuration();
+      refreshViewport();
+    });
+    wavesurfer.on('play', () => {
+      playing = true;
+    });
+    wavesurfer.on('pause', () => {
+      playing = false;
+    });
+    wavesurfer.on('finish', () => {
+      playing = false;
+    });
+    wavesurfer.on('redraw', () => {
+      refreshViewport();
+    });
+    wavesurfer.on('zoom', (px: number) => {
+      zoomPxPerSec = px;
+      refreshViewport();
+    });
+    wavesurfer.on('scroll', () => {
+      refreshViewport();
+    });
+    wavesurfer.on('error', (err: Error) => {
+      loadError = err.message;
+      loading = false;
+    });
+
+    // ResizeObserver: window resize changes effective px-per-second without a wavesurfer event.
+    resizeObserver = new ResizeObserver(() => {
+      refreshViewport();
+    });
+    resizeObserver.observe(waveformEl);
+  }
+
+  // Re-init whenever the editor opens with a file.
+  $effect(() => {
+    if (annotationEditor.open && annotationEditor.filePath && waveformEl && spectrogramEl) {
+      void init();
+    }
+    return () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      wavesurfer?.destroy();
+      wavesurfer = null;
+      spectrogramPlugin = null;
+    };
+  });
+
+  onDestroy(() => {
+    resizeObserver?.disconnect();
+    wavesurfer?.destroy();
+  });
+
+  function togglePlay(): void {
+    void wavesurfer?.playPause();
+  }
+  function zoomIn(): void {
+    const next = (zoomPxPerSec || pxPerSecond) * 1.5;
+    wavesurfer?.zoom(next);
+  }
+  function zoomOut(): void {
+    const next = Math.max(1, (zoomPxPerSec || pxPerSecond) / 1.5);
+    wavesurfer?.zoom(next);
+  }
+
+  function overlayMetrics(e: PointerEvent): { x: number; y: number } | null {
+    if (!overlayEl) return null;
+    const r = overlayEl.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  let drag: {
+    mode: 'draw' | 'move' | 'resize';
+    key?: string;
+    edge?: 'left' | 'right' | 'top' | 'bottom';
+    startX: number;
+    startY: number;
+    orig?: { s: number; e: number; lo: number | null; hi: number | null };
+  } | null = null;
+  let drawRectStart: { x: number; y: number } | null = null;
+
+  function handleOverlayPointerDown(e: PointerEvent): void {
+    // Pointerdown on empty overlay starts a draw; on a box, the box handles it.
+    const p = overlayMetrics(e);
+    if (!p) return;
+    selectBox(null);
+    drawRectStart = p;
+    drag = { mode: 'draw', startX: p.x, startY: p.y };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  }
+
+  function startMove(key: string, e: PointerEvent): void {
+    const p = overlayMetrics(e);
+    const box = annotationEditor.boxes.find((b) => b.key === key);
+    if (!p || !box) return;
+    drag = {
+      mode: 'move',
+      key,
+      startX: p.x,
+      startY: p.y,
+      orig: { s: box.start_time, e: box.end_time, lo: box.low_freq_hz, hi: box.high_freq_hz },
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  }
+
+  function startResize(key: string, edge: 'left' | 'right' | 'top' | 'bottom', e: PointerEvent): void {
+    const p = overlayMetrics(e);
+    const box = annotationEditor.boxes.find((b) => b.key === key);
+    if (!p || !box) return;
+    drag = {
+      mode: 'resize',
+      key,
+      edge,
+      startX: p.x,
+      startY: p.y,
+      orig: { s: box.start_time, e: box.end_time, lo: box.low_freq_hz, hi: box.high_freq_hz },
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  }
+
+  let liveDraw = $state<{ left: number; top: number; width: number; height: number } | null>(null);
+
+  function handlePointerMove(e: PointerEvent): void {
+    if (!drag || !overlayEl) return;
+    const r = overlayEl.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    if (drag.mode === 'draw' && drawRectStart) {
+      liveDraw = {
+        left: Math.min(drawRectStart.x, x),
+        top: Math.min(drawRectStart.y, y),
+        width: Math.abs(x - drawRectStart.x),
+        height: Math.abs(y - drawRectStart.y),
+      };
+    } else if (drag.mode === 'move' && drag.key && drag.orig) {
+      const dt = xToTime(x, viewport) - xToTime(drag.startX, viewport);
+      void updateBox(drag.key, { start_time: Math.max(0, drag.orig.s + dt), end_time: drag.orig.e + dt });
+    } else if (drag.mode === 'resize' && drag.key && drag.orig) {
+      const t = xToTime(x, viewport);
+      const f = yToFreq(y, viewport);
+      if (drag.edge === 'left') void updateBox(drag.key, { start_time: Math.min(t, drag.orig.e - 0.01) });
+      else if (drag.edge === 'right') void updateBox(drag.key, { end_time: Math.max(t, drag.orig.s + 0.01) });
+      else if (drag.edge === 'top') void updateBox(drag.key, { high_freq_hz: f, low_freq_hz: drag.orig.lo ?? 0 });
+      else if (drag.edge === 'bottom')
+        void updateBox(drag.key, { low_freq_hz: f, high_freq_hz: drag.orig.hi ?? viewport.freqMax });
+    }
+  }
+
+  function handlePointerUp(e: PointerEvent): void {
+    window.removeEventListener('pointermove', handlePointerMove);
+    if (drag?.mode === 'draw' && drawRectStart && overlayEl) {
+      const r = overlayEl.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      const t1 = xToTime(Math.min(drawRectStart.x, x), viewport);
+      const t2 = xToTime(Math.max(drawRectStart.x, x), viewport);
+      const f1 = yToFreq(Math.max(drawRectStart.y, y), viewport); // bottom => low
+      const f2 = yToFreq(Math.min(drawRectStart.y, y), viewport); // top => high
+      if (t2 - t1 > 0.02) {
+        void createManualBox({ start_time: t1, end_time: t2, low_freq_hz: f1, high_freq_hz: f2 });
+      }
+    }
+    drag = null;
+    drawRectStart = null;
+    liveDraw = null;
+  }
+
+  function handleKeydown(e: KeyboardEvent): void {
+    if (!annotationEditor.open) return;
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
+    const boxes = annotationEditor.boxes;
+    const selected = getSelectedBox();
+    const idx = selected ? boxes.findIndex((b) => b.key === selected.key) : -1;
+
+    if (e.key === ' ') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'Enter' && selected) {
+      e.preventDefault();
+      void acceptBox(selected.key).then(() => {
+        if (idx >= 0 && idx + 1 < boxes.length) selectBox(boxes[idx + 1].key);
+      });
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (boxes.length === 0) return;
+      // nextIdx is always within [0, boxes.length) after the length-0 early return above.
+      const nextIdx = e.shiftKey ? (idx <= 0 ? boxes.length - 1 : idx - 1) : (idx + 1) % boxes.length;
+      selectBox(boxes[nextIdx].key);
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selected) {
+      e.preventDefault();
+      void removeBox(selected.key);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (annotationEditor.selectedKey) selectBox(null);
+      else closeAnnotationEditor();
+    }
+  }
+</script>
+
+{#if annotationEditor.open}
+  <div class="bg-base-300/80 fixed inset-0 z-50 flex flex-col p-4 backdrop-blur-sm">
+    <div class="bg-base-100 flex h-full flex-col overflow-hidden rounded-lg shadow-xl">
+      <!-- Header -->
+      <div class="border-base-300 flex items-center gap-3 border-b px-4 py-2">
+        <span class="font-medium">{m.annotation_editor_title()}</span>
+        <span class="text-base-content/50 truncate text-xs">{annotationEditor.filePath}</span>
+        <button
+          class="btn btn-ghost btn-sm btn-circle ml-auto"
+          onclick={closeAnnotationEditor}
+          aria-label={m.common_button_close()}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <!-- Transport -->
+      <div class="border-base-300 flex items-center gap-2 border-b px-4 py-2 text-xs">
+        <button
+          class="btn btn-primary btn-sm btn-circle"
+          onclick={togglePlay}
+          disabled={loading}
+          aria-label={m.annotation_play()}
+        >
+          {#if loading}<LoaderCircle size={16} class="animate-spin" />{:else if playing}<Pause size={16} />{:else}<Play
+              size={16}
+            />{/if}
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick={zoomOut} aria-label={m.annotation_zoomOut()}
+          ><ZoomOut size={14} /></button
+        >
+        <button class="btn btn-ghost btn-sm" onclick={zoomIn} aria-label={m.annotation_zoomIn()}
+          ><ZoomIn size={14} /></button
+        >
+        <span class="text-base-content/50 ml-2">{m.annotation_drawHint()}</span>
+      </div>
+
+      {#if loadError}
+        <div role="alert" class="alert alert-error mx-4 my-1 py-1 text-xs">{loadError}</div>
+      {/if}
+
+      <!-- Main: spectrogram + overlay on the left, side panel on the right -->
+      <div class="flex min-h-0 flex-1">
+        <div class="relative min-w-0 flex-1 overflow-hidden p-2">
+          <div bind:this={waveformEl} class="bg-base-100"></div>
+          <div class="relative">
+            <div bind:this={spectrogramEl} class="bg-base-100 overflow-hidden"></div>
+            <!-- Overlay: sibling layer over the spectrogram, NOT injected into wavesurfer's container -->
+            <div
+              bind:this={overlayEl}
+              class="absolute inset-0 overflow-hidden"
+              role="application"
+              aria-label={m.annotation_overlay_label()}
+              onpointerdown={handleOverlayPointerDown}
+            >
+              {#each annotationEditor.boxes as box (box.key)}
+                <AnnotationBox
+                  {box}
+                  rect={annotationToRect(box, viewport)}
+                  selected={annotationEditor.selectedKey === box.key}
+                  onselect={() => {
+                    selectBox(box.key);
+                  }}
+                  onmovestart={(e: PointerEvent) => {
+                    startMove(box.key, e);
+                  }}
+                  onresizestart={(edge: 'left' | 'right' | 'top' | 'bottom', e: PointerEvent) => {
+                    startResize(box.key, edge, e);
+                  }}
+                />
+              {/each}
+              {#if liveDraw}
+                <div
+                  class="border-success bg-success/20 pointer-events-none absolute border-2"
+                  style="left:{liveDraw.left}px;top:{liveDraw.top}px;width:{liveDraw.width}px;height:{liveDraw.height}px;"
+                ></div>
+              {/if}
+            </div>
+          </div>
+        </div>
+        <AnnotationSidePanel />
+      </div>
+    </div>
+
+    {#if annotationEditor.toast}
+      <div class="toast toast-end">
+        <div class="alert alert-error text-sm">{annotationEditor.toast}</div>
+      </div>
+    {/if}
+  </div>
+{/if}
+
+<svelte:window onkeydown={handleKeydown} />
