@@ -187,10 +187,22 @@
     // Wheel over the spectrogram pane zooms. Smaller factor than the buttons
     // because trackpads emit many small-delta events. Svelte 5 wheel handlers
     // are passive, but the pane has nothing to scroll so no preventDefault needed.
-    if (loading || !wavesurfer || e.deltaY === 0) return;
+    if (loading || !wavesurfer || e.deltaY === 0 || duration <= 0) return;
     const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+    // Anchor on the cursor: the time under the mouse becomes the new view center.
+    const anchorTime = overlayEl ? xToTime(e.clientX - overlayEl.getBoundingClientRect().left, viewport) : null;
     const next = Math.max(1, (zoomPxPerSec || pxPerSecond) * factor);
     wavesurfer.zoom(next);
+    if (anchorTime !== null) {
+      // The zoom render lands on the next frame; only then is the new scroll width valid.
+      requestAnimationFrame(() => {
+        if (!wavesurfer) return;
+        const wrapperWidth = waveformEl?.clientWidth ?? 0;
+        const newPxPerSec = Math.max(wrapperWidth, next * duration) / duration;
+        wavesurfer.setScroll(Math.max(0, anchorTime * newPxPerSec - wrapperWidth / 2));
+        refreshViewport();
+      });
+    }
   }
 
   function overlayMetrics(e: PointerEvent): { x: number; y: number } | null {
@@ -419,10 +431,12 @@
           <div bind:this={waveformEl} class="bg-base-100"></div>
           <div class="relative">
             <div bind:this={spectrogramEl} class="bg-base-100 overflow-hidden"></div>
-            <!-- Overlay: sibling layer over the spectrogram, NOT injected into wavesurfer's container -->
+            <!-- Overlay: sibling layer over the spectrogram, NOT injected into wavesurfer's container.
+                 z-10 beats the plugin's own canvases (labels z=9, spectrogram z=4), which would
+                 otherwise paint above the boxes and swallow every pointer event. -->
             <div
               bind:this={overlayEl}
-              class="absolute inset-0 overflow-hidden"
+              class="absolute inset-0 z-10 overflow-hidden"
               role="application"
               aria-label={m.annotation_overlay_label()}
               onpointerdown={handleOverlayPointerDown}
