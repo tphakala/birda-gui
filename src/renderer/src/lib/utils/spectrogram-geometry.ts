@@ -17,7 +17,7 @@ export interface BoxRect {
   height: number;
 }
 
-export function timeToX(time: number, vp: SpectrogramViewport): number {
+function timeToX(time: number, vp: SpectrogramViewport): number {
   return time * vp.pxPerSecond - vp.scrollLeft;
 }
 
@@ -26,7 +26,7 @@ export function xToTime(x: number, vp: SpectrogramViewport): number {
 }
 
 /** 0 Hz is at the bottom (y = height); freqMax is at the top (y = 0). */
-export function freqToY(freqHz: number, vp: SpectrogramViewport): number {
+function freqToY(freqHz: number, vp: SpectrogramViewport): number {
   const clamped = Math.max(0, Math.min(freqHz, vp.freqMax));
   return vp.height * (1 - clamped / vp.freqMax);
 }
@@ -36,7 +36,7 @@ export function yToFreq(y: number, vp: SpectrogramViewport): number {
   return (1 - clampedY / vp.height) * vp.freqMax;
 }
 
-export interface AnnotationBounds {
+interface AnnotationBounds {
   start_time: number;
   end_time: number;
   low_freq_hz: number | null;
