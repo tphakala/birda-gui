@@ -430,7 +430,13 @@
         <div class="relative min-w-0 flex-1 overflow-hidden p-2" onwheel={handleWheel}>
           <div bind:this={waveformEl} class="bg-base-100"></div>
           <div class="relative">
-            <div bind:this={spectrogramEl} class="bg-base-100 overflow-hidden"></div>
+            <!-- isolate traps the plugin's internal z-indexes in their own stacking context;
+                 pointer-events-none guarantees the plugin DOM never steals clicks from the overlay -->
+            <div
+              bind:this={spectrogramEl}
+              class="bg-base-100 isolate overflow-hidden"
+              style="pointer-events: none"
+            ></div>
             <!-- Overlay: sibling layer over the spectrogram, NOT injected into wavesurfer's container.
                  z-10 beats the plugin's own canvases (labels z=9, spectrogram z=4), which would
                  otherwise paint above the boxes and swallow every pointer event. -->
