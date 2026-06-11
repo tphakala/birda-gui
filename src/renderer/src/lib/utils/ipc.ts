@@ -26,6 +26,7 @@ import type {
   CudaDownloadProgress,
   CudaDownloadResult,
   DatabaseHealthResult,
+  ClearDatabaseResult,
 } from '$shared/types';
 
 declare global {
@@ -108,12 +109,8 @@ export function getCatalogStats(): Promise<CatalogStats> {
 }
 
 // Database maintenance
-export function clearDatabase(): Promise<{ detections: number; runs: number; locations: number }> {
-  return window.birda.invoke('catalog:clear-database') as Promise<{
-    detections: number;
-    runs: number;
-    locations: number;
-  }>;
+export function clearDatabase(): Promise<ClearDatabaseResult> {
+  return window.birda.invoke('catalog:clear-database') as Promise<ClearDatabaseResult>;
 }
 
 export function checkDatabaseHealth(): Promise<DatabaseHealthResult> {

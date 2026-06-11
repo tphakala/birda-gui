@@ -52,10 +52,9 @@ function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
 
 export function deleteRun(id: number): void {
   const db = getDb();
-  db.transaction(() => {
-    db.prepare('DELETE FROM detections WHERE run_id = ?').run(id);
-    db.prepare('DELETE FROM analysis_runs WHERE id = ?').run(id);
-  })();
+  // detections, audio_files, and (via audio_files) annotations all cascade-delete
+  // through their FK ON DELETE CASCADE, so deleting the run row is sufficient.
+  db.prepare('DELETE FROM analysis_runs WHERE id = ?').run(id);
 }
 
 /** Mark any runs left in 'running' state as 'failed'; they are stale from a previous session. */

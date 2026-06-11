@@ -351,6 +351,13 @@ export interface CatalogStats {
   total_locations: number;
 }
 
+export interface ClearDatabaseResult {
+  detections: number;
+  runs: number;
+  locations: number;
+  annotations: number;
+}
+
 export interface DatabaseHealthResult {
   integrity_ok: boolean;
   integrity_message: string;

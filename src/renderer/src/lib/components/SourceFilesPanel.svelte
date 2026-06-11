@@ -66,13 +66,38 @@
     return 0;
   }
 
+  const ANNOTATE_HINT_TIMEOUT_MS = 4000;
+  let annotateHint = $state<string | null>(null);
+
+  // Auto-dismiss the hint. The effect re-runs whenever the message changes and
+  // its cleanup clears the pending timer (and also runs on unmount).
+  $effect(() => {
+    if (annotateHint === null) return;
+    const timer = setTimeout(() => {
+      annotateHint = null;
+    }, ANNOTATE_HINT_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  });
+
+  function showAnnotateHint(message: string): void {
+    annotateHint = message;
+  }
+
   async function annotate(filePath: string): Promise<void> {
     const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
     try {
       const id = await resolveAnnotationFile(filePath, runId);
-      if (id !== null) openAnnotationEditor(id, filePath);
+      if (id !== null) {
+        openAnnotationEditor(id, filePath);
+      } else {
+        // No analyzed audio_file row exists for this path yet; annotation needs an analysis run first.
+        showAnnotateHint(m.sourceFiles_annotateNotAnalyzed());
+      }
     } catch (err) {
       console.error('Failed to resolve audio file for annotation:', err);
+      showAnnotateHint(m.sourceFiles_annotateNotAnalyzed());
     }
   }
 </script>
@@ -86,6 +111,11 @@
   <!-- Single file info card -->
   {@const file = scanResult.files[0]}
   {@const parsedNameStart = parseRecordingStart(file.name)}
+  {@const recordedAtDate = file.audiomoth?.recordedAt ? new Date(file.audiomoth.recordedAt) : null}
+  {@const validRecorded = recordedAtDate && !Number.isNaN(recordedAtDate.getTime()) ? recordedAtDate : null}
+  {@const recStart = validRecorded ?? parsedNameStart}
+  {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
+  {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
   <div class="flex flex-1 flex-col p-6">
     <h3 class="text-base-content/70 mb-4 text-sm font-medium">{m.sourceFiles_sourceFile()}</h3>
     <div class="card border-base-300 bg-base-100 border p-5">
@@ -127,24 +157,21 @@
             >
           </div>
         {/if}
-        {#if file.audiomoth?.recordedAt ?? parsedNameStart}
-          {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
-          {@const recStart = file.audiomoth?.recordedAt
-            ? new Date(file.audiomoth.recordedAt)
-            : (parsedNameStart ?? new Date())}
-          {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
-          <div class="flex items-center gap-2">
-            <Calendar size={14} class="text-base-content/40" />
-            <span class="text-base-content/60">{m.sourceFiles_recordingDate()}</span>
-            <span class="ml-auto font-medium"
-              >{recStart.toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                ...tzOpt,
-              })}</span
-            >
-          </div>
+        <div class="flex items-center gap-2">
+          <Calendar size={14} class="text-base-content/40" />
+          <span class="text-base-content/60">{m.sourceFiles_recordingDate()}</span>
+          <span class="ml-auto font-medium"
+            >{recStart
+              ? recStart.toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  ...tzOpt,
+                })
+              : m.sourceFiles_recordingDateUnknown()}</span
+          >
+        </div>
+        {#if recStart}
           <div class="flex items-center gap-2">
             <Play size={14} class="text-base-content/40" />
             <span class="text-base-content/60">{m.sourceFiles_recordingStartTime()}</span>
@@ -266,5 +293,13 @@
     <FolderOpen size={32} />
     <p class="text-sm">{m.sourceFiles_noAudioFiles()}</p>
     <p class="text-xs">{m.sourceFiles_supportedFormats()}</p>
+  </div>
+{/if}
+
+{#if annotateHint}
+  <div class="toast toast-end toast-bottom z-50">
+    <div class="alert alert-warning">
+      <span>{annotateHint}</span>
+    </div>
   </div>
 {/if}
