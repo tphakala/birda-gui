@@ -60,6 +60,7 @@
     CudaStatus,
     CudaDownloadProgress,
     DatabaseHealthResult,
+    ClearDatabaseResult,
   } from '$shared/types';
   import { BIRDA_RELEASES_URL, BIRDA_CLI_VERSION } from '$shared/constants';
   import { onDestroy, onMount } from 'svelte';
@@ -139,7 +140,7 @@
 
   let showClearConfirm = $state(false);
   let clearing = $state(false);
-  let clearResult = $state<{ detections: number; runs: number; locations: number } | null>(null);
+  let clearResult = $state<ClearDatabaseResult | null>(null);
   let clearResultTimer: ReturnType<typeof setTimeout> | null = null;
 
   // --- Models state ---
@@ -1214,6 +1215,7 @@
                   detections: clearResult.detections,
                   runs: clearResult.runs,
                   locations: clearResult.locations,
+                  annotations: clearResult.annotations,
                 })}
               </span>
             {/if}
