@@ -176,8 +176,9 @@
       loading = false;
       duration = wavesurfer.getDuration();
       ensureSpectrogramMount();
-      refreshViewport();
+      // Read width before refreshViewport's scrollLeft write to avoid a read-after-write reflow.
       updateViewportWidth();
+      refreshViewport();
     });
     wavesurfer.on('play', () => {
       playing = true;
