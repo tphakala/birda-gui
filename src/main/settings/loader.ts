@@ -39,7 +39,7 @@ export async function loadSettings(): Promise<AppSettings> {
     const valid: Record<string, unknown> = {};
     /* eslint-disable security/detect-object-injection -- keys come from Object.entries and are gated by `key in shape` against a fixed schema */
     for (const [key, value] of Object.entries(parsed)) {
-      if (!(key in shape)) continue; // unknown/legacy key (e.g. the deprecated default_model): ignore
+      if (!Object.hasOwn(shape, key)) continue; // unknown/legacy/inherited key (e.g. deprecated default_model): ignore
       const field = shape[key as keyof typeof shape].safeParse(value);
       if (field.success) {
         valid[key] = field.data;

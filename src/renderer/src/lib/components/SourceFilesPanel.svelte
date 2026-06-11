@@ -111,8 +111,9 @@
   <!-- Single file info card -->
   {@const file = scanResult.files[0]}
   {@const parsedNameStart = parseRecordingStart(file.name)}
-  {@const recParsed = file.audiomoth?.recordedAt ? new Date(file.audiomoth.recordedAt) : parsedNameStart}
-  {@const recStart = recParsed && !Number.isNaN(recParsed.getTime()) ? recParsed : null}
+  {@const recordedAtDate = file.audiomoth?.recordedAt ? new Date(file.audiomoth.recordedAt) : null}
+  {@const validRecorded = recordedAtDate && !Number.isNaN(recordedAtDate.getTime()) ? recordedAtDate : null}
+  {@const recStart = validRecorded ?? parsedNameStart}
   {@const isUtc = file.audiomoth?.timezoneOffsetMin === 0}
   {@const tzOpt = isUtc ? { timeZone: 'UTC' as const } : undefined}
   <div class="flex flex-1 flex-col p-6">
