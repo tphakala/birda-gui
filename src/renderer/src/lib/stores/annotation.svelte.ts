@@ -1,6 +1,7 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { Annotation, AnnotationInput, AnnotationSource } from '$shared/types';
 import { listAnnotations, upsertAnnotation, deleteAnnotation, getDetections, resolveAllLabels } from '$lib/utils/ipc';
+import { showToast } from '$lib/stores/toast.svelte';
 
 /** A box in the editor: either a persisted annotation or an unsaved AI suggestion. */
 export interface EditorBox {
@@ -29,11 +30,9 @@ interface AnnotationEditorState {
   selectedKey: string | null;
   loading: boolean;
   error: string | null;
-  toast: string | null;
 }
 
 const MAX_DETECTION_SUGGESTIONS = 5000;
-const TOAST_DURATION_MS = 4000;
 
 export const annotationEditor = $state<AnnotationEditorState>({
   open: false,
@@ -43,10 +42,8 @@ export const annotationEditor = $state<AnnotationEditorState>({
   selectedKey: null,
   loading: false,
   error: null,
-  toast: null,
 });
 
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
 let manualBoxSeq = 0;
 /** Keys with a persist in flight; blocks duplicate INSERTs from rapid repeat actions on the same box. */
 const persistInFlight = new SvelteSet<string>();
@@ -64,7 +61,6 @@ export function openAnnotationEditor(audioFileId: number, filePath: string): voi
   annotationEditor.boxes = [];
   annotationEditor.selectedKey = null;
   annotationEditor.error = null;
-  clearToast();
   void loadBoxes();
 }
 
@@ -76,7 +72,6 @@ export function closeAnnotationEditor(): void {
   annotationEditor.selectedKey = null;
   annotationEditor.error = null;
   annotationEditor.loading = false;
-  clearToast();
 }
 
 function annotationToBox(a: Annotation, commonName: string): EditorBox {
@@ -152,23 +147,6 @@ async function loadBoxes(): Promise<void> {
   }
 }
 
-function clearToast(): void {
-  if (toastTimer !== null) {
-    clearTimeout(toastTimer);
-    toastTimer = null;
-  }
-  annotationEditor.toast = null;
-}
-
-function showToast(message: string): void {
-  if (toastTimer !== null) clearTimeout(toastTimer);
-  annotationEditor.toast = message;
-  toastTimer = setTimeout(() => {
-    annotationEditor.toast = null;
-    toastTimer = null;
-  }, TOAST_DURATION_MS);
-}
-
 function inputFromBox(box: EditorBox, audioFileId: number, status: AnnotationInput['status']): AnnotationInput {
   return {
     ...(box.annotationId !== null ? { id: box.annotationId } : {}),
@@ -223,7 +201,7 @@ async function persistBox(box: EditorBox): Promise<void> {
       annotationEditor.boxes = annotationEditor.boxes.filter((b) => b.key !== box.key);
       if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = null;
     }
-    showToast(errorMessage(err));
+    showToast(errorMessage(err), { severity: 'error' });
   } finally {
     persistInFlight.delete(box.key);
     if (pendingPersistKeys.delete(box.key)) {
@@ -322,6 +300,6 @@ export async function removeBox(key: string): Promise<void> {
   } catch (err) {
     // Re-insert only the removed box so concurrent edits to other boxes survive.
     annotationEditor.boxes = [...annotationEditor.boxes, removed].sort((a, b) => a.start_time - b.start_time);
-    showToast(errorMessage(err));
+    showToast(errorMessage(err), { severity: 'error' });
   }
 }

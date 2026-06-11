@@ -40,6 +40,8 @@
   // Viewport state drives box geometry. Bumped via reactive reassignment to retrigger $derived.
   let pxPerSecond = $state(1);
   let scrollLeft = $state(0);
+  /** Visible pane width in px; only changes on window resize, so updated from the ResizeObserver/ready, not on scroll. */
+  let viewportWidth = $state(0);
 
   let resizeObserver: ResizeObserver | null = null;
 
@@ -48,6 +50,30 @@
     scrollLeft,
     freqMax,
     height: spectrogramHeight,
+  });
+
+  /** Render a little beyond the pane so scrolling does not flash empty boxes at the edges. */
+  const OVERSCAN_PX = 200;
+
+  // Virtualize: render only boxes whose projected x-range intersects the visible pane (plus the
+  // selected/dragged box). Derived from `viewport`, so it stays aligned under scroll/zoom/freqMax/resize.
+  const visibleBoxes = $derived.by(() => {
+    const pps = viewport.pxPerSecond;
+    const sl = viewport.scrollLeft;
+    const vw = viewportWidth;
+    // Pre-'ready' the scale is still the reset default, so geometry is not valid yet: render nothing
+    // rather than boxes at the wrong scale (loading flips to false in the wavesurfer 'ready' handler).
+    if (loading || vw <= 0 || pps <= 0) return [];
+    const selected = annotationEditor.selectedKey;
+    const minX = -OVERSCAN_PX;
+    const maxX = vw + OVERSCAN_PX;
+    return annotationEditor.boxes.filter((box) => {
+      // Keep the selected box rendered even off-screen: it is always the box being moved/resized.
+      if (box.key === selected) return true;
+      const left = box.start_time * pps - sl;
+      const right = left + Math.max(1, (box.end_time - box.start_time) * pps);
+      return right >= minX && left <= maxX;
+    });
   });
 
   let zoomPxPerSec = 0; // 0 => fit to width
@@ -65,6 +91,16 @@
     // does not scroll natively; mirror wavesurfer's horizontal scroll onto it.
     const pluginWrapper = spectrogramEl?.firstElementChild;
     if (pluginWrapper instanceof HTMLElement) pluginWrapper.scrollLeft = scrollLeft;
+  }
+
+  /**
+   * Update the cached visible pane width. Kept out of refreshViewport (which fires on every scroll
+   * tick and writes scrollLeft just above): reading clientWidth right after a layout write forces a
+   * synchronous reflow per frame. Width only changes on window resize, so this runs from the
+   * ResizeObserver and the 'ready' handler instead.
+   */
+  function updateViewportWidth(): void {
+    viewportWidth = overlayEl?.clientWidth ?? 0;
   }
 
   /**
@@ -92,6 +128,11 @@
     initializing = true;
     loading = true;
     loadError = null;
+    // Reset viewport scale for the new file; 'ready' and the ResizeObserver re-establish it.
+    pxPerSecond = 1;
+    scrollLeft = 0;
+    viewportWidth = 0;
+    duration = 0;
 
     let settings;
     try {
@@ -135,6 +176,8 @@
       loading = false;
       duration = wavesurfer.getDuration();
       ensureSpectrogramMount();
+      // Read width before refreshViewport's scrollLeft write to avoid a read-after-write reflow.
+      updateViewportWidth();
       refreshViewport();
     });
     wavesurfer.on('play', () => {
@@ -165,6 +208,8 @@
     // ResizeObserver: window resize changes effective px-per-second without a wavesurfer event.
     resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(() => {
+      // Read width before refreshViewport's scrollLeft write to avoid a read-after-write reflow.
+      updateViewportWidth();
       refreshViewport();
     });
     resizeObserver.observe(waveformEl);
@@ -477,7 +522,7 @@
               aria-label={m.annotation_overlay_label()}
               onpointerdown={handleOverlayPointerDown}
             >
-              {#each annotationEditor.boxes as box (box.key)}
+              {#each visibleBoxes as box (box.key)}
                 <AnnotationBox
                   {box}
                   rect={annotationToRect(box, viewport)}
@@ -505,12 +550,6 @@
         <AnnotationSidePanel />
       </div>
     </div>
-
-    {#if annotationEditor.toast}
-      <div class="toast toast-end">
-        <div class="alert alert-error text-sm">{annotationEditor.toast}</div>
-      </div>
-    {/if}
   </div>
 {/if}
 
