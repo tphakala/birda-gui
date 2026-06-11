@@ -21,6 +21,7 @@
   import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
   import * as m from '$paraglide/messages';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
   import { resolveAnnotationFile } from '$lib/utils/ipc';
   import { appState } from '$lib/stores/app.svelte';
 
@@ -66,25 +67,6 @@
     return 0;
   }
 
-  const ANNOTATE_HINT_TIMEOUT_MS = 4000;
-  let annotateHint = $state<string | null>(null);
-
-  // Auto-dismiss the hint. The effect re-runs whenever the message changes and
-  // its cleanup clears the pending timer (and also runs on unmount).
-  $effect(() => {
-    if (annotateHint === null) return;
-    const timer = setTimeout(() => {
-      annotateHint = null;
-    }, ANNOTATE_HINT_TIMEOUT_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  });
-
-  function showAnnotateHint(message: string): void {
-    annotateHint = message;
-  }
-
   async function annotate(filePath: string): Promise<void> {
     const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
     try {
@@ -93,11 +75,11 @@
         openAnnotationEditor(id, filePath);
       } else {
         // No analyzed audio_file row exists for this path yet; annotation needs an analysis run first.
-        showAnnotateHint(m.sourceFiles_annotateNotAnalyzed());
+        showToast(m.sourceFiles_annotateNotAnalyzed(), { severity: 'warning' });
       }
     } catch (err) {
       console.error('Failed to resolve audio file for annotation:', err);
-      showAnnotateHint(m.sourceFiles_annotateNotAnalyzed());
+      showToast(m.sourceFiles_annotateNotAnalyzed(), { severity: 'warning' });
     }
   }
 </script>
@@ -293,13 +275,5 @@
     <FolderOpen size={32} />
     <p class="text-sm">{m.sourceFiles_noAudioFiles()}</p>
     <p class="text-xs">{m.sourceFiles_supportedFormats()}</p>
-  </div>
-{/if}
-
-{#if annotateHint}
-  <div class="toast toast-end toast-bottom z-50">
-    <div class="alert alert-warning">
-      <span>{annotateHint}</span>
-    </div>
   </div>
 {/if}
