@@ -11,8 +11,7 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
 
   // Check if already exists (for retry scenarios)
   const existing = db.prepare('SELECT id FROM audio_files WHERE run_id = ? AND file_path = ?').get(runId, filePath) as
-    | { id: number }
-    | undefined;
+    { id: number } | undefined;
 
   if (existing) return existing.id;
 

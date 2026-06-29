@@ -1524,8 +1524,7 @@ export function getAudioFileIdByPath(filePath: string, runId?: number | null): n
           .prepare('SELECT id FROM audio_files WHERE file_path = ? AND run_id = ? ORDER BY id DESC LIMIT 1')
           .get(filePath, runId) as { id: number } | undefined)
       : (db.prepare('SELECT id FROM audio_files WHERE file_path = ? ORDER BY id DESC LIMIT 1').get(filePath) as
-          | { id: number }
-          | undefined);
+          { id: number } | undefined);
   return row?.id ?? null;
 }
 ```
