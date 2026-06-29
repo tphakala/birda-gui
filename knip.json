@@ -14,5 +14,5 @@
     "$paraglide/*": ["./src/renderer/src/paraglide/*"]
   },
   "ignoreDependencies": ["tailwindcss", "daisyui"],
-  "ignoreBinaries": ["generate-license-file"]
+  "ignoreBinaries": ["powershell"]
 }

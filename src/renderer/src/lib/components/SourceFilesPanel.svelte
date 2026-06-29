@@ -7,7 +7,7 @@
     Loader,
     Clock,
     HardDrive,
-    Waves,
+    WavesHorizontal,
     CircleDot,
     Cpu,
     Battery,
@@ -121,7 +121,7 @@
         </div>
         {#if file.sampleRate}
           <div class="flex items-center gap-2">
-            <Waves size={14} class="text-base-content/40" />
+            <WavesHorizontal size={14} class="text-base-content/40" />
             <span class="text-base-content/60">{m.sourceFiles_sampleRate()}</span>
             <span class="ml-auto font-medium">{(file.sampleRate / 1000).toFixed(1)} kHz</span>
           </div>
