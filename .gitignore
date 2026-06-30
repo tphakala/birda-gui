@@ -7,6 +7,7 @@ docs/plans/
 logs/
 .leann/
 .claude/
+.serena/
 .worktrees/
 *.db
 *.db-wal
