@@ -16,10 +16,8 @@ interface HourlySunPhase {
   gradient?: SunPhaseGradient;
 }
 
-const RAD_TO_DEG = 180 / Math.PI;
-
 function altitudeDeg(date: Date, latitude: number, longitude: number): number {
-  return getPosition(date, latitude, longitude).altitude * RAD_TO_DEG;
+  return getPosition(date, latitude, longitude).altitude;
 }
 
 /** Classify by sun altitude: >= 0° daylight, >= -6° twilight (civil), < -6° night. */
