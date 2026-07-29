@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MapPin, Map, X } from '@lucide/svelte';
   import { MapLibre, Marker } from 'svelte-maplibre-gl';
-  import type maplibregl from 'maplibre-gl';
+  import type { MapMouseEvent } from 'maplibre-gl';
   import * as m from '$paraglide/messages';
 
   let {
@@ -18,7 +18,7 @@
 
   const hasCoords = $derived(latitude !== 0 || longitude !== 0);
 
-  function handleMapClick(e: maplibregl.MapMouseEvent) {
+  function handleMapClick(e: MapMouseEvent) {
     latitude = Math.round(e.lngLat.lat * 10000) / 10000;
     longitude = Math.round(e.lngLat.lng * 10000) / 10000;
   }
