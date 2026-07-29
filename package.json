@@ -109,7 +109,7 @@
   "dependencies": {
     "@electron/rebuild": "^4.0.3",
     "async-mutex": "^0.5.0",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^13.0.2",
     "daisyui": "^5.6.6",
     "music-metadata": "^11.12.3",
     "suncalc": "^2.0.0",
@@ -136,7 +136,7 @@
     "husky": "^9.1.7",
     "knip": "^6.3.0",
     "lint-staged": "^17.0.8",
-    "maplibre-gl": "^5.17.0",
+    "maplibre-gl": "^6.0.0",
     "prettier": "^3.9.4",
     "prettier-plugin-svelte": "^4.1.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
