@@ -176,7 +176,7 @@
           {/if}
         {:else}
           <tr>
-            <td colspan={colCount} class="px-3 py-8 text-center text-base-content/50">
+            <td colspan={colCount} class="text-base-content/50 px-3 py-8 text-center">
               {#if loading}
                 {m.table_loadingDetections()}
               {:else}
