@@ -2,12 +2,15 @@ node_modules/
 dist/
 out/
 release/
-docs/plans/
+# Design docs, specs and plans are working documents, tracked privately and
+# never published from this repository.
+docs/
 .worktrees/
 logs/
 .leann/
 .claude/
 .serena/
+.codegraph/
 .worktrees/
 *.db
 *.db-wal
