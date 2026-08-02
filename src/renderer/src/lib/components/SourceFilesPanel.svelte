@@ -44,7 +44,11 @@
     for (const evt of analysisState.events) {
       if (evt.event === 'file_completed') {
         const p = evt.payload as FileCompletedPayload;
-        statuses.set(p.file, p.status === 'processed' ? 'completed' : p.status);
+        // A 'locked' file was skipped because another worker held it; render it
+        // as a skip. 'processed' maps to the panel's 'completed' state.
+        const status: FileStatus =
+          p.status === 'processed' ? 'completed' : p.status === 'locked' ? 'skipped' : p.status;
+        statuses.set(p.file, status);
       }
     }
 

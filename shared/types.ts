@@ -399,7 +399,9 @@ export interface ProgressPayload {
 
 export interface FileCompletedPayload {
   file: string;
-  status: 'processed' | 'failed' | 'skipped';
+  // 'locked' means another worker held the per-file lock, so birda skipped the
+  // file rather than failing it (birda's FileStatus::Locked). Treat it as a skip.
+  status: 'processed' | 'failed' | 'skipped' | 'locked';
   detections: number;
   duration_ms: number;
 }
