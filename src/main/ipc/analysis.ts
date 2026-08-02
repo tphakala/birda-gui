@@ -348,12 +348,16 @@ export function registerAnalysisHandlers(): void {
                   } finally {
                     importSemaphore.release();
                   }
-                } else if (payload.status === 'skipped') {
+                } else if (payload.status === 'skipped' || payload.status === 'locked') {
+                  // A locked file was claimed by another worker in a distributed
+                  // run; birda reports it as a skip, not a failure, so count it
+                  // as one here too rather than inflating the failed total.
                   skippedFileCount++;
                   if (trackFileWithOverflow(win, skippedFiles, payload.file, skippedFilesOverflow, 'skipped')) {
                     skippedFilesOverflow = true;
                   }
-                  sendLog(win, 'info', 'analysis', `Skipped ${payload.file}`);
+                  const reason = payload.status === 'locked' ? 'Locked by another worker, skipped' : 'Skipped';
+                  sendLog(win, 'info', 'analysis', `${reason} ${payload.file}`);
                 } else {
                   // Must be 'failed' - only remaining case
                   failedFileCount++;
