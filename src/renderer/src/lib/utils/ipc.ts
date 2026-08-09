@@ -140,8 +140,16 @@ export function getModelManifest(id: string): Promise<ModelManifest> {
   return window.birda.invoke('birda:models-manifest', id) as Promise<ModelManifest>;
 }
 
-export function installModel(opts: { id: string; region?: string; variant?: string }): Promise<ModelInstalledResult> {
+export function installModel(opts: {
+  id: string;
+  region?: string | undefined;
+  variant?: string | undefined;
+}): Promise<ModelInstalledResult> {
   return window.birda.invoke('birda:models-install', opts) as Promise<ModelInstalledResult>;
+}
+
+export function cancelInstall(): Promise<boolean> {
+  return window.birda.invoke('birda:models-install-cancel') as Promise<boolean>;
 }
 
 export function setDefaultModel(modelId: string): Promise<void> {

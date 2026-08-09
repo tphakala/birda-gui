@@ -21,8 +21,8 @@
     variant: ManifestVariant;
     family: string;
     installed: boolean;
-    download?: Download;
-    matchHint?: { kind: 'core' | 'partial'; country: string };
+    download?: Download | undefined;
+    matchHint?: { kind: 'core' | 'partial'; country: string } | undefined;
     installDisabled?: boolean;
     onOpen: () => void;
     onInstall: () => void;

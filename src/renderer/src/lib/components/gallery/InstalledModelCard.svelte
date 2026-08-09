@@ -21,11 +21,11 @@
     model: InstalledModel;
     title: string;
     family: string;
-    regionName?: string;
-    size?: string;
+    regionName?: string | undefined;
+    size?: string | undefined;
     isDefault: boolean;
     updateAvailable: boolean;
-    latestVersion?: string;
+    latestVersion?: string | undefined;
     busy?: boolean;
     onSetDefault: () => void;
     onRemove: () => void;

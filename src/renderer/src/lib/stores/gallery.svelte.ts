@@ -1,10 +1,14 @@
 import { SvelteSet } from 'svelte/reactivity';
-import type { ModelManifest, InstalledModel, ModelInstallProgress } from '$shared/types';
+import type { ModelManifest, InstalledModel } from '$shared/types';
 
 export type DownloadState = 'installing' | 'error' | 'cancelled';
 
-export interface Download extends ModelInstallProgress {
+export interface Download {
   state: DownloadState;
+  line?: string;
+  percent?: number;
+  bytesDone?: number;
+  bytesTotal?: number;
 }
 
 interface GalleryState {

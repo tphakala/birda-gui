@@ -1,5 +1,13 @@
 import { ipcMain } from 'electron';
-import { listModels, listAvailable, installModel, modelInfo, removeModel, getManifest } from '../birda/models';
+import {
+  listModels,
+  listAvailable,
+  installModel,
+  modelInfo,
+  removeModel,
+  getManifest,
+  cancelInstall,
+} from '../birda/models';
 import { registerCoverageUrls } from '../birda/coverageCache';
 import { setDefaultModel } from '../birda/config';
 
@@ -19,13 +27,20 @@ export function registerModelHandlers(): void {
     return manifest;
   });
 
-  ipcMain.handle('birda:models-install', async (event, opts: { id: string; region?: string; variant?: string }) => {
-    const sender = event.sender;
-    return installModel(opts, (progress) => {
-      if (!sender.isDestroyed()) {
-        sender.send('birda:models-install-progress', progress);
-      }
-    });
+  ipcMain.handle(
+    'birda:models-install',
+    async (event, opts: { id: string; region?: string | undefined; variant?: string | undefined }) => {
+      const sender = event.sender;
+      return installModel(opts, (progress) => {
+        if (!sender.isDestroyed()) {
+          sender.send('birda:models-install-progress', progress);
+        }
+      });
+    },
+  );
+
+  ipcMain.handle('birda:models-install-cancel', () => {
+    return cancelInstall();
   });
 
   ipcMain.handle('birda:models-info', async (_event, name: string) => {

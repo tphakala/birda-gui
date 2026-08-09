@@ -66,8 +66,22 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
+// The single in-flight install process, tracked so the renderer can cancel it.
+// Only one install runs at a time (the UI enforces this), so one ref suffices.
+let currentInstall: ReturnType<typeof spawn> | null = null;
+
+/** Kill the in-flight install, if any. Returns true if one was running. */
+export function cancelInstall(): boolean {
+  if (currentInstall) {
+    currentInstall.kill();
+    currentInstall = null;
+    return true;
+  }
+  return false;
+}
+
 export async function installModel(
-  opts: { id: string; region?: string; variant?: string },
+  opts: { id: string; region?: string | undefined; variant?: string | undefined },
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
   const birdaPath = await findBirda();
@@ -82,6 +96,7 @@ export async function installModel(
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     registerProcess(proc);
+    currentInstall = proc;
 
     let stdout = '';
     let stderrRemainder = '';
@@ -122,6 +137,7 @@ export async function installModel(
 
     proc.on('close', (code) => {
       unregisterProcess(proc);
+      if (currentInstall === proc) currentInstall = null;
       if (stderrRemainder.trim()) {
         emit(stderrRemainder.trim());
       }
@@ -140,6 +156,7 @@ export async function installModel(
 
     proc.on('error', (err) => {
       unregisterProcess(proc);
+      if (currentInstall === proc) currentInstall = null;
       reject(new Error(`Model install failed: ${err.message}`));
     });
   });
