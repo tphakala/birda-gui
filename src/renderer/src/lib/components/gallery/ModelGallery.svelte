@@ -19,7 +19,7 @@
     offModelInstallProgress,
   } from '$lib/utils/ipc';
   import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
-  import { hasUpdate } from '$lib/gallery/logic';
+  import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
   import type { InstalledModel, ManifestVariant, ModelManifest } from '$shared/types';
 
@@ -39,7 +39,7 @@
   let currentInstallKey: string | null = null;
   let cancelledKey: string | null = null;
 
-  const selectedManifest = $derived(galleryStore.manifests[galleryStore.family] as ModelManifest | undefined);
+  const selectedManifest = $derived(manifestOf(galleryStore.family));
   const defaultId = $derived(galleryStore.installed.find((mo) => mo.is_default)?.id ?? '');
   const installing = $derived(Object.values(galleryStore.downloads).some((d) => d.state === 'installing'));
 
@@ -83,19 +83,28 @@
     loading = true;
     galleryStore.error = null;
     try {
-      const available = await listAvailableModels();
+      // Installed-model management must work even on an older birda that lacks the
+      // `models manifest` subcommand, so fetch the installed list independently
+      // (and concurrently) and never let a manifest failure blank it.
+      const [available] = await Promise.all([listAvailableModels(), refreshInstalled()]);
       families = available
         .filter((a) => FAMILY_IDS.includes(a.id))
         .map((a) => ({ id: a.id, name: a.name, vendor: a.vendor, recommended: a.recommended }));
-      const manifests = await Promise.all(families.map((f) => getModelManifest(f.id)));
-      for (const man of manifests) galleryStore.manifests[man.id] = man;
-      await refreshInstalled();
       if (families.length && !families.some((f) => f.id === galleryStore.family)) {
         galleryStore.family = families[0].id;
       }
       galleryStore.tab = galleryStore.installed.length > 0 ? 'installed' : 'browse';
+      // Manifests power the Browse tab only; degrade Browse (not the Installed
+      // tab) to the legacy notice if this birda cannot produce them.
+      try {
+        const manifests = await Promise.all(families.map((f) => getModelManifest(f.id)));
+        for (const man of manifests) galleryStore.manifests[man.id] = man;
+      } catch (manifestError) {
+        console.error('Failed to load model manifests (older birda?):', manifestError);
+      }
     } catch (e) {
-      galleryStore.error = (e as Error).message || m.gallery_error_loadFailed();
+      console.error('Failed to load model catalog:', e);
+      galleryStore.error = m.gallery_error_loadFailed();
     } finally {
       loading = false;
     }
@@ -126,7 +135,8 @@
     galleryStore.downloads = rest;
   }
 
-  async function doInstall(family: string, variant: ManifestVariant): Promise<void> {
+  // Returns true on success, false on cancel or error, so updateAll can stop.
+  async function doInstall(family: string, variant: ManifestVariant): Promise<boolean> {
     const key = variantKey(family, variant.region);
     currentInstallKey = key;
     busyId = key;
@@ -136,10 +146,10 @@
       clearDownload(key);
       await refreshInstalled();
       announce = m.gallery_installedToast({ model: variant.region_name ?? family });
+      return true;
     } catch (e) {
       clearDownload(key);
       if (cancelledKey === key) {
-        cancelledKey = null;
         announce = m.gallery_download_cancelled();
       } else {
         galleryStore.error = m.gallery_download_failed({
@@ -147,8 +157,12 @@
           error: (e as Error).message,
         });
       }
+      return false;
     } finally {
       if (currentInstallKey === key) currentInstallKey = null;
+      // Always clear the cancel flag for this key, so a cancel that missed the
+      // process (install completed anyway) cannot mislabel a later failure.
+      if (cancelledKey === key) cancelledKey = null;
       busyId = null;
     }
   }
@@ -176,8 +190,11 @@
     void doInstall(family, variant);
   }
 
-  async function handleCancel(variant: ManifestVariant): Promise<void> {
-    cancelledKey = variantKey(galleryStore.family, variant.region);
+  async function handleCancel(): Promise<void> {
+    // Cancel the single in-flight install; key off the ACTUAL in-flight key
+    // (not the browsed family) so doInstall reports it as cancelled, including
+    // during updateAll where the install may span a different family.
+    cancelledKey = currentInstallKey;
     await cancelInstall();
   }
 
@@ -193,6 +210,9 @@
     }
   }
 
+  // handleUpdate/updateAll re-install already-installed registry models, which by
+  // definition already passed this family's license gate, so they skip the
+  // license prompt that handleInstall enforces. This is deliberate, not a gap.
   function handleUpdate(model: InstalledModel): void {
     const family = model.registry_id ?? model.model_type;
     const man = manifestOf(family);
@@ -205,7 +225,8 @@
       const family = mo.registry_id ?? mo.model_type;
       const man = manifestOf(family);
       const variant = man?.variants.find((v) => v.region === mo.region);
-      if (variant) await doInstall(family, variant);
+      // Stop the sequential run if the user cancels (or an install errors).
+      if (variant && !(await doInstall(family, variant))) break;
     }
   }
 
@@ -224,6 +245,13 @@
   }
 
   const detailInstalled = $derived(detailVariant ? installedRegions.has(detailVariant.region ?? 'global') : false);
+
+  // Friendly name for the remove-confirm dialog, matching the installed card.
+  const removeTitle = $derived.by(() => {
+    const target = removeTarget;
+    if (!target) return '';
+    return installedTitle(target, manifestOf(target.registry_id ?? target.model_type));
+  });
 </script>
 
 <div class="space-y-4">
@@ -231,6 +259,7 @@
     <div role="tablist" class="tabs tabs-border">
       <button
         role="tab"
+        aria-selected={galleryStore.tab === 'installed'}
         class="tab {galleryStore.tab === 'installed' ? 'tab-active' : ''}"
         onclick={() => (galleryStore.tab = 'installed')}
       >
@@ -241,6 +270,7 @@
       </button>
       <button
         role="tab"
+        aria-selected={galleryStore.tab === 'browse'}
         class="tab {galleryStore.tab === 'browse' ? 'tab-active' : ''}"
         onclick={() => (galleryStore.tab = 'browse')}
       >
@@ -254,7 +284,7 @@
         </button>
       {/if}
       <button class="btn btn-ghost btn-sm gap-1.5" onclick={load} disabled={loading}>
-        <RefreshCw size={14} class={loading ? 'animate-spin' : ''} />{m.gallery_refresh()}
+        <RefreshCw size={14} class={loading ? 'motion-safe:animate-spin' : ''} />{m.gallery_refresh()}
       </button>
     </div>
   </div>
@@ -273,6 +303,7 @@
       installed={galleryStore.installed}
       manifests={galleryStore.manifests}
       {defaultId}
+      {loading}
       busy={busyId !== null}
       onSetDefault={handleSetDefault}
       onRemove={(mo: InstalledModel) => (removeTarget = mo)}
@@ -312,7 +343,7 @@
         if (detailVariant) handleInstall(detailVariant);
       }}
       onCancel={() => {
-        if (detailVariant) void handleCancel(detailVariant);
+        void handleCancel();
       }}
       onClose={() => (detailVariant = null)}
     />
@@ -329,7 +360,7 @@
 
   {#if removeTarget}
     <RemoveModelModal
-      modelName={removeTarget.id}
+      modelName={removeTitle}
       busy={busyId !== null}
       onConfirm={confirmRemove}
       onCancel={() => (removeTarget = null)}

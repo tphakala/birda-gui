@@ -101,3 +101,18 @@ export function searchRegions(variants: ManifestVariant[], query: string): Regio
 export function hasUpdate(model: InstalledModel, manifest: ModelManifest | undefined): boolean {
   return manifest?.build !== undefined && model.installed_build !== undefined && manifest.build > model.installed_build;
 }
+
+/** The manifest variant matching an installed model's region (global -> no region). */
+export function variantForModel(
+  model: InstalledModel,
+  manifest: ModelManifest | undefined,
+): ManifestVariant | undefined {
+  return manifest?.variants.find((v) => v.region === model.region);
+}
+
+/** Friendly display title for an installed model, e.g. "BirdNET v3.0 · Nordic". */
+export function installedTitle(model: InstalledModel, manifest: ModelManifest | undefined): string {
+  const base = manifest?.name ?? model.id;
+  const region = variantForModel(model, manifest)?.region_name;
+  return region ? `${base} · ${region}` : base;
+}

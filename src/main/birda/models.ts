@@ -49,9 +49,14 @@ export async function listAvailable(): Promise<AvailableModel[]> {
 // The single in-flight install process, tracked so the renderer can cancel it.
 // Only one install runs at a time (the UI enforces this), so one ref suffices.
 let currentInstall: ReturnType<typeof spawn> | null = null;
+// Held in an object (not a bare `let`) so TS does not narrow it to a literal
+// across the `await findBirda()` in installModel, where cancelInstall may mutate
+// it. Set when a cancel arrives before any process exists to kill.
+const cancelState = { requested: false };
 
 /** Kill the in-flight install, if any. Returns true if one was running. */
 export function cancelInstall(): boolean {
+  cancelState.requested = true;
   if (currentInstall) {
     currentInstall.kill();
     currentInstall = null;
@@ -60,11 +65,24 @@ export function cancelInstall(): boolean {
   return false;
 }
 
+// Read through a function so TS does not narrow the post-await check to a literal.
+const cancelRequested = (): boolean => cancelState.requested;
+
 export async function installModel(
   opts: { id: string; region?: string | undefined; variant?: string | undefined },
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
+  cancelState.requested = false;
   const birdaPath = await findBirda();
+  // A cancel that arrived while findBirda() was resolving must still stop the spawn.
+  if (cancelRequested()) {
+    cancelState.requested = false;
+    throw new Error('Model install cancelled');
+  }
+  // Defend the single-install invariant in main rather than trusting the renderer.
+  if (currentInstall) {
+    throw new Error('Another model install is already running');
+  }
   const args = ['--output-mode', 'json', 'models', 'install', opts.id];
   if (opts.region) args.push('--region', opts.region);
   if (opts.variant) args.push('--variant', opts.variant);

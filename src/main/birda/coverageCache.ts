@@ -11,6 +11,11 @@ const coverageUrls = new Map<string, string>();
 const key = (family: string, region: string): string => `${family}/${region}`;
 const cacheDir = (): string => path.join(app.getPath('userData'), 'coverage-cache');
 
+// family/region reach here from the renderer via the birda-map:// URL. The
+// allow-map lookup already gates on birda-vouched keys, but reject any
+// path-bearing segment before it can touch the filesystem (defense in depth).
+const isUnsafeSegment = (s: string): boolean => s.includes('/') || s.includes('\\') || s.includes('..');
+
 export function registerCoverageUrls(family: string, variants: ManifestVariant[]): void {
   for (const variant of variants) {
     if (variant.region && variant.coverage_url) {
@@ -25,8 +30,12 @@ export function registerCoverageUrls(family: string, variants: ManifestVariant[]
  * so the renderer's <img> falls back to the "map unavailable" tile.
  */
 export async function getCoveragePath(family: string, region: string): Promise<string | null> {
+  if (isUnsafeSegment(family) || isUnsafeSegment(region)) return null;
   const url = coverageUrls.get(key(family, region));
   if (!url) return null;
+  // birda resolves Hugging Face URLs, which are always https; refuse anything
+  // else so a bad manifest cannot make main read a local file or fetch cleartext.
+  if (!url.startsWith('https://')) return null;
 
   const dir = path.join(cacheDir(), family);
   const file = path.join(dir, `${region}.svg`);
@@ -43,8 +52,14 @@ export async function getCoveragePath(family: string, region: string): Promise<s
     const buffer = Buffer.from(await res.arrayBuffer());
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     await fs.mkdir(dir, { recursive: true });
+    // Write to a temp file then rename: a crash or two concurrent fetches for
+    // the same region must not leave a truncated file that fs.access then serves
+    // forever.
+    const tmp = `${file}.${process.pid}.tmp`;
     // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.writeFile(file, buffer);
+    await fs.writeFile(tmp, buffer);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.rename(tmp, file);
     return file;
   } catch {
     return null;

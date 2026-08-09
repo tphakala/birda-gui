@@ -79,6 +79,7 @@
       {#each families as f (f.id)}
         <button
           role="tab"
+          aria-selected={family === f.id}
           class="tab {family === f.id ? 'tab-active' : ''}"
           onclick={() => {
             onSelectFamily(f.id);
@@ -105,7 +106,13 @@
   <!-- Country search -->
   <label class="input input-bordered flex max-w-md items-center gap-2">
     <Search size={16} class="opacity-50" />
-    <input type="text" class="grow" placeholder={m.gallery_search_placeholder()} bind:value={query} />
+    <input
+      type="text"
+      class="grow"
+      placeholder={m.gallery_search_placeholder()}
+      aria-label={m.gallery_search_placeholder()}
+      bind:value={query}
+    />
   </label>
 
   {#if results}
@@ -122,7 +129,7 @@
           <RegionCard
             variant={r.variant}
             {family}
-            installed={installedRegions.has(r.variant.region ?? '')}
+            installed={installedRegions.has(r.variant.region ?? 'global')}
             download={downloads[variantKey(family, r.variant.region)]}
             matchHint={r.hint}
             installDisabled={installing}
@@ -175,6 +182,7 @@
               <button
                 class="btn btn-primary btn-sm gap-1"
                 disabled={installing}
+                title={installing ? m.gallery_installAnotherRunning() : undefined}
                 onclick={() => {
                   onInstall(globalVariant);
                 }}
@@ -202,7 +210,7 @@
             <RegionCard
               variant={v}
               {family}
-              installed={installedRegions.has(v.region ?? '')}
+              installed={installedRegions.has(v.region ?? 'global')}
               download={downloads[variantKey(family, v.region)]}
               installDisabled={installing}
               onOpen={() => {

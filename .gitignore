@@ -20,3 +20,6 @@ resources/birda-cli/
 .env
 .env.*
 nul
+
+# Test coverage output
+coverage/

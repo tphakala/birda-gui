@@ -49,7 +49,7 @@
   </button>
   <div class="card-body gap-1.5 p-4">
     <div class="flex items-start justify-between gap-2">
-      <h4 class="truncate text-sm font-semibold">{variant.region_name}</h4>
+      <h4 class="truncate text-sm font-semibold" title={variant.region_name}>{variant.region_name}</h4>
       <div class="shrink-0">
         {#if installed}
           <span class="badge badge-success badge-sm gap-1"

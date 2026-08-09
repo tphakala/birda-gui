@@ -12,6 +12,14 @@
   let loaded = $state(false);
   let failed = $state(false);
   const src = $derived(region ? `birda-map://${family}/${encodeURIComponent(region)}` : '');
+
+  // Reset load state when the source changes, so a reused instance (mutating
+  // props rather than a keyed remount) does not keep a stale loaded/failed flag.
+  $effect(() => {
+    void src;
+    loaded = false;
+    failed = false;
+  });
 </script>
 
 <div class="border-base-300 bg-base-300 relative aspect-[4/3] w-full overflow-hidden rounded-lg border {klass}">
@@ -29,7 +37,9 @@
       alt={m.gallery_coverage_alt({ region: regionName })}
       loading="lazy"
       decoding="async"
-      class="h-full w-full object-cover transition-opacity {loaded ? 'opacity-100' : 'opacity-0'}"
+      class="h-full w-full object-cover transition-opacity motion-reduce:transition-none {loaded
+        ? 'opacity-100'
+        : 'opacity-0'}"
       onload={() => (loaded = true)}
       onerror={() => (failed = true)}
     />

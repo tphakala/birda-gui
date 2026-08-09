@@ -8,6 +8,8 @@ import {
   groupVariants,
   searchRegions,
   hasUpdate,
+  variantForModel,
+  installedTitle,
 } from './logic';
 import type { ModelManifest, ManifestVariant, InstalledModel } from '$shared/types';
 
@@ -172,5 +174,69 @@ describe('hasUpdate', () => {
     expect(hasUpdate(installed({ id: 'x' }), manifest([], { build: 3 }))).toBe(false);
     expect(hasUpdate(installed({ id: 'x', installed_build: 2 }), manifest([]))).toBe(false);
     expect(hasUpdate(installed({ id: 'x', installed_build: 2 }), undefined)).toBe(false);
+  });
+});
+
+describe('searchRegions ranking and edge cases', () => {
+  it('orders a name match ahead of a country match for the same query, regardless of input order', () => {
+    const fixture = [
+      // input order is deliberately country-match first, so a passing result
+      // proves the comparator ran, not just input order.
+      variant({ id: 'b', region: 'baltics', region_name: 'Baltics', countries: { core: ['Finland'], partial: [] } }),
+      variant({ id: 'f', region: 'finland', region_name: 'Finland', countries: { core: [], partial: [] } }),
+    ];
+    const results = searchRegions(fixture, 'finland');
+    expect(results.map((r) => r.variant.region)).toEqual(['finland', 'baltics']);
+    expect(results[0].rank).toBe(0);
+    expect(results[1].rank).toBe(1);
+  });
+
+  it('matches by continent name at rank 3 (ties keep all matches)', () => {
+    const fixture = [
+      variant({ id: 'n', region: 'nordic', region_name: 'Nordic', group_name: 'Europe' }),
+      variant({ id: 'i', region: 'iberia', region_name: 'Iberia', group_name: 'Europe' }),
+    ];
+    const results = searchRegions(fixture, 'europe');
+    expect(results).toHaveLength(2);
+    expect(results.every((r) => r.rank === 3)).toBe(true);
+  });
+
+  it('does not throw when a variant has no countries and still matches by name', () => {
+    const fixture = [variant({ id: 'x', region: 'x', region_name: 'Xland' })];
+    expect(() => searchRegions(fixture, 'zzz')).not.toThrow();
+    expect(searchRegions(fixture, 'xland')[0].variant.region).toBe('x');
+  });
+});
+
+describe('dedupe / global / group edge cases', () => {
+  it('keeps the first-seen variant per region when no default_variant is set', () => {
+    const m = manifest([variant({ id: 'fp32', region: 'nordic' }), variant({ id: 'fp16', region: 'nordic' })]);
+    const result = dedupeRegionVariants(m);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('fp32');
+  });
+
+  it('pickGlobalVariant returns undefined when there is no region-less variant', () => {
+    expect(pickGlobalVariant(manifest([variant({ id: 'a', region: 'nordic' })]))).toBeUndefined();
+  });
+
+  it("groupVariants buckets a variant with no group under 'other'", () => {
+    const groups = groupVariants([variant({ id: 'a', region: 'a' })]);
+    expect(groups[0].slug).toBe('other');
+  });
+});
+
+describe('variantForModel / installedTitle', () => {
+  const man = manifest([variant({ id: 'fp32', region: 'nordic', region_name: 'Nordic' }), variant({ id: 'g' })]);
+
+  it('finds the variant matching an installed model region', () => {
+    expect(variantForModel(installed({ id: 'm', region: 'nordic' }), man)?.region_name).toBe('Nordic');
+    expect(variantForModel(installed({ id: 'm' }), man)?.id).toBe('g');
+  });
+
+  it('builds a friendly title, falling back to the id without a manifest', () => {
+    expect(installedTitle(installed({ id: 'm', region: 'nordic' }), man)).toBe('BirdNET v3.0 · Nordic');
+    expect(installedTitle(installed({ id: 'm2' }), man)).toBe('BirdNET v3.0');
+    expect(installedTitle(installed({ id: 'raw-id', region: 'x' }), undefined)).toBe('raw-id');
   });
 });

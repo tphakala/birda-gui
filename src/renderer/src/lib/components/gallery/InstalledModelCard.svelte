@@ -64,7 +64,7 @@
         </div>
       {/if}
       <div class="min-w-0 flex-1">
-        <h4 class="truncate text-sm font-semibold">{title}</h4>
+        <h4 class="truncate text-sm font-semibold" {title}>{title}</h4>
         {#if provenance}
           <p class="text-base-content/60 mt-0.5 text-xs tabular-nums">{provenance}</p>
         {/if}

@@ -1,7 +1,7 @@
 import { SvelteSet } from 'svelte/reactivity';
 import type { ModelManifest, InstalledModel } from '$shared/types';
 
-export type DownloadState = 'installing' | 'error' | 'cancelled';
+type DownloadState = 'installing' | 'error' | 'cancelled';
 
 export interface Download {
   state: DownloadState;

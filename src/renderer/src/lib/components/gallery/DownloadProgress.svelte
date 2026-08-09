@@ -10,9 +10,14 @@
 <div class="flex items-center gap-2">
   <div class="min-w-0 flex-1">
     {#if download.percent !== undefined}
-      <progress class="progress progress-primary h-2 w-full" value={download.percent} max="100"></progress>
+      <progress
+        class="progress progress-primary h-2 w-full"
+        value={download.percent}
+        max="100"
+        aria-label={m.gallery_installing()}
+      ></progress>
     {:else}
-      <progress class="progress progress-primary h-2 w-full"></progress>
+      <progress class="progress progress-primary h-2 w-full" aria-label={m.gallery_installing()}></progress>
     {/if}
     {#if download.bytesDone !== undefined && download.bytesTotal !== undefined}
       <p class="text-base-content/60 mt-1 text-xs tabular-nums">
@@ -21,6 +26,8 @@
           total: formatFileSize(download.bytesTotal),
         })}
       </p>
+    {:else}
+      <p class="text-base-content/60 mt-1 text-xs">{m.gallery_installing()}</p>
     {/if}
   </div>
   <button

@@ -18,7 +18,10 @@ export function parseSize(token: string): number | undefined {
     ['TIB', 1024 ** 4],
   ]);
   const factor = factors.get(unit);
-  return factor === undefined ? undefined : value * factor;
+  // A multi-dot token like "5.8.0" matches the regex but Number() yields NaN;
+  // reject it rather than propagating NaN into the progress UI.
+  if (factor === undefined || !Number.isFinite(value)) return undefined;
+  return value * factor;
 }
 
 /**

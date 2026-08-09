@@ -38,11 +38,15 @@
   const partial = $derived(variant.countries?.partial ?? []);
 </script>
 
-<dialog class="modal" bind:this={dialog} onclose={onClose}>
+<dialog class="modal" bind:this={dialog} onclose={onClose} aria-labelledby="region-detail-title">
   <div class="modal-box max-w-2xl">
     <div class="mb-3 flex items-center justify-between">
-      <h3 class="text-base font-semibold">{variant.region_name}</h3>
-      <button onclick={onClose} class="btn btn-ghost btn-sm btn-square" aria-label={m.common_button_close()}>
+      <h3 id="region-detail-title" class="text-base font-semibold">{variant.region_name}</h3>
+      <button
+        onclick={() => dialog?.close()}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={m.common_button_close()}
+      >
         <X size={16} />
       </button>
     </div>
@@ -97,13 +101,18 @@
       {:else if installed}
         <span class="badge badge-success gap-1"><CircleCheckBig size={12} />{m.gallery_installedBadge()}</span>
       {:else}
-        <button onclick={onInstall} disabled={installDisabled} class="btn btn-primary gap-1">
+        <button
+          onclick={onInstall}
+          disabled={installDisabled}
+          title={installDisabled ? m.gallery_installAnotherRunning() : undefined}
+          class="btn btn-primary gap-1"
+        >
           <DownloadIcon size={14} />{m.gallery_install()}
         </button>
       {/if}
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button onclick={onClose}>close</button>
+    <button aria-label={m.common_button_close()}>close</button>
   </form>
 </dialog>

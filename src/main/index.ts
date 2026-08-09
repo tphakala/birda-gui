@@ -9,6 +9,7 @@ import {
   session,
 } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
@@ -212,7 +213,9 @@ function registerBirdaMapProtocol() {
     if (!file) {
       return new Response('Not Found', { status: 404 });
     }
-    const response = await net.fetch(`file:///${file.replace(/\\/g, '/')}`);
+    // pathToFileURL encodes special characters (#, ?) that manual file:/// string
+    // building would misparse as a fragment/query.
+    const response = await net.fetch(pathToFileURL(file).href);
     const headers = new Headers(response.headers);
     headers.set('content-type', 'image/svg+xml');
     headers.set('Access-Control-Allow-Origin', '*');
