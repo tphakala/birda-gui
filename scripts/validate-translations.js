@@ -120,6 +120,14 @@ const IGNORED_IDENTICAL_KEYS = new Set([
   'analysis_model', // Model (Nl/Pl)
   'species_fetch_week', // Week (Nl)
   'species_detail_week', // Week (Nl)
+  // Gallery: continent/place names and technical strings identical in some languages
+  'gallery_global_title', // Global (De/Es/Fr/Pt/Sv/Da)
+  'gallery_group_europe', // Europe (Fr)
+  'gallery_group_asia', // Asia (Es/It)
+  'gallery_group_africa', // Africa (It)
+  'gallery_group_oceania', // Oceania (It/Pl)
+  'gallery_detail_download', // Download (Da - project uses the loanword)
+  'gallery_provenance', // v{version} build {build} (build kept as a technical term)
 ]);
 
 /**
