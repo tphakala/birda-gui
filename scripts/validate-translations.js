@@ -127,7 +127,7 @@ const IGNORED_IDENTICAL_KEYS = new Set([
   'gallery_group_africa', // Africa (It)
   'gallery_group_oceania', // Oceania (It/Pl)
   'gallery_detail_download', // Download (Da - project uses the loanword)
-  'gallery_provenance', // v{version} build {build} (build kept as a technical term)
+  'gallery_provenance', // v{version} build {build} - cs/da/fr/hu/it/nl/sv keep the "build" loanword, matching en (de/es/fi/pl/pt translate it)
 ]);
 
 /**
