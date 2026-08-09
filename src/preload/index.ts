@@ -15,6 +15,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'birda:config-path',
   'birda:models-list',
   'birda:models-available',
+  'birda:models-manifest',
   'birda:models-install',
   'birda:models-info',
   'birda:models-set-default',

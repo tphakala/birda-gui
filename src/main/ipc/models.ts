@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { listModels, listAvailable, installModel, modelInfo, removeModel } from '../birda/models';
+import { listModels, listAvailable, installModel, modelInfo, removeModel, getManifest } from '../birda/models';
+import { registerCoverageUrls } from '../birda/coverageCache';
 import { setDefaultModel } from '../birda/config';
 
 export function registerModelHandlers(): void {
@@ -11,11 +12,18 @@ export function registerModelHandlers(): void {
     return listAvailable();
   });
 
-  ipcMain.handle('birda:models-install', async (event, name: string) => {
+  ipcMain.handle('birda:models-manifest', async (_event, id: string) => {
+    const manifest = await getManifest(id);
+    // Teach the birda-map:// protocol which coverage URLs are allowed to fetch.
+    registerCoverageUrls(manifest.id, manifest.variants);
+    return manifest;
+  });
+
+  ipcMain.handle('birda:models-install', async (event, opts: { id: string; region?: string; variant?: string }) => {
     const sender = event.sender;
-    return installModel(name, (line) => {
+    return installModel(opts, (progress) => {
       if (!sender.isDestroyed()) {
-        sender.send('birda:models-install-progress', line);
+        sender.send('birda:models-install-progress', progress);
       }
     });
   });

@@ -1,0 +1,52 @@
+import { app, net } from 'electron';
+import { promises as fs } from 'fs';
+import path from 'path';
+import type { ManifestVariant } from '$shared/types';
+
+// "family/region" -> coverage_url. Populated only from birda manifest fetches,
+// so the birda-map:// protocol can never be pointed at an arbitrary URL by the
+// renderer (no SSRF): it serves only URLs birda vouched for.
+const coverageUrls = new Map<string, string>();
+
+const key = (family: string, region: string): string => `${family}/${region}`;
+const cacheDir = (): string => path.join(app.getPath('userData'), 'coverage-cache');
+
+export function registerCoverageUrls(family: string, variants: ManifestVariant[]): void {
+  for (const variant of variants) {
+    if (variant.region && variant.coverage_url) {
+      coverageUrls.set(key(family, variant.region), variant.coverage_url);
+    }
+  }
+}
+
+/**
+ * Return the on-disk path to a region's cached coverage map, fetching and caching
+ * it on first request. Returns null when the URL is unknown or the fetch fails,
+ * so the renderer's <img> falls back to the "map unavailable" tile.
+ */
+export async function getCoveragePath(family: string, region: string): Promise<string | null> {
+  const url = coverageUrls.get(key(family, region));
+  if (!url) return null;
+
+  const dir = path.join(cacheDir(), family);
+  const file = path.join(dir, `${region}.svg`);
+  try {
+    await fs.access(file);
+    return file;
+  } catch {
+    // Not cached yet; fetch it below.
+  }
+
+  try {
+    const res = await net.fetch(url);
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.mkdir(dir, { recursive: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await fs.writeFile(file, buffer);
+    return file;
+  } catch {
+    return null;
+  }
+}

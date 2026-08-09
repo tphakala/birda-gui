@@ -369,7 +369,7 @@
     modelsError = null;
 
     try {
-      await installModel(id);
+      await installModel({ id });
       // Close dialog immediately after successful installation
       licenseModel = null;
 

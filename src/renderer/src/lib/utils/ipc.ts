@@ -22,6 +22,8 @@ import type {
   BirdaCheckResponse,
   ModelRemovedResult,
   ModelInstalledResult,
+  ModelManifest,
+  ModelInstallProgress,
   CudaStatus,
   CudaDownloadProgress,
   CudaDownloadResult,
@@ -134,8 +136,12 @@ export function listAvailableModels(): Promise<AvailableModel[]> {
   return window.birda.invoke('birda:models-available') as Promise<AvailableModel[]>;
 }
 
-export function installModel(name: string): Promise<ModelInstalledResult> {
-  return window.birda.invoke('birda:models-install', name) as Promise<ModelInstalledResult>;
+export function getModelManifest(id: string): Promise<ModelManifest> {
+  return window.birda.invoke('birda:models-manifest', id) as Promise<ModelManifest>;
+}
+
+export function installModel(opts: { id: string; region?: string; variant?: string }): Promise<ModelInstalledResult> {
+  return window.birda.invoke('birda:models-install', opts) as Promise<ModelInstalledResult>;
 }
 
 export function setDefaultModel(modelId: string): Promise<void> {
@@ -266,7 +272,7 @@ export function resolveAllLabels(scientificNames: string[]): Promise<Record<stri
 }
 
 // Model install progress
-export function onModelInstallProgress(callback: (line: string) => void): void {
+export function onModelInstallProgress(callback: (progress: ModelInstallProgress) => void): void {
   window.birda.on('birda:models-install-progress', callback as unknown as (...args: unknown[]) => void);
 }
 
