@@ -7,16 +7,13 @@
   "common_button_back": "Vissza",
   "status_ready": "Kész",
   "status_analyzing": "Elemzés...",
-
   "settings_title": "Beállítások",
   "settings_tab_preferences": "Preferenciák",
   "settings_tab_models": "Modellek",
   "settings_tab_data": "Adatok",
-
   "settings_cli_title": "birda CLI állapot",
   "settings_cli_checking": "Ellenőrzés...",
   "settings_cli_availableAt": "Elérhető: {path}",
-
   "settings_general_title": "Általános",
   "settings_general_theme": "Téma",
   "settings_general_themeSystem": "Rendszer alapértelmezett",
@@ -26,16 +23,13 @@
   "settings_general_uiLanguage": "Felhasználói felület nyelve",
   "settings_general_birdaPath": "birda elérési út",
   "settings_general_birdaPathPlaceholder": "Hagyja üresen a PATH használatához",
-
   "settings_analysis_title": "Elemzési alapértelmezések",
   "settings_analysis_confidence": "Alapértelmezett megbízhatósági küszöb",
   "settings_analysis_executionProvider": "Végrehajtási szolgáltató",
   "settings_analysis_epAuto": "Automatikus (ajánlott)",
   "settings_analysis_epDescription": "Az inferencia hardveres gyorsítását szabályozza. Az Auto a legjobb elérhető lehetőséget választja.",
-
   "settings_gpu_librariesMissing_title": "GPU-gyorsítás elérhető",
   "settings_gpu_librariesMissing_description": "Nvidia GPU-t észleltünk, de a CUDA/TensorRT könyvtárak nincsenek telepítve. Telepítse őket a GPU-gyorsítás engedélyezéséhez:",
-
   "settings_cuda_title": "GPU-gyorsítás",
   "settings_cuda_notSupported": "A CUDA GPU-gyorsítás csak Linux és Windows rendszeren érhető el NVIDIA GPU-kkal.",
   "settings_cuda_noGpu": "Nem található NVIDIA GPU. A CUDA gyorsításhoz NVIDIA GPU szükséges.",
@@ -55,7 +49,6 @@
   "settings_cuda_removeConfirm": "Eltávolítja a letöltött CUDA könyvtárakat? Ez {size} lemezterületet szabadít fel. Később újra letöltheti őket.",
   "settings_cuda_cancelButton": "Letöltés megszakítása",
   "settings_cuda_requiresRestart": "Az elemzés újraindítása szükséges a GPU-gyorsítás használatához.",
-
   "settings_spectrogram_title": "Spektrogram",
   "settings_spectrogram_maxFreq": "Alapértelmezett maximális frekvencia",
   "settings_spectrogram_height": "Alapértelmezett spektrogram magasság",
@@ -63,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Közepes",
   "settings_spectrogram_heightLarge": "Nagy",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Tárolás",
   "settings_storage_clipDir": "Klip kimeneti könyvtár",
   "settings_storage_openClipDir": "Klip könyvtár megnyitása",
   "settings_storage_dbLocation": "Adatbázis helye",
-
   "settings_saved": "Mentve",
   "settings_unsavedModal_title": "Nem mentett módosítások",
   "settings_unsavedModal_warning": "Nem mentett beállítás-módosítások vannak. Ha most kilép, a módosítások elvesznek.",
   "settings_unsavedModal_discard": "Módosítások elvetése",
   "settings_unsavedModal_stayOnPage": "Maradjon az oldalon",
-
   "settings_models_installed": "Telepítve",
   "settings_models_catalog": "Katalógus",
   "settings_models_refresh": "Frissítés",
@@ -95,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Ez eltávolítja a modellt a konfigurációból és törli a modellfájlokat a lemezről.",
   "settings_models_failedRemove": "{modelId} eltávolítása sikertelen: {error}",
   "settings_models_failedInstall": "{modelId} telepítése sikertelen: {error}",
-
   "settings_data_dataPath": "Adatok elérési útja",
   "settings_data_dataPathDescription": "Az alkalmazásadatok, az adatbázis és a konfigurációs fájlok itt vannak tárolva.",
   "settings_data_openFolder": "Mappa megnyitása",
@@ -121,13 +110,11 @@
   "settings_data_vacuumDescription": "Fel nem használt lemezterület felszabadítása az adatbázisfájl újraépítésével.",
   "settings_data_vacuumed": "Tömörítés kész",
   "settings_data_birdaConfig": "birda konfiguráció (csak olvasható)",
-
   "settings_clearModal_title": "Adatbázis törlése",
   "settings_clearModal_warning": "Ez véglegesen törli az összes észlelést, elemzési futtatást és helyszínt az adatbázisból. Ez a művelet nem vonható vissza.",
   "settings_clearModal_detectionsRemoved": "{count} észlelés kerül törlésre",
   "settings_clearModal_locationsRemoved": "{count} helyszín kerül törlésre",
   "settings_clearModal_deleteAll": "Összes adat törlése",
-
   "settings_licenseModal_title": "Licencszerződés",
   "settings_licenseModal_license": "Licenc",
   "settings_licenseModal_commercialUse": "Kereskedelmi felhasználás",
@@ -135,25 +122,19 @@
   "settings_licenseModal_notAllowed": "Nem engedélyezett",
   "settings_licenseModal_agree": "A modell telepítésével elfogadja a {license} licenc feltételeit.",
   "settings_licenseModal_acceptInstall": "Elfogadás és telepítés",
-
   "licenses_title": "Harmadik fél licencei",
   "licenses_notFound": "Licencinformáció nem érhető el.",
-
   "common_button_close": "Bezárás",
-
   "sidebar_analysis": "Elemzés",
   "sidebar_detections": "Észlelések",
   "sidebar_map": "Térkép",
   "sidebar_species": "Fajok",
   "sidebar_settings": "Beállítások",
-
   "status_detections": "{count} észlelés",
   "status_species": "{count} faj",
   "status_locations": "{count} helyszín",
-
   "audio_pause": "Szünet",
   "audio_playClip": "Klip lejátszása",
-
   "log_title": "Napló",
   "log_expand": "Kibontás",
   "log_collapse": "Összecsukás",
@@ -161,11 +142,9 @@
   "log_clear": "Napló törlése",
   "log_close": "Naplópanel bezárása",
   "log_empty": "Még nincsenek naplóbejegyzések. Az elemzés futtatásával itt láthatja a kimenetet.",
-
   "progress_complete": "Elemzés befejezve",
   "progress_failed": "Elemzés sikertelen",
   "progress_status": "{processed}/{total} fájl · {detections} észlelés",
-
   "filter_title": "Szűrők",
   "filter_collapse": "Szűrők összecsukása",
   "filter_species": "Fajok",
@@ -173,7 +152,6 @@
   "filter_minConfidence": "Min. megbízhatóság",
   "filter_show": "Szűrők megjelenítése",
   "filter_all": "Összes",
-
   "table_columnOffset": "Eltolás",
   "table_columnTime": "Idő",
   "table_columnSpecies": "Faj",
@@ -184,12 +162,10 @@
   "table_columnClip": "Klip",
   "table_loadingDetections": "Észlelések betöltése...",
   "table_noDetections": "Nem találhatók észlelések",
-
   "pagination_detectionCount": "{count} észlelés",
   "pagination_detectionCountSingular": "{count} észlelés",
   "pagination_totalDetections": "{count} észlelés összesen",
   "pagination_pageOf": "{current}. oldal / {total}",
-
   "detail_audioLoadFailed": "Hang betöltése sikertelen: {message}",
   "detail_freqMax": "Max. frekvencia",
   "detail_height": "Magasság",
@@ -203,7 +179,6 @@
   "detail_exporting": "Exportálás...",
   "detail_exportAsWav": "Kijelölés exportálása WAV-ként",
   "detail_clearSelection": "Kijelölés törlése",
-
   "sourceFiles_scanning": "Fájlok keresése...",
   "sourceFiles_sourceFile": "Forrásfájl",
   "sourceFiles_duration": "Időtartam",
@@ -225,7 +200,6 @@
   "sourceFiles_statusSkip": "kihagyás",
   "sourceFiles_noAudioFiles": "Nem találhatók hangfájlok",
   "sourceFiles_supportedFormats": "Támogatott: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Koordináták",
   "coords_autoDetected": "automatikusan észlelve",
   "coords_pickOnMap": "Koordináták kiválasztása a térképen",
@@ -236,12 +210,9 @@
   "coords_longitudePlaceholder": "-180 és 180 között",
   "coords_pickTitle": "Koordináták kiválasztása",
   "coords_clickToSet": "Kattintson a térképre a koordináták beállításához",
-
   "speciesSearch_placeholder": "Fajok keresése a térképen...",
   "speciesSearch_detCount": "{count} észl.",
-
   "map_unknownLocation": "Ismeretlen helyszín",
-
   "runs_title": "Futtatások",
   "runs_empty": "Még nincsenek elemzési futtatások",
   "runs_emptyHint": "Az első elemzés indításához menjen az Elemzés lapra.",
@@ -254,7 +225,6 @@
   "runs_status_failed": "Sikertelen",
   "runs_deleteRun": "Futtatás törlése",
   "runs_status_pending": "Várakozik",
-
   "analysis_title": "Elemzés",
   "analysis_selectFile": "Fájl kiválasztása",
   "analysis_selectFileDesc": "Válasszon egy hangfájlt elemzésre",
@@ -283,7 +253,6 @@
   "analysis_filterByName": "Szűrés faj szerint...",
   "analysis_conf": "Megb.",
   "analysis_allConfidences": "Összes",
-
   "calendar_datePlaceholder": "NN/HH/ÉÉÉÉ",
   "calendar_today": "Ma",
   "calendar_month_january": "Január",
@@ -305,16 +274,13 @@
   "calendar_weekday_fr": "Pé",
   "calendar_weekday_sa": "Szo",
   "calendar_weekday_su": "Va",
-
   "wizard_welcome_title": "Üdvözöljük a Birda GUI-ban",
   "wizard_welcome_subtitle": "Néhány gyors lépésben beállítjuk.",
   "wizard_welcome_getStarted": "Kezdjük el",
   "wizard_welcome_skip": "Beállítás kihagyása",
-
   "wizard_uiLanguage_title": "Válasszon nyelvet",
   "wizard_uiLanguage_subtitle": "Válassza ki a Birda GUI felület nyelvét.",
   "wizard_uiLanguage_detected": "A rendszerbeállítások alapján {language} nyelvet észleltünk.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "A Birda GUI-nak szüksége van a birda parancssori eszközre a hangfájlok elemzéséhez.",
   "wizard_cli_checking": "birda keresése...",
@@ -323,22 +289,18 @@
   "wizard_cli_notFoundHint": "Ha a birda telepítve van, manuálisan megadhatja az elérési utat, vagy letöltheti az alábbi linkről.",
   "wizard_cli_download": "birda letöltése",
   "wizard_cli_setPath": "Elérési út manuális megadása",
-
   "wizard_model_title": "Modell telepítése",
   "wizard_model_subtitle": "A madárhangok elemzéséhez legalább egy modell szükséges. Válasszon egyet a telepítéshez.",
   "wizard_model_installing": "{name} telepítése...",
   "wizard_model_installed": "telepítve",
   "wizard_model_hasModels": "{count} modell van telepítve. Több modellt a Beállítások menüből telepíthet.",
   "wizard_model_noCli": "A birda CLI nem érhető el. Menjen vissza az előző lépésre a CLI beállításához, mielőtt modelleket telepítene.",
-
   "wizard_language_title": "Fajok nyelve",
   "wizard_language_subtitle": "Válassza ki az észlelési eredményekben megjelenő madárfaj-nevek nyelvét.",
-
   "wizard_finish": "Beállítás befejezése",
   "wizard_next": "Tovább",
   "wizard_back": "Vissza",
   "wizard_stepOf": "{current}. lépés / {total}",
-
   "species_title": "Fajlisták",
   "species_fetchNew": "Új lekérése",
   "species_customList": "Egyéni létrehozása",
@@ -352,7 +314,6 @@
   "species_selectList": "Válasszon fajlistát a tartalmának megtekintéséhez.",
   "species_useAsFilter": "Használat észlelési szűrőként",
   "species_searchInList": "Fajok szűrése a listában...",
-
   "species_fetch_title": "Fajlista lekérése",
   "species_fetch_subtitle": "Kérje le egy helyszín és évszak várható madárfajait.",
   "species_fetch_week": "Hét",
@@ -366,7 +327,6 @@
   "species_fetch_listName": "Lista neve",
   "species_fetch_listNamePlaceholder": "pl. Budapest, 24. hét",
   "species_fetch_save": "Lista mentése",
-
   "species_custom_title": "Egyéni fajlista létrehozása",
   "species_custom_name": "Lista neve",
   "species_custom_namePlaceholder": "A fajlistám...",
@@ -375,24 +335,19 @@
   "species_custom_searchAdd": "Fajok keresése és hozzáadása...",
   "species_custom_selectedCount": "{count} kiválasztva",
   "species_custom_create": "Lista létrehozása",
-
   "species_table_commonName": "Köznapi név",
   "species_table_scientificName": "Tudományos név",
   "species_table_frequency": "Frekvencia",
-
   "species_detail_location": "Helyszín",
   "species_detail_week": "{week}. hét",
   "species_detail_threshold": "Küszöb: {threshold}%",
-
   "species_fetch_weekError": "A hétnek 1 és 48 között kell lennie",
   "species_fetch_coordsError": "Kérjük, adja meg a koordinátákat",
   "species_fetch_moreSpecies": "...és {count} további",
   "species_loading": "Betöltés...",
-
   "view_table": "Táblázat",
   "view_species": "Fajok",
   "view_grid": "Rács",
-
   "species_card_detections": "{count} észlelés",
   "species_card_detectionsSingular": "{count} észlelés",
   "species_card_avgConfidence": "Átl. {value}",
@@ -403,7 +358,6 @@
   "species_card_sortCount": "Darabszám",
   "species_card_sortName": "Név",
   "species_card_sortConfidence": "Megbízhatóság",
-
   "grid_noResults": "Nincs adat a hőtérképhez",
   "grid_daylight": "Nappal",
   "grid_phase_night": "Éjszaka",
@@ -414,9 +368,7 @@
   "grid_detectionCountSingular": "{count} észlelés",
   "grid_less": "Kevesebb",
   "grid_more": "Több",
-
   "pagination_speciesCount": "{count} faj",
-
   "annotation_editor_title": "Annotációszerkesztő",
   "annotation_overlay_label": "Annotációs réteg",
   "annotation_play": "Lejátszás / szünet",
@@ -435,5 +387,66 @@
   "annotation_list_title": "Annotációk",
   "annotation_annotateFile": "Fájl annotálása",
   "annotation_annotate": "Annotálás",
-  "annotation_searchSpecies": "Hozzárendelendő faj keresése..."
+  "annotation_searchSpecies": "Hozzárendelendő faj keresése...",
+  "gallery_tab_installed": "Installed",
+  "gallery_tab_browse": "Browse",
+  "gallery_refresh": "Refresh",
+  "gallery_updateAll": "Update all",
+  "gallery_search_placeholder": "Search by country or region",
+  "gallery_search_matches": "{count} regions match",
+  "gallery_search_noResults": "No regions match \"{query}\"",
+  "gallery_search_tryGlobal": "The global model covers all species worldwide.",
+  "gallery_search_matchCore": "Core: {country}",
+  "gallery_search_matchPartial": "Partial: {country}",
+  "gallery_family_recommended": "Recommended",
+  "gallery_family_meta": "{vendor} · {license} · {count} regional models",
+  "gallery_global_title": "Global",
+  "gallery_global_stats": "{count} species · complete worldwide coverage · {size}",
+  "gallery_region_stats": "{count} species · {size}",
+  "gallery_region_moreCountries": "+{count} more",
+  "gallery_group_europe": "Europe",
+  "gallery_group_asia": "Asia",
+  "gallery_group_northAmerica": "North America",
+  "gallery_group_southAmerica": "South America",
+  "gallery_group_africa": "Africa",
+  "gallery_group_oceania": "Oceania",
+  "gallery_coverage_alt": "Coverage map for {region}",
+  "gallery_coverage_unavailable": "Map unavailable",
+  "gallery_legend_core": "Core coverage",
+  "gallery_legend_partial": "Partial coverage",
+  "gallery_detail_species": "Species",
+  "gallery_detail_download": "Download",
+  "gallery_detail_coreCountries": "Core countries",
+  "gallery_detail_partialCountries": "Partial countries",
+  "gallery_install": "Install",
+  "gallery_installing": "Installing...",
+  "gallery_installedBadge": "Installed",
+  "gallery_installAnotherRunning": "Another download is running",
+  "gallery_download_progress": "{done} of {total}",
+  "gallery_download_cancel": "Cancel download",
+  "gallery_download_cancelled": "Download cancelled.",
+  "gallery_download_failed": "Failed to install {model}: {error}",
+  "gallery_installedToast": "{model} installed",
+  "gallery_update": "Update",
+  "gallery_updateAvailable": "Update available: {version}",
+  "gallery_default": "Default",
+  "gallery_setDefault": "Set default",
+  "gallery_remove": "Remove",
+  "gallery_removeDisabledDefault": "The default model cannot be removed",
+  "gallery_confirmRemove_title": "Remove {model}?",
+  "gallery_confirmRemove_body": "This deletes the model files from disk. Your detections are kept.",
+  "gallery_provenance": "v{version} build {build}",
+  "gallery_sizeOnDisk": "{size} on disk",
+  "gallery_hardware_auto": "Hardware variant selected automatically",
+  "gallery_license_title": "License agreement",
+  "gallery_license_shareAlike": "Share-alike",
+  "gallery_license_agree": "By installing you accept the {license} license terms.",
+  "gallery_license_acceptInstall": "Accept and Install",
+  "gallery_installed_empty_title": "No models installed yet",
+  "gallery_installed_empty_body": "Install a model for your region to start analyzing.",
+  "gallery_installed_empty_cta": "Browse models",
+  "gallery_error_loadFailed": "Could not load the model catalog.",
+  "gallery_error_retry": "Retry",
+  "gallery_legacyBirda": "Regional models need birda {minVersion} or newer. Showing the classic catalog.",
+  "gallery_license_required": "Required"
 }

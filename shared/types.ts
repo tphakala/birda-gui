@@ -312,9 +312,15 @@ export interface InstalledModel {
   id: string;
   model_type: string;
   is_default: boolean;
-  path: string;
-  labels_path: string;
-  has_meta_model: boolean;
+  path?: string;
+  labels_path?: string;
+  // Install provenance from birda (present on registry installs, absent for
+  // `models add` or anything installed before provenance was recorded).
+  registry_id?: string;
+  installed_version?: string;
+  installed_build?: number;
+  region?: string;
+  variant?: string;
 }
 
 export interface AvailableModel {
@@ -327,6 +333,53 @@ export interface AvailableModel {
   recommended: boolean;
   license: string;
   commercial_use: boolean;
+}
+
+// === Model manifest (from `birda models manifest <id>`) ===
+
+export interface ModelLicense {
+  type: string; // SPDX id, e.g. "CC-BY-NC-SA-4.0"
+  url: string;
+  commercial_use: boolean;
+  attribution_required: boolean;
+  share_alike: boolean;
+}
+
+/** One downloadable variant (region + hardware) of a model family. */
+export interface ManifestVariant {
+  id: string;
+  region?: string; // slug; absent for the global/legacy variant
+  region_name?: string;
+  group?: string; // continent slug
+  group_name?: string;
+  group_order: number;
+  classes?: number;
+  size_bytes?: number;
+  model_url: string;
+  labels_url: string;
+  coverage_url?: string; // region coverage map (SVG); absent for global/legacy
+  countries?: { core: string[]; partial: string[] };
+}
+
+/** Projected manifest for one model family. */
+export interface ModelManifest {
+  id: string;
+  name: string;
+  version: string;
+  build?: number;
+  model_type: string;
+  license: ModelLicense;
+  default_variant?: string;
+  selection: Record<string, string>;
+  variants: ManifestVariant[];
+}
+
+/** Structured install progress parsed from birda's stderr progress bar. */
+export interface ModelInstallProgress {
+  line: string;
+  percent?: number;
+  bytesDone?: number;
+  bytesTotal?: number;
 }
 
 export interface AppSettings {

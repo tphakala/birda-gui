@@ -1,6 +1,14 @@
 import { execFile, spawn } from 'child_process';
 import { findBirda, registerProcess, unregisterProcess } from './runner';
-import type { InstalledModel, AvailableModel, ModelRemovedResult, ModelInstalledResult } from '$shared/types';
+import { parseProgressLine } from './progress';
+import type {
+  InstalledModel,
+  AvailableModel,
+  ModelRemovedResult,
+  ModelInstalledResult,
+  ModelManifest,
+  ModelInstallProgress,
+} from '$shared/types';
 
 interface BirdaJsonEnvelope {
   spec_version: string;
@@ -38,62 +46,126 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-export async function installModel(name: string, onProgress?: (line: string) => void): Promise<ModelInstalledResult> {
-  const birdaPath = await findBirda();
-  return new Promise((resolve, reject) => {
-    // JSON mode auto-accepts license and defaults "set as default?" to no.
-    // No stdin interaction needed — the GUI shows its own license dialog
-    // and manages defaults separately via birda:models-set-default.
-    const proc = spawn(birdaPath, ['--output-mode', 'json', 'models', 'install', name], {
-      stdio: ['pipe', 'pipe', 'pipe'],
+// The single in-flight install process, tracked so the renderer can cancel it.
+// Only one install runs at a time, so one ref suffices for the spawned process.
+let currentInstall: ReturnType<typeof spawn> | null = null;
+// Reserves the single-install slot from the very start of installModel, before
+// currentInstall exists, so a concurrent call during findBirda() is rejected.
+let installInProgress = false;
+// Held in an object (not a bare `let`) so TS does not narrow it to a literal
+// across the `await findBirda()` in installModel, where cancelInstall may mutate
+// it. Set when a cancel arrives before any process exists to kill.
+const cancelState = { requested: false };
+
+/** Kill the in-flight install, if any. Returns true if one was running. */
+export function cancelInstall(): boolean {
+  cancelState.requested = true;
+  if (currentInstall) {
+    currentInstall.kill();
+    currentInstall = null;
+    return true;
+  }
+  return false;
+}
+
+// Read through a function so TS does not narrow the post-await check to a literal.
+const cancelRequested = (): boolean => cancelState.requested;
+
+export async function installModel(
+  opts: { id: string; region?: string | undefined; variant?: string | undefined },
+  onProgress?: (progress: ModelInstallProgress) => void,
+): Promise<ModelInstalledResult> {
+  // Reserve the single-install slot BEFORE the first await. currentInstall is not
+  // set until after spawn, so a concurrent call arriving during findBirda() would
+  // slip past a currentInstall check; installInProgress closes that window. The
+  // reservation and cancel state are released in the finally when this operation
+  // settles, so cancellation before close stays cancellation.
+  if (installInProgress) {
+    throw new Error('Another model install is already running');
+  }
+  installInProgress = true;
+  cancelState.requested = false;
+  try {
+    const birdaPath = await findBirda();
+    // A cancel that arrived while findBirda() was resolving must still stop the spawn.
+    if (cancelRequested()) {
+      throw new Error('Model install cancelled');
+    }
+    const args = ['--output-mode', 'json', 'models', 'install', opts.id];
+    if (opts.region) args.push('--region', opts.region);
+    if (opts.variant) args.push('--variant', opts.variant);
+    return await new Promise<ModelInstalledResult>((resolve, reject) => {
+      // JSON mode auto-accepts license and defaults "set as default?" to no.
+      // No stdin interaction needed: the GUI shows its own license dialog
+      // and manages defaults separately via birda:models-set-default.
+      const proc = spawn(birdaPath, args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      registerProcess(proc);
+      currentInstall = proc;
+
+      let stdout = '';
+      let stderrRemainder = '';
+
+      // stdout = final JSON envelope (not progress)
+      proc.stdout.on('data', (data: Buffer) => {
+        stdout += data.toString();
+      });
+
+      // stderr = indicatif progress bars ("<bar> 42% (58.0 MB/138.0 MB)")
+      const emit = (line: string) => {
+        if (onProgress) onProgress(parseProgressLine(line));
+      };
+
+      proc.stderr.on('data', (data: Buffer) => {
+        if (!onProgress) return;
+        const combined = stderrRemainder + data.toString();
+        const parts = combined.split('\n');
+        stderrRemainder = parts.pop() ?? '';
+        for (const line of parts) {
+          const trimmed = line.trim();
+          if (trimmed) emit(trimmed);
+        }
+      });
+
+      proc.stdin.end();
+
+      proc.on('close', (code) => {
+        unregisterProcess(proc);
+        if (currentInstall === proc) currentInstall = null;
+        if (stderrRemainder.trim()) {
+          emit(stderrRemainder.trim());
+        }
+        if (code !== 0) {
+          // A non-zero exit right after a cancel is the kill, not a real failure;
+          // report it as a cancellation so the renderer labels it correctly.
+          if (cancelRequested()) {
+            reject(new Error('Model install cancelled'));
+            return;
+          }
+          reject(new Error(`Model install failed: ${stdout}`));
+          return;
+        }
+        try {
+          const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
+          const payload = envelope.payload as unknown as ModelInstalledResult;
+          resolve(payload);
+        } catch {
+          reject(new Error(`Failed to parse install result: ${stdout.slice(0, 200)}`));
+        }
+      });
+
+      proc.on('error', (err) => {
+        unregisterProcess(proc);
+        if (currentInstall === proc) currentInstall = null;
+        reject(new Error(`Model install failed: ${err.message}`));
+      });
     });
-    registerProcess(proc);
-
-    let stdout = '';
-    let stderrRemainder = '';
-
-    // stdout = final JSON envelope (not progress)
-    proc.stdout.on('data', (data: Buffer) => {
-      stdout += data.toString();
-    });
-
-    // stderr = indicatif progress bars
-    proc.stderr.on('data', (data: Buffer) => {
-      if (!onProgress) return;
-      const combined = stderrRemainder + data.toString();
-      const parts = combined.split('\n');
-      stderrRemainder = parts.pop() ?? '';
-      for (const line of parts) {
-        const trimmed = line.trim();
-        if (trimmed) onProgress(trimmed);
-      }
-    });
-
-    proc.stdin.end();
-
-    proc.on('close', (code) => {
-      unregisterProcess(proc);
-      if (onProgress && stderrRemainder.trim()) {
-        onProgress(stderrRemainder.trim());
-      }
-      if (code !== 0) {
-        reject(new Error(`Model install failed: ${stdout}`));
-        return;
-      }
-      try {
-        const envelope = JSON.parse(stdout) as BirdaJsonEnvelope;
-        const payload = envelope.payload as unknown as ModelInstalledResult;
-        resolve(payload);
-      } catch {
-        reject(new Error(`Failed to parse install result: ${stdout.slice(0, 200)}`));
-      }
-    });
-
-    proc.on('error', (err) => {
-      unregisterProcess(proc);
-      reject(new Error(`Model install failed: ${err.message}`));
-    });
-  });
+  } finally {
+    currentInstall = null;
+    installInProgress = false;
+    cancelState.requested = false;
+  }
 }
 
 export async function removeModel(name: string): Promise<ModelRemovedResult> {
@@ -104,4 +176,16 @@ export async function removeModel(name: string): Promise<ModelRemovedResult> {
 export async function modelInfo(name: string): Promise<unknown> {
   const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'info', name]);
   return envelope.payload;
+}
+
+export async function getManifest(id: string): Promise<ModelManifest> {
+  const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'manifest', id]);
+  const payload = envelope.payload as { manifest?: ModelManifest } | null | undefined;
+  const manifest = payload?.manifest;
+  // Guard against an older/other birda whose payload lacks a usable manifest, so
+  // the caller gets a clear error to fall back on rather than a later TypeError.
+  if (!manifest || typeof manifest.id !== 'string' || !Array.isArray(manifest.variants)) {
+    throw new Error(`birda returned no usable manifest for ${id}`);
+  }
+  return manifest;
 }

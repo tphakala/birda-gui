@@ -13,14 +13,10 @@
     RefreshCw,
     X,
     ExternalLink,
-    Cpu,
     Info,
     ShieldCheck,
     Wrench,
   } from '@lucide/svelte';
-  import logoBirdnet from '../../assets/logo-birdnet.png';
-  import logoGoogle from '../../assets/logo-google.png';
-  import logoJyu from '../../assets/logo-jyu.jpeg';
   import {
     getSettings,
     setSettings,
@@ -36,11 +32,6 @@
     getAvailableLanguages,
     getCatalogStats,
     clearDatabase,
-    listModels,
-    listAvailableModels,
-    installModel,
-    setDefaultModel,
-    removeModel,
     detectGpuCapabilities,
     checkCudaStatus,
     downloadCudaLibs,
@@ -51,11 +42,10 @@
     offCudaDownloadProgress,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
+  import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import type {
     AppSettings,
-    InstalledModel,
-    AvailableModel,
     BirdaCheckResponse,
     CudaStatus,
     CudaDownloadProgress,
@@ -143,20 +133,6 @@
   let clearResult = $state<ClearDatabaseResult | null>(null);
   let clearResultTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // --- Models state ---
-  let installedModels = $state<InstalledModel[]>([]);
-  let availableModelsToInstall = $state<AvailableModel[]>([]);
-  let modelsLoading = $state(false);
-  let installing = $state<string | null>(null);
-  let deleting = $state<string | null>(null);
-  let modelsError = $state<string | null>(null);
-  let licenseModel = $state<AvailableModel | null>(null);
-  let removeConfirmModel = $state<InstalledModel | null>(null);
-
-  type ModelsTab = 'installed' | 'catalog';
-  let modelsTab = $state<ModelsTab>('installed');
-  const installedIds = $derived(new Set(installedModels.map((mod) => mod.id)));
-
   // --- GPU state ---
   let gpuCapabilities = $state<{
     hasNvidiaGpu: boolean;
@@ -175,27 +151,6 @@
   let cudaDownloadSizeBytes = $state(0);
   let showCudaRemoveConfirm = $state(false);
   let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
-
-  const LICENSE_URLS: Record<string, string> = {
-    'CC-BY-NC-SA-4.0': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
-    'Apache-2.0': 'https://www.apache.org/licenses/LICENSE-2.0',
-    MIT: 'https://opensource.org/licenses/MIT',
-  };
-
-  const MODEL_LOGOS: Record<string, string> = {
-    birdnet: logoBirdnet,
-    perch: logoGoogle,
-    bsg: logoJyu,
-  };
-
-  function getModelLogo(id: string): string | null {
-    for (const [prefix, logo] of Object.entries(MODEL_LOGOS)) {
-      if (id.startsWith(prefix)) return logo;
-    }
-    return null;
-  }
-
-  const defaultModelId = $derived(installedModels.find((mod) => mod.is_default)?.id ?? '');
 
   $effect(() => {
     // Only sync theme to appState after settings are loaded to prevent flash
@@ -233,29 +188,12 @@
       if (birdaStatus.available) {
         birdaConfig = await getBirdaConfig();
         availableLanguages = await getAvailableLanguages();
-        await Promise.all([refreshModels(), refreshGpuCapabilities()]);
+        await refreshGpuCapabilities();
       }
       // CUDA status is independent of birda CLI availability
       await refreshCudaStatus();
     } catch (e) {
       error = (e as Error).message;
-    }
-  }
-
-  async function refreshModels() {
-    modelsLoading = true;
-    modelsError = null;
-    try {
-      [installedModels, availableModelsToInstall] = await Promise.all([listModels(), listAvailableModels()]);
-      // Sync appState.selectedModel from birda's is_default flag
-      const defaultModel = installedModels.find((mod) => mod.is_default);
-      appState.selectedModel = defaultModel?.id ?? '';
-    } catch (e) {
-      modelsError = (e as Error).message;
-      installedModels = [];
-      availableModelsToInstall = [];
-    } finally {
-      modelsLoading = false;
     }
   }
 
@@ -354,76 +292,6 @@
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-  }
-
-  function promptLicense(model: AvailableModel) {
-    licenseModel = model;
-  }
-
-  async function handleAcceptAndInstall() {
-    if (!licenseModel) return;
-    const id = licenseModel.id;
-
-    // Start installation first
-    installing = id;
-    modelsError = null;
-
-    try {
-      await installModel(id);
-      // Close dialog immediately after successful installation
-      licenseModel = null;
-
-      // Refresh model list - if this fails, it's not a critical error
-      try {
-        await refreshModels();
-      } catch (refreshError) {
-        // Model was installed successfully, just the list refresh failed
-        // This is a minor issue - log it but don't show as installation failure
-        console.error('Failed to refresh model list after installation:', refreshError);
-      }
-    } catch (e) {
-      // Keep dialog open on installation failure so user retains context
-      modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });
-    } finally {
-      installing = null;
-    }
-  }
-
-  async function handleSetDefault(modelId: string) {
-    saving = true;
-    modelsError = null;
-    try {
-      await setDefaultModel(modelId);
-      try {
-        await refreshModels();
-      } catch (refreshError) {
-        console.error('Failed to refresh model list after setting default:', refreshError);
-      }
-    } catch (e) {
-      modelsError = (e as Error).message;
-    } finally {
-      saving = false;
-    }
-  }
-
-  async function handleRemoveModel() {
-    if (!removeConfirmModel) return;
-    const id = removeConfirmModel.id;
-    deleting = id;
-    modelsError = null;
-    try {
-      await removeModel(id);
-      try {
-        await refreshModels();
-      } catch (refreshError) {
-        console.error('Failed to refresh model list after removal:', refreshError);
-      }
-    } catch (e) {
-      modelsError = m.settings_models_failedRemove({ modelId: id, error: (e as Error).message });
-    } finally {
-      removeConfirmModel = null;
-      deleting = null;
-    }
   }
 
   async function save() {
@@ -906,176 +774,7 @@
 
       <!-- ==================== MODELS ==================== -->
     {:else if activeSubTab === 'models'}
-      <!-- Models header -->
-      <div class="flex items-center justify-between">
-        <div class="tabs tabs-border">
-          <button class="tab" class:tab-active={modelsTab === 'installed'} onclick={() => (modelsTab = 'installed')}>
-            {m.settings_models_installed()}
-            {#if installedModels.length > 0}
-              <span class="badge badge-sm ml-1.5">{installedModels.length}</span>
-            {/if}
-          </button>
-          <button class="tab" class:tab-active={modelsTab === 'catalog'} onclick={() => (modelsTab = 'catalog')}>
-            {m.settings_models_catalog()}
-          </button>
-        </div>
-        <button onclick={refreshModels} disabled={modelsLoading} class="btn btn-ghost btn-sm gap-1.5">
-          <RefreshCw size={14} class={modelsLoading ? 'animate-spin' : ''} />
-          {m.settings_models_refresh()}
-        </button>
-      </div>
-
-      {#if modelsError}
-        <div role="alert" class="alert alert-error">
-          <span>{modelsError}</span>
-        </div>
-      {/if}
-
-      {#if modelsTab === 'installed'}
-        <!-- Installed models grid -->
-        {#if installedModels.length === 0}
-          <div class="text-base-content/50 py-12 text-center">
-            <Cpu size={40} class="mx-auto mb-3 opacity-30" />
-            <p class="text-sm">{modelsLoading ? m.settings_models_loading() : m.settings_models_noInstalled()}</p>
-            <p class="mt-1 text-xs">{m.settings_models_switchToCatalog()}</p>
-          </div>
-        {:else}
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {#each installedModels as model (model.id)}
-              {@const info = availableModelsToInstall.find((a) => a.id === model.id)}
-              {@const logo = getModelLogo(model.id)}
-              <div class="card border-base-300 bg-base-200 border">
-                <div class="card-body gap-3 p-4">
-                  <div class="flex items-start gap-3">
-                    {#if logo}
-                      <img src={logo} alt="" class="size-10 shrink-0 rounded-lg" />
-                    {:else}
-                      <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
-                        <Cpu size={24} class="text-primary" />
-                      </div>
-                    {/if}
-                    <div class="min-w-0 flex-1">
-                      <h4 class="text-sm font-semibold">{info?.name ?? model.id}</h4>
-                      {#if info?.description}
-                        <p class="text-base-content/70 mt-0.5 line-clamp-2 text-xs">{info.description}</p>
-                      {/if}
-                      <p class="text-base-content/60 mt-1 text-xs">{info?.vendor ?? ''}</p>
-                    </div>
-                  </div>
-
-                  <div class="border-base-300 flex items-center justify-between border-t pt-3">
-                    <div class="flex items-center gap-2">
-                      {#if info?.version}
-                        <span class="text-base-content/60 text-xs">v{info.version}</span>
-                        <span class="text-base-content/40">·</span>
-                      {/if}
-                      <span class="text-base-content/60 text-xs">{model.model_type}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      <button
-                        onclick={() => handleSetDefault(model.id)}
-                        disabled={saving}
-                        class="btn btn-xs {defaultModelId === model.id ? 'btn-primary' : 'btn-ghost'}"
-                      >
-                        {#if defaultModelId === model.id}
-                          <CircleCheckBig size={12} />
-                          {m.settings_models_default()}
-                        {:else}
-                          {m.settings_models_setDefault()}
-                        {/if}
-                      </button>
-                      <button
-                        class="btn btn-ghost btn-xs btn-square"
-                        disabled={deleting !== null || defaultModelId === model.id}
-                        title={defaultModelId === model.id ? m.settings_models_default() : m.settings_models_remove()}
-                        aria-label={defaultModelId === model.id
-                          ? m.settings_models_default()
-                          : m.settings_models_remove()}
-                        onclick={() => (removeConfirmModel = model)}
-                      >
-                        {#if deleting === model.id}
-                          <Loader size={13} class="animate-spin" />
-                        {:else}
-                          <Trash2 size={13} />
-                        {/if}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {:else}
-        <!-- Catalog grid -->
-        {#if availableModelsToInstall.length === 0}
-          <div class="text-base-content/50 py-12 text-center">
-            <Download size={40} class="mx-auto mb-3 opacity-30" />
-            <p class="text-sm">{modelsLoading ? m.settings_models_loadingCatalog() : m.settings_models_noCatalog()}</p>
-          </div>
-        {:else}
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {#each availableModelsToInstall as model (model.id)}
-              {@const isInstalled = installedIds.has(model.id)}
-              {@const logo = getModelLogo(model.id)}
-              <div class="card border-base-300 bg-base-200 relative overflow-hidden border">
-                <div class="card-body gap-3 p-4">
-                  <div class="flex items-start gap-3">
-                    {#if logo}
-                      <img src={logo} alt="" class="size-10 shrink-0 rounded-lg" />
-                    {:else}
-                      <div class="bg-primary/10 shrink-0 rounded-lg p-2.5">
-                        <Cpu size={24} class="text-primary" />
-                      </div>
-                    {/if}
-                    <div class="min-w-0 flex-1">
-                      <h4 class="text-sm font-semibold">{model.name}</h4>
-                      {#if model.description}
-                        <p class="text-base-content/70 mt-0.5 line-clamp-2 text-xs">{model.description}</p>
-                      {/if}
-                      <p class="text-base-content/60 mt-1 text-xs">{model.vendor}</p>
-                    </div>
-                  </div>
-
-                  <div class="border-base-300 flex items-center justify-between border-t pt-3">
-                    <div class="flex items-center gap-2">
-                      <span class="text-base-content/60 text-xs">v{model.version}</span>
-                      <span class="text-base-content/40">·</span>
-                      <span class="text-base-content/60 text-xs">{model.model_type}</span>
-                      {#if !model.commercial_use}
-                        <span class="text-base-content/20">·</span>
-                        <span class="text-error/80 text-xs">{m.settings_models_nonCommercial()}</span>
-                      {/if}
-                    </div>
-                    {#if isInstalled}
-                      <span class="badge badge-success badge-sm gap-1">
-                        <CircleCheckBig size={10} />
-                        {m.settings_models_installedBadge()}
-                      </span>
-                    {:else}
-                      <button
-                        onclick={() => {
-                          promptLicense(model);
-                        }}
-                        disabled={installing !== null}
-                        class="btn btn-primary btn-xs gap-1"
-                      >
-                        {#if installing === model.id}
-                          <Loader size={12} class="animate-spin" />
-                          {m.settings_models_installing()}
-                        {:else}
-                          <Download size={12} />
-                          {m.settings_models_install()}
-                        {/if}
-                      </button>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {/if}
+      <ModelGallery />
 
       <!-- ==================== DATA ==================== -->
     {:else if activeSubTab === 'data'}
@@ -1276,69 +975,6 @@
   </dialog>
 {/if}
 
-<!-- License Acceptance Modal -->
-{#if licenseModel}
-  <dialog class="modal modal-open">
-    <div class="modal-box">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">{m.settings_licenseModal_title()}</h2>
-        <button onclick={() => (licenseModel = null)} class="btn btn-ghost btn-sm btn-square">
-          <X size={20} />
-        </button>
-      </div>
-
-      <div class="mt-4 space-y-4">
-        <div>
-          <p class="text-sm font-medium">{licenseModel.name}</p>
-          <p class="text-base-content/50 text-xs">{licenseModel.vendor}</p>
-        </div>
-
-        <div class="border-base-300 bg-base-200 space-y-2 rounded-lg border p-3 text-sm">
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70">{m.settings_licenseModal_license()}</span>
-            {#if LICENSE_URLS[licenseModel.license]}
-              <a
-                href={LICENSE_URLS[licenseModel.license]}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link link-primary flex items-center gap-1"
-              >
-                {licenseModel.license}
-                <ExternalLink size={12} />
-              </a>
-            {:else}
-              <span class="font-medium">{licenseModel.license}</span>
-            {/if}
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-base-content/70">{m.settings_licenseModal_commercialUse()}</span>
-            <span class="font-medium {licenseModel.commercial_use ? 'text-success' : 'text-error'}">
-              {licenseModel.commercial_use ? m.settings_licenseModal_allowed() : m.settings_licenseModal_notAllowed()}
-            </span>
-          </div>
-        </div>
-
-        <p class="text-base-content/50 text-xs">
-          {m.settings_licenseModal_agree({ license: licenseModel.license })}
-        </p>
-      </div>
-
-      <div class="modal-action">
-        <button onclick={() => (licenseModel = null)} class="btn">
-          {m.common_button_cancel()}
-        </button>
-        <button onclick={handleAcceptAndInstall} class="btn btn-primary gap-1.5">
-          <Download size={16} />
-          {m.settings_licenseModal_acceptInstall()}
-        </button>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (licenseModel = null)}>close</button>
-    </form>
-  </dialog>
-{/if}
-
 <!-- CUDA Remove Confirmation Modal -->
 {#if showCudaRemoveConfirm}
   <dialog class="modal modal-open">
@@ -1361,40 +997,6 @@
     </div>
     <form method="dialog" class="modal-backdrop">
       <button onclick={() => (showCudaRemoveConfirm = false)}>close</button>
-    </form>
-  </dialog>
-{/if}
-
-<!-- Remove Model Confirmation Modal -->
-{#if removeConfirmModel}
-  {@const modelToRemove = removeConfirmModel}
-  {@const info = availableModelsToInstall.find((a) => a.id === modelToRemove.id)}
-  <dialog class="modal modal-open">
-    <div class="modal-box">
-      <div class="text-error flex items-center gap-3">
-        <TriangleAlert size={24} />
-        <h3 class="text-lg font-semibold">
-          {m.settings_models_confirmRemove({ modelName: info?.name ?? modelToRemove.id })}
-        </h3>
-      </div>
-      <p class="text-base-content/70 mt-3 text-sm">
-        {m.settings_models_confirmRemoveDescription()}
-      </p>
-      <div class="modal-action">
-        <button onclick={() => (removeConfirmModel = null)} disabled={deleting !== null} class="btn">
-          {m.common_button_cancel()}
-        </button>
-        <button onclick={handleRemoveModel} disabled={deleting !== null} class="btn btn-error gap-1.5">
-          {#if deleting}
-            <Loader size={14} class="animate-spin" />
-          {/if}
-          <Trash2 size={14} />
-          {m.settings_models_remove()}
-        </button>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (removeConfirmModel = null)}>close</button>
     </form>
   </dialog>
 {/if}

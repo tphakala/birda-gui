@@ -9,6 +9,8 @@ import {
   session,
 } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
+import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
 import { closeDb } from './db/database';
@@ -22,6 +24,7 @@ import { killAll as killAllBirdaProcesses } from './birda/runner';
 // (http://localhost:5173) on Electron >= 41.4, where Chromium tightened custom-scheme CORS.
 protocol.registerSchemesAsPrivileged([
   { scheme: 'birda-media', privileges: { secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+  { scheme: 'birda-map', privileges: { secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
 ]);
 
 let mainWindow: BrowserWindow | null = null;
@@ -194,6 +197,32 @@ function registerBirdaMediaProtocol() {
   });
 }
 
+function registerBirdaMapProtocol() {
+  protocol.handle('birda-map', async (request) => {
+    // birda-map://<family>/<region> -> the cached region coverage map (SVG).
+    // The URL comes from the renderer, but only family/region pairs that birda
+    // reported a coverage_url for are fetchable (see coverageCache), so this
+    // never fetches an arbitrary URL.
+    const url = new URL(request.url);
+    const family = url.hostname;
+    const region = decodeURIComponent(url.pathname.replace(/^\//, ''));
+    if (!family || !region) {
+      return new Response('Not Found', { status: 404 });
+    }
+    const file = await getCoveragePath(family, region);
+    if (!file) {
+      return new Response('Not Found', { status: 404 });
+    }
+    // pathToFileURL encodes special characters (#, ?) that manual file:/// string
+    // building would misparse as a fragment/query.
+    const response = await net.fetch(pathToFileURL(file).href);
+    const headers = new Headers(response.headers);
+    headers.set('content-type', 'image/svg+xml');
+    headers.set('Access-Control-Allow-Origin', '*');
+    return new Response(response.body, { status: response.status, headers });
+  });
+}
+
 void app.whenReady().then(async () => {
   // Security: allow permissions the app needs, deny everything else
   const ALLOWED_PERMISSIONS = new Set([
@@ -213,6 +242,7 @@ void app.whenReady().then(async () => {
   });
 
   registerBirdaMediaProtocol();
+  registerBirdaMapProtocol();
   await registerHandlers();
 
   // Mark any runs stuck in 'running' from a previous session as failed

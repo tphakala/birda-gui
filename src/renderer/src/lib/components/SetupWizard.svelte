@@ -135,12 +135,12 @@
     installProgress = '';
     modelsError = null;
 
-    onModelInstallProgress((line) => {
-      installProgress = line;
+    onModelInstallProgress((progress) => {
+      installProgress = progress.line;
     });
 
     try {
-      await installModel(id);
+      await installModel({ id });
       await refreshModels();
     } catch (e) {
       modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });

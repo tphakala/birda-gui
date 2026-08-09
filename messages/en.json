@@ -7,16 +7,13 @@
   "common_button_back": "Back",
   "status_ready": "Ready",
   "status_analyzing": "Analyzing...",
-
   "settings_title": "Settings",
   "settings_tab_preferences": "Preferences",
   "settings_tab_models": "Models",
   "settings_tab_data": "Data",
-
   "settings_cli_title": "birda CLI Status",
   "settings_cli_checking": "Checking...",
   "settings_cli_availableAt": "Available at {path}",
-
   "settings_general_title": "General",
   "settings_general_theme": "Theme",
   "settings_general_themeSystem": "System Default",
@@ -26,16 +23,13 @@
   "settings_general_uiLanguage": "UI Language",
   "settings_general_birdaPath": "birda Binary Path",
   "settings_general_birdaPathPlaceholder": "Leave empty to use PATH",
-
   "settings_analysis_title": "Analysis Defaults",
   "settings_analysis_confidence": "Default Confidence Threshold",
   "settings_analysis_executionProvider": "Execution Provider",
   "settings_analysis_epAuto": "Auto (Recommended)",
   "settings_analysis_epDescription": "Controls hardware acceleration for inference. Auto selects the best available option.",
-
   "settings_gpu_librariesMissing_title": "GPU Acceleration Available",
   "settings_gpu_librariesMissing_description": "An Nvidia GPU was detected, but CUDA/TensorRT libraries are not installed. Install them to enable GPU acceleration:",
-
   "settings_cuda_title": "GPU Acceleration",
   "settings_cuda_notSupported": "CUDA GPU acceleration is only available on Linux and Windows with NVIDIA GPUs.",
   "settings_cuda_noGpu": "No NVIDIA GPU detected. CUDA acceleration requires an NVIDIA GPU.",
@@ -55,7 +49,6 @@
   "settings_cuda_removeConfirm": "Remove downloaded CUDA libraries? This will free {size} of disk space. You can re-download them later.",
   "settings_cuda_cancelButton": "Cancel Download",
   "settings_cuda_requiresRestart": "Restart analysis to use GPU acceleration.",
-
   "settings_spectrogram_title": "Spectrogram",
   "settings_spectrogram_maxFreq": "Default Max Frequency",
   "settings_spectrogram_height": "Default Spectrogram Height",
@@ -63,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Medium",
   "settings_spectrogram_heightLarge": "Large",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Storage",
   "settings_storage_clipDir": "Clip Output Directory",
   "settings_storage_openClipDir": "Open clip directory",
   "settings_storage_dbLocation": "Database Location",
-
   "settings_saved": "Saved",
   "settings_unsavedModal_title": "Unsaved Changes",
   "settings_unsavedModal_warning": "You have unsaved settings changes. If you leave now, your changes will be lost.",
   "settings_unsavedModal_discard": "Discard Changes",
   "settings_unsavedModal_stayOnPage": "Stay on Page",
-
   "settings_models_installed": "Installed",
   "settings_models_catalog": "Catalog",
   "settings_models_refresh": "Refresh",
@@ -95,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "This will remove the model from your configuration and delete model files from disk.",
   "settings_models_failedRemove": "Failed to remove {modelId}: {error}",
   "settings_models_failedInstall": "Failed to install {modelId}: {error}",
-
   "settings_data_dataPath": "Data Path",
   "settings_data_dataPathDescription": "Application data, database, and configuration files are stored here.",
   "settings_data_openFolder": "Open Folder",
@@ -121,13 +110,11 @@
   "settings_data_vacuumDescription": "Reclaim unused disk space by rebuilding the database file.",
   "settings_data_vacuumed": "Compaction complete",
   "settings_data_birdaConfig": "birda Configuration (read-only)",
-
   "settings_clearModal_title": "Clear Database",
   "settings_clearModal_warning": "This will permanently delete all detections, analysis runs, and locations from the database. This action cannot be undone.",
   "settings_clearModal_detectionsRemoved": "{count} detections will be removed",
   "settings_clearModal_locationsRemoved": "{count} locations will be removed",
   "settings_clearModal_deleteAll": "Delete All Data",
-
   "settings_licenseModal_title": "License Agreement",
   "settings_licenseModal_license": "License",
   "settings_licenseModal_commercialUse": "Commercial use",
@@ -135,25 +122,19 @@
   "settings_licenseModal_notAllowed": "Not allowed",
   "settings_licenseModal_agree": "By installing this model, you agree to the terms of the {license} license.",
   "settings_licenseModal_acceptInstall": "Accept & Install",
-
   "licenses_title": "Third Party Licenses",
   "licenses_notFound": "License information is not available.",
-
   "common_button_close": "Close",
-
   "sidebar_analysis": "Analysis",
   "sidebar_detections": "Detections",
   "sidebar_map": "Map",
   "sidebar_species": "Species",
   "sidebar_settings": "Settings",
-
   "status_detections": "{count} detections",
   "status_species": "{count} species",
   "status_locations": "{count} locations",
-
   "audio_pause": "Pause",
   "audio_playClip": "Play clip",
-
   "log_title": "Log",
   "log_expand": "Expand",
   "log_collapse": "Collapse",
@@ -161,11 +142,9 @@
   "log_clear": "Clear log",
   "log_close": "Close log panel",
   "log_empty": "No log entries yet. Run an analysis to see output here.",
-
   "progress_complete": "Analysis Complete",
   "progress_failed": "Analysis Failed",
   "progress_status": "{processed}/{total} files · {detections} detections",
-
   "filter_title": "Filters",
   "filter_collapse": "Collapse filters",
   "filter_species": "Species",
@@ -173,7 +152,6 @@
   "filter_minConfidence": "Min Confidence",
   "filter_show": "Show filters",
   "filter_all": "All",
-
   "table_columnOffset": "Offset",
   "table_columnTime": "Time",
   "table_columnSpecies": "Species",
@@ -184,12 +162,10 @@
   "table_columnClip": "Clip",
   "table_loadingDetections": "Loading detections...",
   "table_noDetections": "No detections found",
-
   "pagination_detectionCount": "{count} detections",
   "pagination_detectionCountSingular": "{count} detection",
   "pagination_totalDetections": "{count} total detections",
   "pagination_pageOf": "Page {current} of {total}",
-
   "detail_audioLoadFailed": "Audio load failed: {message}",
   "detail_freqMax": "Freq max",
   "detail_height": "Height",
@@ -203,7 +179,6 @@
   "detail_exporting": "Exporting...",
   "detail_exportAsWav": "Export selection as WAV",
   "detail_clearSelection": "Clear selection",
-
   "sourceFiles_scanning": "Scanning files...",
   "sourceFiles_sourceFile": "Source File",
   "sourceFiles_duration": "Duration",
@@ -225,7 +200,6 @@
   "sourceFiles_statusSkip": "skip",
   "sourceFiles_noAudioFiles": "No audio files found",
   "sourceFiles_supportedFormats": "Supported: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Coordinates",
   "coords_autoDetected": "auto-detected",
   "coords_pickOnMap": "Pick coordinates from map",
@@ -236,12 +210,9 @@
   "coords_longitudePlaceholder": "-180 to 180",
   "coords_pickTitle": "Pick Coordinates",
   "coords_clickToSet": "Click on the map to set coordinates",
-
   "speciesSearch_placeholder": "Search species on map...",
   "speciesSearch_detCount": "{count} det.",
-
   "map_unknownLocation": "Unknown Location",
-
   "runs_title": "Runs",
   "runs_empty": "No analysis runs yet",
   "runs_emptyHint": "Go to the Analysis tab to start your first analysis.",
@@ -254,7 +225,6 @@
   "runs_status_failed": "Failed",
   "runs_deleteRun": "Delete run",
   "runs_status_pending": "Pending",
-
   "analysis_title": "Analysis",
   "analysis_selectFile": "Select File",
   "analysis_selectFileDesc": "Select an audio file to analyze",
@@ -283,7 +253,6 @@
   "analysis_filterByName": "Filter by species...",
   "analysis_conf": "Conf",
   "analysis_allConfidences": "All",
-
   "calendar_datePlaceholder": "DD/MM/YYYY",
   "calendar_today": "Today",
   "calendar_month_january": "January",
@@ -305,16 +274,13 @@
   "calendar_weekday_fr": "Fr",
   "calendar_weekday_sa": "Sa",
   "calendar_weekday_su": "Su",
-
   "wizard_welcome_title": "Welcome to Birda GUI",
   "wizard_welcome_subtitle": "Let's get you set up in a few quick steps.",
   "wizard_welcome_getStarted": "Get Started",
   "wizard_welcome_skip": "Skip setup",
-
   "wizard_uiLanguage_title": "Choose Your Language",
   "wizard_uiLanguage_subtitle": "Select the language for the Birda GUI interface.",
   "wizard_uiLanguage_detected": "We detected {language} based on your system settings.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI needs the birda command-line tool to analyze audio files.",
   "wizard_cli_checking": "Checking for birda...",
@@ -323,22 +289,18 @@
   "wizard_cli_notFoundHint": "You can set the path manually if birda is installed, or download it from the link below.",
   "wizard_cli_download": "Download birda",
   "wizard_cli_setPath": "Set path manually",
-
   "wizard_model_title": "Install a Model",
   "wizard_model_subtitle": "You need at least one model to analyze bird sounds. Choose one to install.",
   "wizard_model_installing": "Installing {name}...",
   "wizard_model_installed": "installed",
   "wizard_model_hasModels": "You have {count} model(s) installed. You can install more later from Settings.",
   "wizard_model_noCli": "birda CLI is not available. Go back to the previous step to set up the CLI before installing models.",
-
   "wizard_language_title": "Species Language",
   "wizard_language_subtitle": "Choose the language for bird species names shown in detection results.",
-
   "wizard_finish": "Finish Setup",
   "wizard_next": "Next",
   "wizard_back": "Back",
   "wizard_stepOf": "Step {current} of {total}",
-
   "species_title": "Species Lists",
   "species_fetchNew": "Fetch New",
   "species_customList": "Create Custom",
@@ -352,7 +314,6 @@
   "species_selectList": "Select a species list to view its contents.",
   "species_useAsFilter": "Use as Detection Filter",
   "species_searchInList": "Filter species in list...",
-
   "species_fetch_title": "Fetch Species List",
   "species_fetch_subtitle": "Get expected bird species for a location and time of year.",
   "species_fetch_week": "Week",
@@ -366,7 +327,6 @@
   "species_fetch_listName": "List Name",
   "species_fetch_listNamePlaceholder": "e.g. Helsinki, Week 24",
   "species_fetch_save": "Save List",
-
   "species_custom_title": "Create Custom Species List",
   "species_custom_name": "List Name",
   "species_custom_namePlaceholder": "My species list...",
@@ -375,24 +335,19 @@
   "species_custom_searchAdd": "Search and add species...",
   "species_custom_selectedCount": "{count} selected",
   "species_custom_create": "Create List",
-
   "species_table_commonName": "Common Name",
   "species_table_scientificName": "Scientific Name",
   "species_table_frequency": "Frequency",
-
   "species_detail_location": "Location",
   "species_detail_week": "Week {week}",
   "species_detail_threshold": "Threshold: {threshold}%",
-
   "species_fetch_weekError": "Week must be between 1 and 48",
   "species_fetch_coordsError": "Please set coordinates",
   "species_fetch_moreSpecies": "...and {count} more",
   "species_loading": "Loading...",
-
   "view_table": "Table",
   "view_species": "Species",
   "view_grid": "Grid",
-
   "species_card_detections": "{count} detections",
   "species_card_detectionsSingular": "{count} detection",
   "species_card_avgConfidence": "Avg {value}",
@@ -403,7 +358,6 @@
   "species_card_sortCount": "Count",
   "species_card_sortName": "Name",
   "species_card_sortConfidence": "Confidence",
-
   "grid_noResults": "No data for heatmap",
   "grid_daylight": "Daylight",
   "grid_phase_night": "Night",
@@ -414,9 +368,7 @@
   "grid_detectionCountSingular": "{count} detection",
   "grid_less": "Less",
   "grid_more": "More",
-
   "pagination_speciesCount": "{count} species",
-
   "annotation_editor_title": "Annotation Editor",
   "annotation_overlay_label": "Annotation overlay",
   "annotation_play": "Play / pause",
@@ -435,5 +387,66 @@
   "annotation_list_title": "Annotations",
   "annotation_annotateFile": "Annotate file",
   "annotation_annotate": "Annotate",
-  "annotation_searchSpecies": "Search species to assign..."
+  "annotation_searchSpecies": "Search species to assign...",
+  "gallery_tab_installed": "Installed",
+  "gallery_tab_browse": "Browse",
+  "gallery_refresh": "Refresh",
+  "gallery_updateAll": "Update all",
+  "gallery_search_placeholder": "Search by country or region",
+  "gallery_search_matches": "{count} regions match",
+  "gallery_search_noResults": "No regions match \"{query}\"",
+  "gallery_search_tryGlobal": "The global model covers all species worldwide.",
+  "gallery_search_matchCore": "Core: {country}",
+  "gallery_search_matchPartial": "Partial: {country}",
+  "gallery_family_recommended": "Recommended",
+  "gallery_family_meta": "{vendor} · {license} · {count} regional models",
+  "gallery_global_title": "Global",
+  "gallery_global_stats": "{count} species · complete worldwide coverage · {size}",
+  "gallery_region_stats": "{count} species · {size}",
+  "gallery_region_moreCountries": "+{count} more",
+  "gallery_group_europe": "Europe",
+  "gallery_group_asia": "Asia",
+  "gallery_group_northAmerica": "North America",
+  "gallery_group_southAmerica": "South America",
+  "gallery_group_africa": "Africa",
+  "gallery_group_oceania": "Oceania",
+  "gallery_coverage_alt": "Coverage map for {region}",
+  "gallery_coverage_unavailable": "Map unavailable",
+  "gallery_legend_core": "Core coverage",
+  "gallery_legend_partial": "Partial coverage",
+  "gallery_detail_species": "Species",
+  "gallery_detail_download": "Download",
+  "gallery_detail_coreCountries": "Core countries",
+  "gallery_detail_partialCountries": "Partial countries",
+  "gallery_install": "Install",
+  "gallery_installing": "Installing...",
+  "gallery_installedBadge": "Installed",
+  "gallery_installAnotherRunning": "Another download is running",
+  "gallery_download_progress": "{done} of {total}",
+  "gallery_download_cancel": "Cancel download",
+  "gallery_download_cancelled": "Download cancelled.",
+  "gallery_download_failed": "Failed to install {model}: {error}",
+  "gallery_installedToast": "{model} installed",
+  "gallery_update": "Update",
+  "gallery_updateAvailable": "Update available: {version}",
+  "gallery_default": "Default",
+  "gallery_setDefault": "Set default",
+  "gallery_remove": "Remove",
+  "gallery_removeDisabledDefault": "The default model cannot be removed",
+  "gallery_confirmRemove_title": "Remove {model}?",
+  "gallery_confirmRemove_body": "This deletes the model files from disk. Your detections are kept.",
+  "gallery_provenance": "v{version} build {build}",
+  "gallery_sizeOnDisk": "{size} on disk",
+  "gallery_hardware_auto": "Hardware variant selected automatically",
+  "gallery_license_title": "License agreement",
+  "gallery_license_shareAlike": "Share-alike",
+  "gallery_license_agree": "By installing you accept the {license} license terms.",
+  "gallery_license_acceptInstall": "Accept and Install",
+  "gallery_installed_empty_title": "No models installed yet",
+  "gallery_installed_empty_body": "Install a model for your region to start analyzing.",
+  "gallery_installed_empty_cta": "Browse models",
+  "gallery_error_loadFailed": "Could not load the model catalog.",
+  "gallery_error_retry": "Retry",
+  "gallery_legacyBirda": "Regional models need birda {minVersion} or newer. Showing the classic catalog.",
+  "gallery_license_required": "Required"
 }
