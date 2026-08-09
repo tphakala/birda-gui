@@ -3,6 +3,7 @@
   import { Cpu } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import { formatFileSize } from '$lib/utils/format';
+  import { hasUpdate } from '$lib/gallery/logic';
   import type { InstalledModel, ModelManifest, ManifestVariant } from '$shared/types';
 
   const {
@@ -38,8 +39,8 @@
   }
   function updateFor(model: InstalledModel): { available: boolean; latest?: string } {
     const man = manifestFor(model);
-    if (man?.build === undefined || model.installed_build === undefined) return { available: false };
-    return { available: man.build > model.installed_build, latest: man.version };
+    if (!man || !hasUpdate(model, man)) return { available: false };
+    return { available: true, latest: man.version };
   }
 
   const sorted = $derived(

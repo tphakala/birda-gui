@@ -19,6 +19,7 @@
     offModelInstallProgress,
   } from '$lib/utils/ipc';
   import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
+  import { hasUpdate } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
   import type { InstalledModel, ManifestVariant, ModelManifest } from '$shared/types';
 
@@ -59,11 +60,8 @@
     return galleryStore.downloads[key];
   }
 
-  function hasUpdate(mo: InstalledModel): boolean {
-    const man = manifestOf(mo.registry_id ?? mo.model_type);
-    return man?.build !== undefined && mo.installed_build !== undefined && man.build > mo.installed_build;
-  }
-  const updatableCount = $derived(galleryStore.installed.filter(hasUpdate).length);
+  const updatable = (mo: InstalledModel): boolean => hasUpdate(mo, manifestOf(mo.registry_id ?? mo.model_type));
+  const updatableCount = $derived(galleryStore.installed.filter(updatable).length);
 
   function loadAcceptedLicenses(): void {
     try {
@@ -203,7 +201,7 @@
   }
 
   async function updateAll(): Promise<void> {
-    for (const mo of galleryStore.installed.filter(hasUpdate)) {
+    for (const mo of galleryStore.installed.filter(updatable)) {
       const family = mo.registry_id ?? mo.model_type;
       const man = manifestOf(family);
       const variant = man?.variants.find((v) => v.region === mo.region);

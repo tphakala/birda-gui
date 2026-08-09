@@ -35,12 +35,6 @@ export const galleryStore: GalleryState = $state({
   error: null,
 });
 
-/** Stable key for a variant's install/download state (region, or "global"). */
-export function variantKey(family: string, region?: string): string {
-  return `${family}:${region ?? 'global'}`;
-}
-
-/** Key for remembered license acceptance. */
-export function licenseKey(family: string, licenseType: string): string {
-  return `${family}:${licenseType}`;
-}
+// Pure key helpers live in the framework-free logic module (unit tested there);
+// re-exported here so components keep importing them from the store.
+export { variantKey, licenseKey } from '$lib/gallery/logic';

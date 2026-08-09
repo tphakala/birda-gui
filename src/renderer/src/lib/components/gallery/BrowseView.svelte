@@ -4,8 +4,14 @@
   import { Search, Globe, Download as DownloadIcon, CircleCheckBig } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import { formatFileSize, formatNumber } from '$lib/utils/format';
-  import { SvelteMap } from 'svelte/reactivity';
-  import { variantKey, type Download } from '$lib/stores/gallery.svelte';
+  import {
+    variantKey,
+    dedupeRegionVariants,
+    pickGlobalVariant,
+    groupVariants,
+    searchRegions,
+  } from '$lib/gallery/logic';
+  import type { Download } from '$lib/stores/gallery.svelte';
   import type { ModelManifest, ManifestVariant } from '$shared/types';
 
   const {
@@ -36,65 +42,12 @@
 
   const familyInfo = $derived(families.find((f) => f.id === family));
 
-  // Collapse hardware variants (fp32/fp16/...) to one entry per region: birda
-  // auto-selects the hardware variant at install time, so the UI installs by
-  // region only. Prefer the manifest's default_variant as the representative.
-  const regionVariants = $derived.by(() => {
-    const map = new SvelteMap<string, ManifestVariant>();
-    for (const v of manifest.variants) {
-      if (!v.region) continue;
-      const existing = map.get(v.region);
-      if (!existing || v.id === manifest.default_variant) map.set(v.region, v);
-    }
-    return [...map.values()];
-  });
-
-  const globalVariant = $derived(
-    manifest.variants.find((v) => !v.region && v.id === manifest.default_variant) ??
-      manifest.variants.find((v) => !v.region),
-  );
-
-  const fold = (s: string): string =>
-    s
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-      .toLowerCase();
-
-  const results = $derived.by(() => {
-    const q = fold(query.trim());
-    if (!q) return null;
-    return regionVariants
-      .map((v) => {
-        const name = fold(v.region_name ?? '');
-        const core = (v.countries?.core ?? []).find((c) => fold(c).includes(q));
-        const partial = (v.countries?.partial ?? []).find((c) => fold(c).includes(q));
-        let rank = 99;
-        let hint: { kind: 'core' | 'partial'; country: string } | undefined;
-        if (name.includes(q)) rank = 0;
-        else if (core) {
-          rank = 1;
-          hint = { kind: 'core', country: core };
-        } else if (partial) {
-          rank = 2;
-          hint = { kind: 'partial', country: partial };
-        } else if (fold(v.group_name ?? '').includes(q)) rank = 3;
-        return { v, rank, hint };
-      })
-      .filter((r) => r.rank < 99)
-      .sort((a, b) => a.rank - b.rank);
-  });
-
-  const groups = $derived.by(() => {
-    const byGroup = new SvelteMap<string, { name: string; order: number; items: ManifestVariant[] }>();
-    for (const v of regionVariants) {
-      const slug = v.group ?? 'other';
-      if (!byGroup.has(slug)) {
-        byGroup.set(slug, { name: v.group_name ?? slug, order: v.group_order, items: [] });
-      }
-      byGroup.get(slug)?.items.push(v);
-    }
-    return [...byGroup.entries()].map(([slug, g]) => ({ slug, ...g })).sort((a, b) => a.order - b.order);
-  });
+  // One entry per region (hardware variants collapsed), the global variant,
+  // ranked search results, and continent groups. Logic is unit tested in logic.ts.
+  const regionVariants = $derived(dedupeRegionVariants(manifest));
+  const globalVariant = $derived(pickGlobalVariant(manifest));
+  const results = $derived(query.trim() ? searchRegions(regionVariants, query) : null);
+  const groups = $derived(groupVariants(regionVariants));
 
   function groupLabel(slug: string, fallback: string): string {
     switch (slug) {
@@ -165,22 +118,22 @@
     {:else}
       <p class="text-base-content/50 text-xs">{m.gallery_search_matches({ count: results.length })}</p>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {#each results as r (r.v.region)}
+        {#each results as r (r.variant.region)}
           <RegionCard
-            variant={r.v}
+            variant={r.variant}
             {family}
-            installed={installedRegions.has(r.v.region ?? '')}
-            download={downloads[variantKey(family, r.v.region)]}
+            installed={installedRegions.has(r.variant.region ?? '')}
+            download={downloads[variantKey(family, r.variant.region)]}
             matchHint={r.hint}
             installDisabled={installing}
             onOpen={() => {
-              onOpenRegion(r.v);
+              onOpenRegion(r.variant);
             }}
             onInstall={() => {
-              onInstall(r.v);
+              onInstall(r.variant);
             }}
             onCancel={() => {
-              onCancel(r.v);
+              onCancel(r.variant);
             }}
           />
         {/each}

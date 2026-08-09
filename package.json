@@ -18,8 +18,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
     "validate:translations": "node scripts/validate-translations.js",
-    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run validate:translations && npm audit --omit=dev",
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run validate:translations && npm audit --omit=dev",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "dist:linux": "npm run build && electron-builder --linux",
@@ -147,7 +148,8 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.10"
   },
   "lint-staged": {
     "*.{ts,svelte}": [
