@@ -1,10 +1,10 @@
 import { SvelteSet } from 'svelte/reactivity';
 import type { ModelManifest, InstalledModel } from '$shared/types';
 
-type DownloadState = 'installing' | 'error' | 'cancelled';
-
+// Progress for a single in-flight install. An entry exists only while the
+// install is running; it is removed on success, error, or cancel (errors and
+// cancellations surface via galleryStore.error and the aria-live announcer).
 export interface Download {
-  state: DownloadState;
   line?: string;
   percent?: number;
   bytesDone?: number;
@@ -16,8 +16,8 @@ interface GalleryState {
   family: string;
   manifests: Record<string, ModelManifest>;
   installed: InstalledModel[];
-  // Keyed by variantKey(family, region). Present while a download is in flight
-  // or just after it errored/cancelled; cleared on success or dismissal.
+  // Keyed by variantKey(family, region). Present only while a download is in
+  // flight; cleared on success, error, or cancel.
   downloads: Record<string, Download>;
   // Keyed by `${family}:${licenseType}`. Remembered per family+license so a user
   // assembling several regions of one family accepts its license only once.

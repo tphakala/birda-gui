@@ -11,6 +11,10 @@ import {
 import { registerCoverageUrls } from '../birda/coverageCache';
 import { setDefaultModel } from '../birda/config';
 
+// Model id/region/variant become birda CLI args; reject anything that is not a
+// plain identifier (in particular a leading "-" that birda would read as a flag).
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
 export function registerModelHandlers(): void {
   ipcMain.handle('birda:models-list', async () => {
     return listModels();
@@ -30,6 +34,14 @@ export function registerModelHandlers(): void {
   ipcMain.handle(
     'birda:models-install',
     async (event, opts: { id: string; region?: string | undefined; variant?: string | undefined }) => {
+      if (typeof opts.id !== 'string' || !SAFE_ID.test(opts.id)) {
+        throw new Error('Invalid model install options');
+      }
+      for (const value of [opts.region, opts.variant]) {
+        if (value !== undefined && (typeof value !== 'string' || !SAFE_ID.test(value))) {
+          throw new Error('Invalid model install options');
+        }
+      }
       const sender = event.sender;
       return installModel(opts, (progress) => {
         if (!sender.isDestroyed()) {

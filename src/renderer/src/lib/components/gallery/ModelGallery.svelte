@@ -41,7 +41,7 @@
 
   const selectedManifest = $derived(manifestOf(galleryStore.family));
   const defaultId = $derived(galleryStore.installed.find((mo) => mo.is_default)?.id ?? '');
-  const installing = $derived(Object.values(galleryStore.downloads).some((d) => d.state === 'installing'));
+  const installing = $derived(Object.keys(galleryStore.downloads).length > 0);
 
   const installedRegions = $derived(
     new Set(
@@ -115,7 +115,7 @@
     onModelInstallProgress((p) => {
       const k = currentInstallKey;
       if (!k) return;
-      if (downloadOf(k)) galleryStore.downloads[k] = { ...p, state: 'installing' };
+      if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
     });
     void load();
     return () => {
@@ -140,7 +140,7 @@
     const key = variantKey(family, variant.region);
     currentInstallKey = key;
     busyId = key;
-    galleryStore.downloads[key] = { state: 'installing' };
+    galleryStore.downloads[key] = {};
     try {
       await installModel({ id: family, region: variant.region });
       clearDownload(key);

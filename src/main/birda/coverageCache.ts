@@ -1,5 +1,6 @@
 import { app, net } from 'electron';
 import { promises as fs } from 'fs';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import type { ManifestVariant } from '$shared/types';
 
@@ -7,6 +8,10 @@ import type { ManifestVariant } from '$shared/types';
 // so the birda-map:// protocol can never be pointed at an arbitrary URL by the
 // renderer (no SSRF): it serves only URLs birda vouched for.
 const coverageUrls = new Map<string, string>();
+
+// One in-flight fetch per family/region, so several region cards requesting the
+// same map at once share a single download and write instead of racing.
+const inFlight = new Map<string, Promise<string | null>>();
 
 const key = (family: string, region: string): string => `${family}/${region}`;
 const cacheDir = (): string => path.join(app.getPath('userData'), 'coverage-cache');
@@ -46,22 +51,31 @@ export async function getCoveragePath(family: string, region: string): Promise<s
     // Not cached yet; fetch it below.
   }
 
-  try {
-    const res = await net.fetch(url);
-    if (!res.ok) return null;
-    const buffer = Buffer.from(await res.arrayBuffer());
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.mkdir(dir, { recursive: true });
-    // Write to a temp file then rename: a crash or two concurrent fetches for
-    // the same region must not leave a truncated file that fs.access then serves
-    // forever.
-    const tmp = `${file}.${process.pid}.tmp`;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.writeFile(tmp, buffer);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    await fs.rename(tmp, file);
-    return file;
-  } catch {
-    return null;
-  }
+  const mapKey = key(family, region);
+  const pending = inFlight.get(mapKey);
+  if (pending) return pending;
+
+  const fetchAndCache = (async (): Promise<string | null> => {
+    try {
+      const res = await net.fetch(url);
+      if (!res.ok) return null;
+      const buffer = Buffer.from(await res.arrayBuffer());
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      await fs.mkdir(dir, { recursive: true });
+      // Unique temp name then atomic rename: an interrupted or interleaved write
+      // must never leave a truncated file that fs.access then serves forever.
+      const tmp = `${file}.${randomUUID()}.tmp`;
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      await fs.writeFile(tmp, buffer);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      await fs.rename(tmp, file);
+      return file;
+    } catch {
+      return null;
+    } finally {
+      inFlight.delete(mapKey);
+    }
+  })();
+  inFlight.set(mapKey, fetchAndCache);
+  return fetchAndCache;
 }

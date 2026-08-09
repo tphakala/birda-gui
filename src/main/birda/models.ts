@@ -72,16 +72,17 @@ export async function installModel(
   opts: { id: string; region?: string | undefined; variant?: string | undefined },
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
+  // Fail fast if an install is already running, BEFORE touching cancelState, so a
+  // rejected concurrent call cannot clear the running install's pending cancel.
+  if (currentInstall) {
+    throw new Error('Another model install is already running');
+  }
   cancelState.requested = false;
   const birdaPath = await findBirda();
   // A cancel that arrived while findBirda() was resolving must still stop the spawn.
   if (cancelRequested()) {
     cancelState.requested = false;
     throw new Error('Model install cancelled');
-  }
-  // Defend the single-install invariant in main rather than trusting the renderer.
-  if (currentInstall) {
-    throw new Error('Another model install is already running');
   }
   const args = ['--output-mode', 'json', 'models', 'install', opts.id];
   if (opts.region) args.push('--region', opts.region);
@@ -129,6 +130,13 @@ export async function installModel(
         emit(stderrRemainder.trim());
       }
       if (code !== 0) {
+        // A non-zero exit right after a cancel is the kill, not a real failure;
+        // report it as a cancellation so the renderer labels it correctly.
+        if (cancelState.requested) {
+          cancelState.requested = false;
+          reject(new Error('Model install cancelled'));
+          return;
+        }
         reject(new Error(`Model install failed: ${stdout}`));
         return;
       }
@@ -161,6 +169,12 @@ export async function modelInfo(name: string): Promise<unknown> {
 
 export async function getManifest(id: string): Promise<ModelManifest> {
   const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'manifest', id]);
-  const payload = envelope.payload as { manifest: ModelManifest };
-  return payload.manifest;
+  const payload = envelope.payload as { manifest?: ModelManifest };
+  const manifest = payload.manifest;
+  // Guard against an older/other birda whose payload lacks a usable manifest, so
+  // the caller gets a clear error to fall back on rather than a later TypeError.
+  if (!manifest || typeof manifest.id !== 'string' || !Array.isArray(manifest.variants)) {
+    throw new Error(`birda returned no usable manifest for ${id}`);
+  }
+  return manifest;
 }
