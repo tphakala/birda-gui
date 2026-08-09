@@ -7,16 +7,13 @@
   "common_button_back": "Zpět",
   "status_ready": "Připraveno",
   "status_analyzing": "Analyzuji...",
-
   "settings_title": "Nastavení",
   "settings_tab_preferences": "Předvolby",
   "settings_tab_models": "Modely",
   "settings_tab_data": "Data",
-
   "settings_cli_title": "Stav birda CLI",
   "settings_cli_checking": "Kontroluji...",
   "settings_cli_availableAt": "Dostupné na {path}",
-
   "settings_general_title": "Obecné",
   "settings_general_theme": "Motiv",
   "settings_general_themeSystem": "Výchozí systémový",
@@ -26,16 +23,13 @@
   "settings_general_uiLanguage": "Jazyk rozhraní",
   "settings_general_birdaPath": "Cesta k birda",
   "settings_general_birdaPathPlaceholder": "Ponechte prázdné pro použití PATH",
-
   "settings_analysis_title": "Výchozí nastavení analýzy",
   "settings_analysis_confidence": "Výchozí práh spolehlivosti",
   "settings_analysis_executionProvider": "Poskytovatel výpočtu",
   "settings_analysis_epAuto": "Automaticky (doporučeno)",
   "settings_analysis_epDescription": "Řídí hardwarovou akceleraci pro inferenci. Auto vybere nejlepší dostupnou možnost.",
-
   "settings_gpu_librariesMissing_title": "Akcelerace GPU dostupná",
   "settings_gpu_librariesMissing_description": "Byla zjištěna grafická karta Nvidia, ale knihovny CUDA/TensorRT nejsou nainstalovány. Nainstalujte je pro povolení akcelerace GPU:",
-
   "settings_cuda_title": "Akcelerace GPU",
   "settings_cuda_notSupported": "Akcelerace CUDA GPU je dostupná pouze na Linuxu a Windows s grafickými kartami NVIDIA.",
   "settings_cuda_noGpu": "Nebyla nalezena žádná grafická karta NVIDIA. Akcelerace CUDA vyžaduje grafickou kartu NVIDIA.",
@@ -55,7 +49,6 @@
   "settings_cuda_removeConfirm": "Odebrat stažené knihovny CUDA? Tím se uvolní {size} místa na disku. Později je můžete znovu stáhnout.",
   "settings_cuda_cancelButton": "Zrušit stahování",
   "settings_cuda_requiresRestart": "Restartujte analýzu pro použití akcelerace GPU.",
-
   "settings_spectrogram_title": "Spektrogram",
   "settings_spectrogram_maxFreq": "Výchozí maximální frekvence",
   "settings_spectrogram_height": "Výchozí výška spektrogramu",
@@ -63,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Střední",
   "settings_spectrogram_heightLarge": "Velký",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Úložiště",
   "settings_storage_clipDir": "Výstupní adresář klipů",
   "settings_storage_openClipDir": "Otevřít adresář klipů",
   "settings_storage_dbLocation": "Umístění databáze",
-
   "settings_saved": "Uloženo",
   "settings_unsavedModal_title": "Neuložené změny",
   "settings_unsavedModal_warning": "Máte neuložené změny nastavení. Pokud odejdete nyní, vaše změny budou ztraceny.",
   "settings_unsavedModal_discard": "Zahodit změny",
   "settings_unsavedModal_stayOnPage": "Zůstat na stránce",
-
   "settings_models_installed": "Nainstalované",
   "settings_models_catalog": "Katalog",
   "settings_models_refresh": "Obnovit",
@@ -95,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Tím odeberete model z vaší konfigurace a odstraníte soubory modelu z disku.",
   "settings_models_failedRemove": "Odebrání {modelId} selhalo: {error}",
   "settings_models_failedInstall": "Instalace {modelId} selhala: {error}",
-
   "settings_data_dataPath": "Cesta k datům",
   "settings_data_dataPathDescription": "Data aplikace, databáze a konfigurační soubory jsou uloženy zde.",
   "settings_data_openFolder": "Otevřít složku",
@@ -121,13 +110,11 @@
   "settings_data_vacuumDescription": "Uvolnit nevyužité místo na disku přestavbou souboru databáze.",
   "settings_data_vacuumed": "Komprimace dokončena",
   "settings_data_birdaConfig": "Konfigurace birda (pouze ke čtení)",
-
   "settings_clearModal_title": "Vymazat databázi",
   "settings_clearModal_warning": "Tím trvale odstraníte všechny detekce, běhy analýzy a místa z databáze. Tuto akci nelze vrátit zpět.",
   "settings_clearModal_detectionsRemoved": "{count} detekcí bude odstraněno",
   "settings_clearModal_locationsRemoved": "{count} míst bude odstraněno",
   "settings_clearModal_deleteAll": "Odstranit všechna data",
-
   "settings_licenseModal_title": "Licenční smlouva",
   "settings_licenseModal_license": "Licence",
   "settings_licenseModal_commercialUse": "Komerční použití",
@@ -135,25 +122,19 @@
   "settings_licenseModal_notAllowed": "Není povoleno",
   "settings_licenseModal_agree": "Instalací tohoto modelu souhlasíte s podmínkami licence {license}.",
   "settings_licenseModal_acceptInstall": "Přijmout a nainstalovat",
-
   "licenses_title": "Licence třetích stran",
   "licenses_notFound": "Informace o licenci nejsou k dispozici.",
-
   "common_button_close": "Zavřít",
-
   "sidebar_analysis": "Analýza",
   "sidebar_detections": "Detekce",
   "sidebar_map": "Mapa",
   "sidebar_species": "Druhy",
   "sidebar_settings": "Nastavení",
-
   "status_detections": "{count} detekce",
   "status_species": "{count} druhy",
   "status_locations": "{count} místa",
-
   "audio_pause": "Pauza",
   "audio_playClip": "Přehrát klip",
-
   "log_title": "Log",
   "log_expand": "Rozbalit",
   "log_collapse": "Sbalit",
@@ -161,11 +142,9 @@
   "log_clear": "Vymazat log",
   "log_close": "Zavřít panel logu",
   "log_empty": "Zatím žádné záznamy. Spusťte analýzu pro zobrazení výstupu zde.",
-
   "progress_complete": "Analýza dokončena",
   "progress_failed": "Analýza selhala",
   "progress_status": "{processed}/{total} souborů · {detections} detekcí",
-
   "filter_title": "Filtry",
   "filter_collapse": "Skrýt filtry",
   "filter_species": "Druhy",
@@ -173,7 +152,6 @@
   "filter_minConfidence": "Min. spolehlivost",
   "filter_show": "Zobrazit filtry",
   "filter_all": "Vše",
-
   "table_columnOffset": "Posun",
   "table_columnTime": "Čas",
   "table_columnSpecies": "Druh",
@@ -184,12 +162,10 @@
   "table_columnClip": "Klip",
   "table_loadingDetections": "Načítám detekce...",
   "table_noDetections": "Nebyly nalezeny žádné detekce",
-
   "pagination_detectionCount": "{count} detekce",
   "pagination_detectionCountSingular": "{count} detekce",
   "pagination_totalDetections": "{count} detekcí celkem",
   "pagination_pageOf": "Stránka {current} z {total}",
-
   "detail_audioLoadFailed": "Načtení zvuku selhalo: {message}",
   "detail_freqMax": "Max. freq.",
   "detail_height": "Výška",
@@ -203,7 +179,6 @@
   "detail_exporting": "Exportuji...",
   "detail_exportAsWav": "Exportovat výběr jako WAV",
   "detail_clearSelection": "Zrušit výběr",
-
   "sourceFiles_scanning": "Skenuji soubory...",
   "sourceFiles_sourceFile": "Zdrojový soubor",
   "sourceFiles_duration": "Trvání",
@@ -225,7 +200,6 @@
   "sourceFiles_statusSkip": "přeskočit",
   "sourceFiles_noAudioFiles": "Nebyly nalezeny žádné zvukové soubory",
   "sourceFiles_supportedFormats": "Podporované: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Souřadnice",
   "coords_autoDetected": "automaticky zjištěno",
   "coords_pickOnMap": "Vybrat souřadnice z mapy",
@@ -236,12 +210,9 @@
   "coords_longitudePlaceholder": "-180 až 180",
   "coords_pickTitle": "Vybrat souřadnice",
   "coords_clickToSet": "Klikněte na mapu pro nastavení souřadnic",
-
   "speciesSearch_placeholder": "Hledat druhy na mapě...",
   "speciesSearch_detCount": "{count} det.",
-
   "map_unknownLocation": "Neznámá poloha",
-
   "runs_title": "Běhy",
   "runs_empty": "Zatím žádné běhy analýzy",
   "runs_emptyHint": "Přejděte na kartu Analýza pro spuštění první analýzy.",
@@ -254,7 +225,6 @@
   "runs_status_failed": "Selhalo",
   "runs_deleteRun": "Odstranit běh",
   "runs_status_pending": "Čeká",
-
   "analysis_title": "Analýza",
   "analysis_selectFile": "Vybrat soubor",
   "analysis_selectFileDesc": "Vyberte zvukový soubor k analýze",
@@ -283,7 +253,6 @@
   "analysis_filterByName": "Filtrovat podle druhu...",
   "analysis_conf": "Spol.",
   "analysis_allConfidences": "Vše",
-
   "calendar_datePlaceholder": "DD/MM/RRRR",
   "calendar_today": "Dnes",
   "calendar_month_january": "Leden",
@@ -305,16 +274,13 @@
   "calendar_weekday_fr": "Pá",
   "calendar_weekday_sa": "So",
   "calendar_weekday_su": "Ne",
-
   "wizard_welcome_title": "Vítejte v Birda GUI",
   "wizard_welcome_subtitle": "Pojďme vás nastavit v několika rychlých krocích.",
   "wizard_welcome_getStarted": "Začít",
   "wizard_welcome_skip": "Přeskočit nastavení",
-
   "wizard_uiLanguage_title": "Zvolte jazyk",
   "wizard_uiLanguage_subtitle": "Vyberte jazyk pro rozhraní Birda GUI.",
   "wizard_uiLanguage_detected": "Zjistili jsme {language} na základě vašich systémových nastavení.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI potřebuje nástroj příkazového řádku birda pro analýzu zvukových souborů.",
   "wizard_cli_checking": "Hledám birda...",
@@ -323,22 +289,18 @@
   "wizard_cli_notFoundHint": "Pokud je birda nainstalováno, můžete cestu nastavit ručně, nebo jej stáhnout z odkazu níže.",
   "wizard_cli_download": "Stáhnout birda",
   "wizard_cli_setPath": "Nastavit cestu ručně",
-
   "wizard_model_title": "Nainstalovat model",
   "wizard_model_subtitle": "Pro analýzu zvuků ptáků potřebujete alespoň jeden model. Vyberte jeden k instalaci.",
   "wizard_model_installing": "Instaluji {name}...",
   "wizard_model_installed": "nainstalováno",
   "wizard_model_hasModels": "Máte {count} nainstalovaný/é model/y. Více modelů můžete nainstalovat později v Nastavení.",
   "wizard_model_noCli": "birda CLI není k dispozici. Vraťte se na předchozí krok pro nastavení CLI před instalací modelů.",
-
   "wizard_language_title": "Jazyk druhů",
   "wizard_language_subtitle": "Vyberte jazyk pro názvy ptačích druhů zobrazené ve výsledcích detekce.",
-
   "wizard_finish": "Dokončit nastavení",
   "wizard_next": "Další",
   "wizard_back": "Zpět",
   "wizard_stepOf": "Krok {current} z {total}",
-
   "species_title": "Seznamy druhů",
   "species_fetchNew": "Načíst nový",
   "species_customList": "Vytvořit vlastní",
@@ -352,7 +314,6 @@
   "species_selectList": "Vyberte seznam druhů pro zobrazení jeho obsahu.",
   "species_useAsFilter": "Použít jako filtr detekcí",
   "species_searchInList": "Filtrovat druhy v seznamu...",
-
   "species_fetch_title": "Načíst seznam druhů",
   "species_fetch_subtitle": "Získejte očekávané druhy ptáků pro místo a dobu roku.",
   "species_fetch_week": "Týden",
@@ -366,7 +327,6 @@
   "species_fetch_listName": "Název seznamu",
   "species_fetch_listNamePlaceholder": "např. Praha, Týden 24",
   "species_fetch_save": "Uložit seznam",
-
   "species_custom_title": "Vytvořit vlastní seznam druhů",
   "species_custom_name": "Název seznamu",
   "species_custom_namePlaceholder": "Můj seznam druhů...",
@@ -375,24 +335,19 @@
   "species_custom_searchAdd": "Hledat a přidávat druhy...",
   "species_custom_selectedCount": "{count} vybráno",
   "species_custom_create": "Vytvořit seznam",
-
   "species_table_commonName": "Obecný název",
   "species_table_scientificName": "Vědecký název",
   "species_table_frequency": "Frekvence",
-
   "species_detail_location": "Místo",
   "species_detail_week": "Týden {week}",
   "species_detail_threshold": "Práh: {threshold} %",
-
   "species_fetch_weekError": "Týden musí být mezi 1 a 48",
   "species_fetch_coordsError": "Prosím zadejte souřadnice",
   "species_fetch_moreSpecies": "...a {count} dalších",
   "species_loading": "Načítám...",
-
   "view_table": "Tabulka",
   "view_species": "Druhy",
   "view_grid": "Mřížka",
-
   "species_card_detections": "{count} detekce",
   "species_card_detectionsSingular": "{count} detekce",
   "species_card_avgConfidence": "Prům. {value}",
@@ -403,7 +358,6 @@
   "species_card_sortCount": "Počet",
   "species_card_sortName": "Název",
   "species_card_sortConfidence": "Spolehlivost",
-
   "grid_noResults": "Žádná data pro tepelnou mapu",
   "grid_daylight": "Denní světlo",
   "grid_phase_night": "Noc",
@@ -414,9 +368,7 @@
   "grid_detectionCountSingular": "{count} detekce",
   "grid_less": "Méně",
   "grid_more": "Více",
-
   "pagination_speciesCount": "{count} druhů",
-
   "annotation_editor_title": "Editor anotací",
   "annotation_overlay_label": "Vrstva anotací",
   "annotation_play": "Přehrát / pozastavit",
@@ -435,5 +387,73 @@
   "annotation_list_title": "Anotace",
   "annotation_annotateFile": "Anotovat soubor",
   "annotation_annotate": "Anotovat",
-  "annotation_searchSpecies": "Vyhledejte druh k přiřazení..."
+  "annotation_searchSpecies": "Vyhledejte druh k přiřazení...",
+  "gallery_tab_installed": "Installed",
+  "gallery_tab_browse": "Browse",
+  "gallery_refresh": "Refresh",
+  "gallery_updateAll": "Update all",
+  "gallery_search_placeholder": "Search by country or region",
+  "gallery_search_matches": "{count} regions match",
+  "gallery_search_noResults": "No regions match \"{query}\"",
+  "gallery_search_tryGlobal": "The global model covers all species worldwide.",
+  "gallery_search_matchCore": "Core: {country}",
+  "gallery_search_matchPartial": "Partial: {country}",
+  "gallery_family_recommended": "Recommended",
+  "gallery_family_meta": "{vendor} · {license} · {count} regional models",
+  "gallery_family_nonCommercial": "non-commercial",
+  "gallery_global_title": "Global",
+  "gallery_global_stats": "{count} species · complete worldwide coverage · {size}",
+  "gallery_region_stats": "{count} species · {size}",
+  "gallery_region_moreCountries": "+{count} more",
+  "gallery_group_europe": "Europe",
+  "gallery_group_asia": "Asia",
+  "gallery_group_northAmerica": "North America",
+  "gallery_group_southAmerica": "South America",
+  "gallery_group_africa": "Africa",
+  "gallery_group_oceania": "Oceania",
+  "gallery_coverage_alt": "Coverage map for {region}",
+  "gallery_coverage_unavailable": "Map unavailable",
+  "gallery_legend_core": "Core coverage",
+  "gallery_legend_partial": "Partial coverage",
+  "gallery_detail_species": "Species",
+  "gallery_detail_download": "Download",
+  "gallery_detail_group": "Group",
+  "gallery_detail_coreCountries": "Core countries",
+  "gallery_detail_partialCountries": "Partial countries",
+  "gallery_install": "Install",
+  "gallery_installing": "Installing...",
+  "gallery_installedBadge": "Installed",
+  "gallery_installAnotherRunning": "Another download is running",
+  "gallery_download_progress": "{done} of {total}",
+  "gallery_download_cancel": "Cancel download",
+  "gallery_download_cancelled": "Download cancelled.",
+  "gallery_download_failed": "Failed to install {model}: {error}",
+  "gallery_installedToast": "{model} installed",
+  "gallery_update": "Update",
+  "gallery_updateAvailable": "Update available: {version}",
+  "gallery_default": "Default",
+  "gallery_setDefault": "Set default",
+  "gallery_remove": "Remove",
+  "gallery_removeDisabledDefault": "The default model cannot be removed",
+  "gallery_confirmRemove_title": "Remove {model}?",
+  "gallery_confirmRemove_body": "This deletes the model files from disk. Your detections are kept.",
+  "gallery_provenance": "v{version} build {build}",
+  "gallery_sizeOnDisk": "{size} on disk",
+  "gallery_geomodel_title": "BirdNET Geomodel",
+  "gallery_geomodel_description": "Location-based range filter shared by every installed model.",
+  "gallery_geomodel_nudge": "Add the geomodel to filter detections by location and date.",
+  "gallery_geomodel_installedMeta": "{version} · {size} on disk · shared by all models",
+  "gallery_hardware_auto": "Hardware variant selected automatically",
+  "gallery_license_title": "License agreement",
+  "gallery_license_shareAlike": "Share-alike",
+  "gallery_license_agree": "By installing you accept the {license} license terms.",
+  "gallery_license_acceptInstall": "Accept and Install",
+  "gallery_installed_empty_title": "No models installed yet",
+  "gallery_installed_empty_body": "Install a model for your region to start analyzing.",
+  "gallery_installed_empty_cta": "Browse models",
+  "gallery_error_loadFailed": "Could not load the model catalog.",
+  "gallery_error_retry": "Retry",
+  "gallery_offline_cached": "Offline, showing the last cached catalog.",
+  "gallery_offline_noCache": "You appear to be offline and no catalog is cached.",
+  "gallery_legacyBirda": "Regional models need birda {minVersion} or newer. Showing the classic catalog."
 }

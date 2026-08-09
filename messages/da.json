@@ -7,16 +7,13 @@
   "common_button_back": "Tilbage",
   "status_ready": "Klar",
   "status_analyzing": "Analyserer...",
-
   "settings_title": "Indstillinger",
   "settings_tab_preferences": "Præferencer",
   "settings_tab_models": "Modeller",
   "settings_tab_data": "Data",
-
   "settings_cli_title": "birda CLI Status",
   "settings_cli_checking": "Kontrollerer...",
   "settings_cli_availableAt": "Tilgængelig på {path}",
-
   "settings_general_title": "Generelt",
   "settings_general_theme": "Tema",
   "settings_general_themeSystem": "Systemstandard",
@@ -26,16 +23,13 @@
   "settings_general_uiLanguage": "Brugergrænsefladesprog",
   "settings_general_birdaPath": "birda-sti",
   "settings_general_birdaPathPlaceholder": "Lad stå tomt for at bruge PATH",
-
   "settings_analysis_title": "Analyseindstillinger",
   "settings_analysis_confidence": "Standard konfidenstærskel",
   "settings_analysis_executionProvider": "Udførelsesudbyder",
   "settings_analysis_epAuto": "Automatisk (anbefalet)",
   "settings_analysis_epDescription": "Styrer hardwareacceleration til inferens. Auto vælger den bedste tilgængelige mulighed.",
-
   "settings_gpu_librariesMissing_title": "GPU-acceleration tilgængelig",
   "settings_gpu_librariesMissing_description": "En Nvidia GPU blev registreret, men CUDA/TensorRT-biblioteker er ikke installeret. Installer dem for at aktivere GPU-acceleration:",
-
   "settings_cuda_title": "GPU-acceleration",
   "settings_cuda_notSupported": "CUDA GPU-acceleration er kun tilgængelig på Linux og Windows med NVIDIA GPU'er.",
   "settings_cuda_noGpu": "Ingen NVIDIA GPU registreret. CUDA-acceleration kræver en NVIDIA GPU.",
@@ -55,7 +49,6 @@
   "settings_cuda_removeConfirm": "Fjern downloadede CUDA-biblioteker? Dette frigør {size} diskplads. Du kan downloade dem igen senere.",
   "settings_cuda_cancelButton": "Annuller download",
   "settings_cuda_requiresRestart": "Genstart analyse for at bruge GPU-acceleration.",
-
   "settings_spectrogram_title": "Spektrogram",
   "settings_spectrogram_maxFreq": "Standard maksimumfrekvens",
   "settings_spectrogram_height": "Standard spektrogramhøjde",
@@ -63,18 +56,15 @@
   "settings_spectrogram_heightMedium": "Mellem",
   "settings_spectrogram_heightLarge": "Stor",
   "settings_spectrogram_heightXL": "XL",
-
   "settings_storage_title": "Lager",
   "settings_storage_clipDir": "Klipudgangsmappe",
   "settings_storage_openClipDir": "Åbn klipmappe",
   "settings_storage_dbLocation": "Databaseplacering",
-
   "settings_saved": "Gemt",
   "settings_unsavedModal_title": "Ugemte ændringer",
   "settings_unsavedModal_warning": "Du har ugemte indstillingsændringer. Hvis du forlader nu, vil dine ændringer gå tabt.",
   "settings_unsavedModal_discard": "Kassér ændringer",
   "settings_unsavedModal_stayOnPage": "Bliv på siden",
-
   "settings_models_installed": "Installeret",
   "settings_models_catalog": "Katalog",
   "settings_models_refresh": "Opdater",
@@ -95,7 +85,6 @@
   "settings_models_confirmRemoveDescription": "Dette fjerner modellen fra din konfiguration og sletter modelfiler fra disk.",
   "settings_models_failedRemove": "Kunne ikke fjerne {modelId}: {error}",
   "settings_models_failedInstall": "Kunne ikke installere {modelId}: {error}",
-
   "settings_data_dataPath": "Datasti",
   "settings_data_dataPathDescription": "Applikationsdata, database og konfigurationsfiler gemmes her.",
   "settings_data_openFolder": "Åbn mappe",
@@ -121,13 +110,11 @@
   "settings_data_vacuumDescription": "Frigør ubrugt diskplads ved at genopbygge databasefilen.",
   "settings_data_vacuumed": "Komprimering fuldført",
   "settings_data_birdaConfig": "birda-konfiguration (skrivebeskyttet)",
-
   "settings_clearModal_title": "Ryd database",
   "settings_clearModal_warning": "Dette sletter permanent alle registreringer, analysekørsler og placeringer fra databasen. Denne handling kan ikke fortrydes.",
   "settings_clearModal_detectionsRemoved": "{count} registreringer vil blive fjernet",
   "settings_clearModal_locationsRemoved": "{count} placeringer vil blive fjernet",
   "settings_clearModal_deleteAll": "Slet alle data",
-
   "settings_licenseModal_title": "Licensaftale",
   "settings_licenseModal_license": "Licens",
   "settings_licenseModal_commercialUse": "Kommerciel brug",
@@ -135,25 +122,19 @@
   "settings_licenseModal_notAllowed": "Ikke tilladt",
   "settings_licenseModal_agree": "Ved at installere denne model accepterer du betingelserne i {license}-licensen.",
   "settings_licenseModal_acceptInstall": "Acceptér og installer",
-
   "licenses_title": "Tredjeparts licenser",
   "licenses_notFound": "Licensoplysninger er ikke tilgængelige.",
-
   "common_button_close": "Luk",
-
   "sidebar_analysis": "Analyse",
   "sidebar_detections": "Registreringer",
   "sidebar_map": "Kort",
   "sidebar_species": "Arter",
   "sidebar_settings": "Indstillinger",
-
   "status_detections": "{count} registreringer",
   "status_species": "{count} arter",
   "status_locations": "{count} placeringer",
-
   "audio_pause": "Pause",
   "audio_playClip": "Afspil klip",
-
   "log_title": "Log",
   "log_expand": "Udvid",
   "log_collapse": "Skjul",
@@ -161,11 +142,9 @@
   "log_clear": "Ryd log",
   "log_close": "Luk logpanel",
   "log_empty": "Ingen logposter endnu. Kør en analyse for at se output her.",
-
   "progress_complete": "Analyse fuldført",
   "progress_failed": "Analyse mislykkedes",
   "progress_status": "{processed}/{total} filer · {detections} registreringer",
-
   "filter_title": "Filtre",
   "filter_collapse": "Skjul filtre",
   "filter_species": "Arter",
@@ -173,7 +152,6 @@
   "filter_minConfidence": "Min. konfidens",
   "filter_show": "Vis filtre",
   "filter_all": "Alle",
-
   "table_columnOffset": "Offset",
   "table_columnTime": "Tid",
   "table_columnSpecies": "Art",
@@ -184,12 +162,10 @@
   "table_columnClip": "Klip",
   "table_loadingDetections": "Indlæser registreringer...",
   "table_noDetections": "Ingen registreringer fundet",
-
   "pagination_detectionCount": "{count} registreringer",
   "pagination_detectionCountSingular": "{count} registrering",
   "pagination_totalDetections": "{count} registreringer i alt",
   "pagination_pageOf": "Side {current} af {total}",
-
   "detail_audioLoadFailed": "Lydindlæsning mislykkedes: {message}",
   "detail_freqMax": "Maks. freq.",
   "detail_height": "Højde",
@@ -203,7 +179,6 @@
   "detail_exporting": "Eksporterer...",
   "detail_exportAsWav": "Eksportér valg som WAV",
   "detail_clearSelection": "Ryd valg",
-
   "sourceFiles_scanning": "Scanner filer...",
   "sourceFiles_sourceFile": "Kildefil",
   "sourceFiles_duration": "Varighed",
@@ -225,7 +200,6 @@
   "sourceFiles_statusSkip": "spring over",
   "sourceFiles_noAudioFiles": "Ingen lydfiler fundet",
   "sourceFiles_supportedFormats": "Understøttet: WAV, MP3, FLAC, OGG, M4A",
-
   "coords_title": "Koordinater",
   "coords_autoDetected": "auto-registreret",
   "coords_pickOnMap": "Vælg koordinater fra kort",
@@ -236,12 +210,9 @@
   "coords_longitudePlaceholder": "-180 til 180",
   "coords_pickTitle": "Vælg koordinater",
   "coords_clickToSet": "Klik på kortet for at sætte koordinater",
-
   "speciesSearch_placeholder": "Søg arter på kort...",
   "speciesSearch_detCount": "{count} reg.",
-
   "map_unknownLocation": "Ukendt placering",
-
   "runs_title": "Kørsler",
   "runs_empty": "Ingen analysekørsler endnu",
   "runs_emptyHint": "Gå til Analyse-fanen for at starte din første analyse.",
@@ -254,7 +225,6 @@
   "runs_status_failed": "Mislykkedes",
   "runs_deleteRun": "Slet kørsel",
   "runs_status_pending": "Afventer",
-
   "analysis_title": "Analyse",
   "analysis_selectFile": "Vælg fil",
   "analysis_selectFileDesc": "Vælg en lydfil til analyse",
@@ -283,7 +253,6 @@
   "analysis_filterByName": "Filtrer efter art...",
   "analysis_conf": "Konf.",
   "analysis_allConfidences": "Alle",
-
   "calendar_datePlaceholder": "DD/MM/ÅÅÅÅ",
   "calendar_today": "I dag",
   "calendar_month_january": "Januar",
@@ -305,16 +274,13 @@
   "calendar_weekday_fr": "Fr",
   "calendar_weekday_sa": "Lø",
   "calendar_weekday_su": "Sø",
-
   "wizard_welcome_title": "Velkommen til Birda GUI",
   "wizard_welcome_subtitle": "Lad os sætte dig op i et par hurtige trin.",
   "wizard_welcome_getStarted": "Kom i gang",
   "wizard_welcome_skip": "Spring opsætning over",
-
   "wizard_uiLanguage_title": "Vælg dit sprog",
   "wizard_uiLanguage_subtitle": "Vælg sproget til Birda GUI-grænsefladen.",
   "wizard_uiLanguage_detected": "Vi registrerede {language} baseret på dine systemindstillinger.",
-
   "wizard_cli_title": "birda CLI",
   "wizard_cli_subtitle": "Birda GUI kræver birda-kommandolinjeværktøjet til at analysere lydfiler.",
   "wizard_cli_checking": "Søger efter birda...",
@@ -323,22 +289,18 @@
   "wizard_cli_notFoundHint": "Du kan indstille stien manuelt, hvis birda er installeret, eller downloade det fra linket nedenfor.",
   "wizard_cli_download": "Download birda",
   "wizard_cli_setPath": "Indstil sti manuelt",
-
   "wizard_model_title": "Installer en model",
   "wizard_model_subtitle": "Du har brug for mindst én model til at analysere fuglelyde. Vælg en til installation.",
   "wizard_model_installing": "Installerer {name}...",
   "wizard_model_installed": "installeret",
   "wizard_model_hasModels": "Du har {count} installeret(e) model(ler). Du kan installere flere senere fra Indstillinger.",
   "wizard_model_noCli": "birda CLI er ikke tilgængelig. Gå tilbage til det forrige trin for at konfigurere CLI, før du installerer modeller.",
-
   "wizard_language_title": "Artssprog",
   "wizard_language_subtitle": "Vælg sproget for fugleartnavne vist i registreringsresultater.",
-
   "wizard_finish": "Afslut opsætning",
   "wizard_next": "Næste",
   "wizard_back": "Tilbage",
   "wizard_stepOf": "Trin {current} af {total}",
-
   "species_title": "Artslister",
   "species_fetchNew": "Hent ny",
   "species_customList": "Opret brugerdefineret",
@@ -352,7 +314,6 @@
   "species_selectList": "Vælg en artsliste for at se dens indhold.",
   "species_useAsFilter": "Brug som registreringsfilter",
   "species_searchInList": "Filtrer arter i listen...",
-
   "species_fetch_title": "Hent artsliste",
   "species_fetch_subtitle": "Hent forventede fuglearter for en placering og tid på året.",
   "species_fetch_week": "Uge",
@@ -366,7 +327,6 @@
   "species_fetch_listName": "Listenavn",
   "species_fetch_listNamePlaceholder": "f.eks. København, Uge 24",
   "species_fetch_save": "Gem liste",
-
   "species_custom_title": "Opret brugerdefineret artsliste",
   "species_custom_name": "Listenavn",
   "species_custom_namePlaceholder": "Min artsliste...",
@@ -375,24 +335,19 @@
   "species_custom_searchAdd": "Søg og tilføj arter...",
   "species_custom_selectedCount": "{count} valgt",
   "species_custom_create": "Opret liste",
-
   "species_table_commonName": "Almindeligt navn",
   "species_table_scientificName": "Videnskabeligt navn",
   "species_table_frequency": "Frekvens",
-
   "species_detail_location": "Placering",
   "species_detail_week": "Uge {week}",
   "species_detail_threshold": "Stærskel: {threshold}%",
-
   "species_fetch_weekError": "Uge skal være mellem 1 og 48",
   "species_fetch_coordsError": "Angiv venligst koordinater",
   "species_fetch_moreSpecies": "...og {count} flere",
   "species_loading": "Indlæser...",
-
   "view_table": "Tabel",
   "view_species": "Arter",
   "view_grid": "Gitter",
-
   "species_card_detections": "{count} registreringer",
   "species_card_detectionsSingular": "{count} registrering",
   "species_card_avgConfidence": "Gns. {value}",
@@ -403,7 +358,6 @@
   "species_card_sortCount": "Antal",
   "species_card_sortName": "Navn",
   "species_card_sortConfidence": "Konfidens",
-
   "grid_noResults": "Ingen data til varmekort",
   "grid_daylight": "Dagslys",
   "grid_phase_night": "Nat",
@@ -414,9 +368,7 @@
   "grid_detectionCountSingular": "{count} registrering",
   "grid_less": "Færre",
   "grid_more": "Flere",
-
   "pagination_speciesCount": "{count} arter",
-
   "annotation_editor_title": "Annotationseditor",
   "annotation_overlay_label": "Annotationslag",
   "annotation_play": "Afspil / pause",
@@ -435,5 +387,73 @@
   "annotation_list_title": "Annotationer",
   "annotation_annotateFile": "Annotér fil",
   "annotation_annotate": "Annotér",
-  "annotation_searchSpecies": "Søg efter art at tildele..."
+  "annotation_searchSpecies": "Søg efter art at tildele...",
+  "gallery_tab_installed": "Installed",
+  "gallery_tab_browse": "Browse",
+  "gallery_refresh": "Refresh",
+  "gallery_updateAll": "Update all",
+  "gallery_search_placeholder": "Search by country or region",
+  "gallery_search_matches": "{count} regions match",
+  "gallery_search_noResults": "No regions match \"{query}\"",
+  "gallery_search_tryGlobal": "The global model covers all species worldwide.",
+  "gallery_search_matchCore": "Core: {country}",
+  "gallery_search_matchPartial": "Partial: {country}",
+  "gallery_family_recommended": "Recommended",
+  "gallery_family_meta": "{vendor} · {license} · {count} regional models",
+  "gallery_family_nonCommercial": "non-commercial",
+  "gallery_global_title": "Global",
+  "gallery_global_stats": "{count} species · complete worldwide coverage · {size}",
+  "gallery_region_stats": "{count} species · {size}",
+  "gallery_region_moreCountries": "+{count} more",
+  "gallery_group_europe": "Europe",
+  "gallery_group_asia": "Asia",
+  "gallery_group_northAmerica": "North America",
+  "gallery_group_southAmerica": "South America",
+  "gallery_group_africa": "Africa",
+  "gallery_group_oceania": "Oceania",
+  "gallery_coverage_alt": "Coverage map for {region}",
+  "gallery_coverage_unavailable": "Map unavailable",
+  "gallery_legend_core": "Core coverage",
+  "gallery_legend_partial": "Partial coverage",
+  "gallery_detail_species": "Species",
+  "gallery_detail_download": "Download",
+  "gallery_detail_group": "Group",
+  "gallery_detail_coreCountries": "Core countries",
+  "gallery_detail_partialCountries": "Partial countries",
+  "gallery_install": "Install",
+  "gallery_installing": "Installing...",
+  "gallery_installedBadge": "Installed",
+  "gallery_installAnotherRunning": "Another download is running",
+  "gallery_download_progress": "{done} of {total}",
+  "gallery_download_cancel": "Cancel download",
+  "gallery_download_cancelled": "Download cancelled.",
+  "gallery_download_failed": "Failed to install {model}: {error}",
+  "gallery_installedToast": "{model} installed",
+  "gallery_update": "Update",
+  "gallery_updateAvailable": "Update available: {version}",
+  "gallery_default": "Default",
+  "gallery_setDefault": "Set default",
+  "gallery_remove": "Remove",
+  "gallery_removeDisabledDefault": "The default model cannot be removed",
+  "gallery_confirmRemove_title": "Remove {model}?",
+  "gallery_confirmRemove_body": "This deletes the model files from disk. Your detections are kept.",
+  "gallery_provenance": "v{version} build {build}",
+  "gallery_sizeOnDisk": "{size} on disk",
+  "gallery_geomodel_title": "BirdNET Geomodel",
+  "gallery_geomodel_description": "Location-based range filter shared by every installed model.",
+  "gallery_geomodel_nudge": "Add the geomodel to filter detections by location and date.",
+  "gallery_geomodel_installedMeta": "{version} · {size} on disk · shared by all models",
+  "gallery_hardware_auto": "Hardware variant selected automatically",
+  "gallery_license_title": "License agreement",
+  "gallery_license_shareAlike": "Share-alike",
+  "gallery_license_agree": "By installing you accept the {license} license terms.",
+  "gallery_license_acceptInstall": "Accept and Install",
+  "gallery_installed_empty_title": "No models installed yet",
+  "gallery_installed_empty_body": "Install a model for your region to start analyzing.",
+  "gallery_installed_empty_cta": "Browse models",
+  "gallery_error_loadFailed": "Could not load the model catalog.",
+  "gallery_error_retry": "Retry",
+  "gallery_offline_cached": "Offline, showing the last cached catalog.",
+  "gallery_offline_noCache": "You appear to be offline and no catalog is cached.",
+  "gallery_legacyBirda": "Regional models need birda {minVersion} or newer. Showing the classic catalog."
 }

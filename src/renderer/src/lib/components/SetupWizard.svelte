@@ -135,8 +135,8 @@
     installProgress = '';
     modelsError = null;
 
-    onModelInstallProgress((line) => {
-      installProgress = line;
+    onModelInstallProgress((progress) => {
+      installProgress = progress.line;
     });
 
     try {
