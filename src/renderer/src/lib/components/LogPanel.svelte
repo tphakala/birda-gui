@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Trash2, Copy, ChevronDown, ChevronUp } from '@lucide/svelte';
+  import { X, Trash, Copy, ChevronDown, ChevronUp } from '@lucide/svelte';
   import { appState } from '$lib/stores/app.svelte';
   import { logState, clearLog, type LogEntry } from '$lib/stores/log.svelte';
   import * as m from '$paraglide/messages';
@@ -60,6 +60,8 @@
 
   // Auto-scroll when entries change
   $effect(() => {
+    // Read length to register a reactive dependency so the effect re-runs on new entries.
+    // eslint-disable-next-line @typescript-eslint/no-meaningless-void-operator -- intentional reactive-dependency read
     void logState.entries.length;
     requestAnimationFrame(scrollToBottom);
   });
@@ -89,7 +91,7 @@
         <Copy size={13} />
       </button>
       <button class="btn btn-ghost btn-xs btn-square" onclick={clearLog} title={m.log_clear()}>
-        <Trash2 size={13} />
+        <Trash size={13} />
       </button>
       <button
         class="btn btn-ghost btn-xs btn-square"

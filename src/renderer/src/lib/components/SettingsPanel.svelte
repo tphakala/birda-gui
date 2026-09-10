@@ -6,7 +6,7 @@
     CircleCheckBig,
     CircleX,
     Loader,
-    Trash2,
+    Trash,
     TriangleAlert,
     Database,
     Download,
@@ -905,7 +905,7 @@
               disabled={clearing || appState.catalogStats.total_detections === 0}
               class="btn btn-error btn-sm gap-1.5"
             >
-              <Trash2 size={14} />
+              <Trash size={14} />
               {m.settings_data_clearAll()}
             </button>
             {#if clearResult}

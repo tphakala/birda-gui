@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Bird, Download, Plus, Search, Trash2, X, Funnel, MapPin } from '@lucide/svelte';
+  import { Bird, Download, Plus, Search, Trash, X, Funnel, MapPin } from '@lucide/svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import {
@@ -309,7 +309,7 @@
               class="text-base-content/30 hover:text-error mt-0.5 opacity-0 transition-opacity group-hover:opacity-100"
               title={m.species_deleteList()}
             >
-              <Trash2 size={14} />
+              <Trash size={14} />
             </button>
           </div>
         {/each}
