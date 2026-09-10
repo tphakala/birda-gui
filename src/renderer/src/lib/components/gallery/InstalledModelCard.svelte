@@ -1,6 +1,6 @@
 <script lang="ts">
   import CoverageMap from './CoverageMap.svelte';
-  import { Cpu, Globe, CircleCheckBig, TriangleAlert, Trash2 } from '@lucide/svelte';
+  import { Cpu, Globe, CircleCheckBig, TriangleAlert, Trash } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import type { InstalledModel } from '$shared/types';
 
@@ -100,7 +100,7 @@
         aria-label={isDefault ? m.gallery_removeDisabledDefault() : m.gallery_remove()}
         title={isDefault ? m.gallery_removeDisabledDefault() : m.gallery_remove()}
       >
-        <Trash2 size={13} />
+        <Trash size={13} />
       </button>
     </div>
   </div>

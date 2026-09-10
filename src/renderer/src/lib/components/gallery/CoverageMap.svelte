@@ -16,6 +16,7 @@
   // Reset load state when the source changes, so a reused instance (mutating
   // props rather than a keyed remount) does not keep a stale loaded/failed flag.
   $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-meaningless-void-operator -- intentional reactive-dependency read
     void src;
     loaded = false;
     failed = false;

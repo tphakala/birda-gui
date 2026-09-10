@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, Trash2 } from '@lucide/svelte';
+  import { Check, Trash } from '@lucide/svelte';
   import {
     annotationEditor,
     getSelectedBox,
@@ -91,7 +91,7 @@
             void removeBox(selected.key);
           }}
         >
-          <Trash2 size={12} />{m.annotation_remove()}
+          <Trash size={12} />{m.annotation_remove()}
         </button>
       </div>
     </div>
