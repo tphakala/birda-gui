@@ -1,0 +1,167 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "f94ff3a1a0e1",
+  "session_id": "2660e9f8-229c-4430-b352-e97bf0701d2c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-10T09:33:39.741311Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-4-8[1m]",
+  "turn_id": "c87f91182310",
+  "checkpoint_transcript_start": 862,
+  "transcript_lines_at_start": 862,
+  "compact_transcript_start": 108,
+  "token_usage": {
+    "input_tokens": 32,
+    "cache_creation_tokens": 27056,
+    "cache_read_tokens": 4563099,
+    "output_tokens": 20483,
+    "api_call_count": 16,
+    "subagent_tokens": {
+      "input_tokens": 42,
+      "cache_creation_tokens": 36014,
+      "cache_read_tokens": 2317154,
+      "output_tokens": 25171,
+      "api_call_count": 21
+    }
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01JnKo9keSv312HvXipkEavM",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "gate"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "b3ce0d1587fb",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 449,
+        "end": 450,
+        "entry_ids": [
+          "74ddb93a-b843-4ada-a464-8e01cfbfd228"
+        ],
+        "tool_use_id": "toolu_01JnKo9keSv312HvXipkEavM"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01JnKo9keSv312HvXipkEavM"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: gate",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01BzCq2o7RR4zdiaS5ngwwqH",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "watch-pr"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "b3ce0d1587fb",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 654,
+        "end": 655,
+        "entry_ids": [
+          "e60a63ec-0fa0-4988-a666-d4484b0b803a"
+        ],
+        "tool_use_id": "toolu_01BzCq2o7RR4zdiaS5ngwwqH"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01BzCq2o7RR4zdiaS5ngwwqH"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: watch-pr",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01QatmVyaxvSVJ4jjvpG4JFz",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "wrapup"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "b3ce0d1587fb",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 777,
+        "end": 778,
+        "entry_ids": [
+          "24cbe7f8-5d9b-401e-9aa8-aa22c3966b64"
+        ],
+        "tool_use_id": "toolu_01QatmVyaxvSVJ4jjvpG4JFz"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01QatmVyaxvSVJ4jjvpG4JFz"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: wrapup",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-10T09:33:39.669989Z",
+    "agent_lines": 21,
+    "agent_removed": 18,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 21,
+    "total_lines_changed": 39,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 20,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".husky/_/commit-msg": 4,
+        ".husky/_/post-commit": 4,
+        ".husky/_/post-rewrite": 4,
+        ".husky/_/pre-push": 5,
+        ".husky/_/prepare-commit-msg": 3
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 41,
+      "agent_lines_removed": 18
+    }
+  ]
+}
