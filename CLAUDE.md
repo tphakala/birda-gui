@@ -2,13 +2,13 @@
 
 Desktop GUI for the **birda** bird species detection CLI. Built with Electron + Svelte 5 + TypeScript.
 
-## 🔍 Understanding the Codebase — USE LEANN FIRST
+## 🔍 Understanding the Codebase: USE LEANN FIRST
 
 **CRITICAL:** Before reading files, grepping, or exploring the codebase to understand how something works, you MUST use LEANN first. LEANN is a semantic vector search system that provides accurate, context-aware answers about the codebase architecture and implementation patterns.
 
 ### When You Need to Understand Code or Project Structure
 
-1. **ALWAYS START WITH LEANN** — Use `fish -c "leann ask birda-gui '<your question>'"` for:
+1. **ALWAYS START WITH LEANN**. Use `fish -c "leann ask birda-gui '<your question>'"` for:
    - "How does [feature/system] work?"
    - "Where is [functionality] implemented?"
    - "What patterns are used for [architecture concern]?"
@@ -91,10 +91,10 @@ build/                # Electron-builder resources (icons, NSIS installer script
 
 ## TypeScript Configuration
 
-Two separate tsconfig files — **never mix them**:
+Two separate tsconfig files (never mix them):
 
-- **`tsconfig.json`** — Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
-- **`tsconfig.node.json`** — Main + Preload + Shared. Node.js only, no DOM. Has `types: ["node"]`.
+- **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
+- **`tsconfig.node.json`**: Main + Preload + Shared. Node.js only, no DOM. Has `types: ["node"]`.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 
@@ -118,8 +118,11 @@ task lint:fix               # ESLint with auto-fix
 task format                 # Prettier write
 task format:check           # Prettier check (CI)
 
+# Testing
+npm run test                # vitest run (unit tests; no Taskfile target yet)
+
 # Full validation (CI equivalent)
-npm run validate            # format:check + lint + typecheck + npm audit
+npm run validate            # format:check + lint + typecheck + test + validate:translations + npm audit
 
 # Packaging
 task dist                   # Build + electron-builder for current platform
@@ -169,10 +172,10 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 State stores are in `src/renderer/src/lib/stores/`:
 
-- `app.svelte.ts` — Global UI state (active tab, settings, selections)
-- `analysis.svelte.ts` — Analysis progress tracking
-- `log.svelte.ts` — Application log entries
-- `map.svelte.ts` — Map view state
+- `app.svelte.ts`: Global UI state (active tab, settings, selections)
+- `analysis.svelte.ts`: Analysis progress tracking
+- `log.svelte.ts`: Application log entries
+- `map.svelte.ts`: Map view state
 
 Components mutate store state directly (no actions/reducers pattern).
 
@@ -229,23 +232,23 @@ Usage in components:
 
 ## Testing
 
-No test framework is configured. Quality is enforced via:
+**Vitest** is configured for unit tests. Run with `npm run test` (`vitest run`); it is part of `npm run validate` and runs in CI.
 
-- Strict TypeScript (both tsconfigs)
-- ESLint with type-aware + security rules
-- knip (dead code detection)
-- npm audit (dependency security)
-- Pre-commit hooks (lint-staged)
+- Config: `vitest.config.ts` (node environment; aliases mirror the app's `$lib` / `$shared` / `$paraglide` paths).
+- Test files: co-located `*.test.ts` next to the code under test, in both `src/` and `shared/` (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`.
+- Scope: framework-free logic only. The node environment has no DOM, so there are no Svelte component or DOM tests.
+
+Additional quality gates: strict TypeScript (both tsconfigs), ESLint with type-aware and security rules, knip (dead code detection), npm audit (dependency security), and pre-commit hooks (lint-staged).
 
 ## Key Conventions
 
-- **No `any` types** — strict TypeScript throughout
+- **No `any` types**: strict TypeScript throughout
 - **Shared types** go in `shared/types.ts`, never duplicated
 - **Component files**: PascalCase `.svelte` (e.g., `DetectionDetail.svelte`)
 - **Store files**: camelCase `.svelte.ts` (e.g., `app.svelte.ts`)
 - **Main process modules**: camelCase `.ts` grouped by domain
 - **ESM throughout** (`"type": "module"` in package.json), CJS only for Electron main/preload output
-- **No testing files** — no `.test.ts` or `.spec.ts` convention established
+- **Test files**: co-located `*.test.ts` next to the code under test (Vitest, node environment, framework-free logic only)
 - **Formatting**: single quotes, trailing commas, 120 char lines, 2-space indent
 
 ## Development Tools & Context
