@@ -1,0 +1,172 @@
+please see what PRs we have open, analyse each one and merge safe ones, then flag what we should do for non-safe (major) updates
+
+---
+
+now run npm deps updates locally, is there more updates available?
+
+---
+
+resolve all issues. branch, implement, test, /gate, /watch-pr, /wrapup. work autonomously
+
+---
+
+<task-notification>
+<task-id>a725d2aece6990682</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-e909385-src-birda-gui/2660e9f8-229c-4430-b352-e97bf0701d2c/tasks/a725d2aece6990682.output</output-file>
+<status>completed</status>
+<summary>Agent "Gate Agent 8: UX/UI" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>Read complete. Here's my report.
+
+---
+
+## Gate Review Agent 8 (UX/UI &amp; Accessibility) - REPORT-ONLY
+
+**Patterns file read:** `/tmp/gate-checklists/agent8.md`
+**9 items loaded (sliced from 9; 0 suppressed as inapplicable)**
+
+No items were suppressed, and none looks like it should have been. Project doctrine: `CLAUDE.md` at repo root governs styling/i18n conventions (daisyUI + Tailwind, Paraglide) but has no dedicated UX/a11y section, so the checklist heuristics apply on their own merits.
+
+### Icon swap verdict (the actual changeset)
+
+`Trash2` -&gt; `Trash` is the Lucide 1.44 recommended replacement. Both are trash-can glyphs (`Trash` is a lidded can, appropriate and conventional for delete/clear affordances). The swap is visually reasonable. No size or stroke inconsistency was introduced: every call site keeps its existing `size` prop (12/13/14), each consistent with the neighboring icons in that same view (e.g. Annotation Trash 12 matches Check 12; Log Trash 13 matches Copy 13 and X 13; Settings Trash 14 matches Database 14). There are no `strokeWidth` overrides anywhere, so stroke is uniform. Nothing to fix in the swap itself.
+
+**Accessible-name check across all 5 swapped buttons: none is missing an accessible name.** Two carry a visible text label, two icon-only buttons carry `title`, and one icon-only button carries both `aria-label` and `title`. So there is no "icon-only button with no accessible name" finding here. Details below.
+
+### Findings (ordered by severity)
+
+**1. [Medium] [PRE-EXISTING] SpeciesPage.svelte (delete-list button, ~304-313): hover-only reveal with no keyboard-focus equivalent. Tag: objective, fixable.**
+The button is `opacity-0 ... transition-opacity group-hover:opacity-100`, revealed only when the parent row is mouse-hovered. There is no `group-focus-within:` / `focus-visible:` counterpart. A keyboard user who tabs to this button gets nothing visible: the element (and its focus ring) stays at opacity 0, so the focused destructive control is invisible. User-visible consequence: keyboard-only users cannot see which delete control they are about to activate. Suggested fix (described, not applied): add `group-focus-within:opacity-100` on the button (and/or `focus-visible:opacity-100`) so the action reveals on keyboard focus as well as hover. This is the checklist item-5 "hover:-only reveal with no focus equivalent" pattern, and it is objective and mechanically fixable, so route to Agents 2/3.
+
+**2. [Low] [PRE-EXISTING] LogPanel.svelte (clear-log button, ~93): destructive clear with no confirmation.**
+`onclick={clearLog}` wipes the entire log in one click, no confirm step (unlike the Settings "clear all data" button, which opens a modal). Consequence: an accidental click discards the visible log. Mitigating context that keeps this Low and report-only (product judgment): log entries are ephemeral/non-critical, and a Copy-to-clipboard button sits immediately to its left, so the user can rescue the content first. Suggested consideration: a lightweight confirm, or an undo/toast, if logs are ever treated as important. Not the icon swap's concern.
+
+**3. [Low] [PRE-EXISTING] SettingsPanel.svelte (clear-all button, ~903-910): disabled state has no discoverable reason. Tag: objective, fixable (minor).**
+`disabled={clearing || appState.catalogStats.total_detections === 0}` with no `title` / `aria-describedby` tied to that condition. When disabled at zero detections, a screen-reader or touch user gets no reason. Consequence is small because the DB content counts (detections/species/locations) render directly above, making the "nothing to clear" state inferable visually. For contrast, `InstalledModelCard.svelte` handles the same situation correctly: its remove button swaps `aria-label`/`title` to `gallery_removeDisabledDefault()` when disabled. Suggested fix: mirror that pattern, give the clear-all button a `title` explaining the disabled reason when count is 0.
+
+**4. [Low] [PRE-EXISTING] All 5 buttons: no `type="button"`. Tag: objective, fixable (very low impact here).**
+None of the five buttons declares `type="button"`, so each defaults to `type="submit"`. I verified none of them sits inside a `&lt;form&gt;`: the only `&lt;form&gt;` elements in these files are the `method="dialog"` modal backdrops in SettingsPanel (972, 998) and SpeciesPage (531, 648), which do not wrap these buttons. So there is no accidental-submit consequence today. Still an objective, mechanical fix (add `type="button"`) that hardens against future refactors that introduce a wrapping form; batch it if Agents 2/3 touch these files.
+
+**5. [Low / informational] [PRE-EXISTING] SpeciesPage.svelte (~276-313): nested interactive control.**
+The delete `&lt;button&gt;` is nested inside `&lt;div role="button" tabindex="0"&gt;` (the row itself is a fake button). Nested interactive elements are a semantics anti-pattern; it currently works via `e.stopPropagation()`. This is a screen-reader/semantics concern that belongs to Agents 2/3, noted here not duplicated.
+
+### Coverage table
+
+| # | File | Trash swap OK | Accessible name | Findings |
+|---|------|---------------|-----------------|----------|
+| 1 | `src/renderer/src/lib/components/AnnotationSidePanel.svelte` (~94) | Yes, size 12 (matches Check 12) | Visible text label `m.annotation_remove()` | No a11y finding beyond #4 (missing `type="button"`, no form, Low) |
+| 2 | `src/renderer/src/lib/components/LogPanel.svelte` (~93) | Yes, size 13 (matches Copy/X 13) | Icon-only, `title={m.log_clear()}` present | #2 clear-without-confirm (Low); #4 (Low) |
+| 3 | `src/renderer/src/lib/components/SettingsPanel.svelte` (~908) | Yes, size 14 (matches Database/Loader 14) | Visible text label `m.settings_data_clearAll()` | #3 disabled-no-reason (Low); #4 (Low). Destructive action correctly gated behind confirm modal (good) |
+| 4 | `src/renderer/src/lib/components/gallery/InstalledModelCard.svelte` (~103) | Yes, size 13 | Icon-only, `aria-label` + `title` (best practice, disabled reason explained) | None. Reference example of correct disabled-state a11y; #4 only (Low) |
+| 5 | `src/renderer/src/pages/SpeciesPage.svelte` (~312) | Yes, size 14 | Icon-only, `title={m.species_deleteList()}` present | #1 hover-only reveal, no focus equivalent (Medium, objective/fixable); #5 nested interactive (info); #4 (Low) |
+
+Bottom line: the icon swap is clean and safe. The only Medium is the pre-existing keyboard-invisible delete control in SpeciesPage (item #1, objective/fixable). Everything else is Low/pre-existing and report-only.</result>
+<usage><subagent_tokens>83793</subagent_tokens><tool_uses>8</tool_uses><duration_ms>116538</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>ae5f445062d40e3e3</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-e909385-src-birda-gui/2660e9f8-229c-4430-b352-e97bf0701d2c/tasks/ae5f445062d40e3e3.output</output-file>
+<status>completed</status>
+<summary>Agent "Gate Agent 3: quality" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All 6 files pass ESLint cleanly (exit 0, `--report-unused-disable-directives` reports nothing). I have complete evidence. Here is my report.
+
+---
+
+## Gate Review Agent 3 (Quality &amp; Patterns) — Report
+
+**Checklists read:** `/tmp/gate-checklists/agent3.md`. The separate `agent3-part2.md` does **not** exist as a file (checked: MISSING), but its full content is embedded at the tail of `agent3.md` under the "Agent 3: Quality &amp; Patterns Reference (part 2)" heading, so both reference bodies were loaded. **32 items loaded (sliced from 33; 1 suppressed as inapplicable).** The one suppression (item 22, empty-component-libs) is correct for this repo (daisyUI present); no suppressed item should have applied to this changeset.
+
+**Verdict: no defects. The changeset is clean.** Every quality question in the brief checks out, verified against the files and the linter.
+
+### Evidence gathered
+
+1. **eslint-disable directives are truthful and minimal.** Both sites use `// eslint-disable-next-line @typescript-eslint/no-meaningless-void-operator -- intentional reactive-dependency read`: per-line (not file-wide), naming the exact rule, with a specific reason. Running `npx eslint --report-unused-disable-directives` over both files exits 0 with **no output** — definitive proof the directives suppress a real violation (they are not unused and not mis-targeted). If either the rule name were wrong or the rule did not actually fire, that flag would have reported the directive as unused.
+
+2. **LogPanel's new explanatory comment is accurate.** `log.svelte.ts:12` declares `logState = $state&lt;{ entries: LogEntry[] }&gt;(...)`, and entries are mutated via `.push` / `.splice` / `.length = 0` (`addLog`, `clearLog`). Reading `logState.entries.length` inside the `$effect` therefore registers a reactive dependency on the proxied array's length, so the effect re-runs whenever entries are added/cleared. The comment "Read length to register a reactive dependency so the effect re-runs on new entries" is correct, and it is a genuine non-obvious WHY (item 7 carve-out), not change-narration.
+
+3. **Disabling is the right pattern here.** A bare `logState.entries.length;` would trip `no-unused-expressions`; the `void` prefix (originally added to satisfy that) now trips the newly-stricter `no-meaningless-void-operator`. The two core rules conflict, and a documented per-line disable is the minimal clean resolution. Alternatives (throwaway const, wrapper fn) are more awkward. Both `$effect`s are valid Svelte 5 side-effects (imperative state reset / scroll), not `$effect`-for-derived misuse (item 25 clean); neither self-depends, so no effect loop.
+
+4. **Multi-site fix is complete (item 15).** A hazard-sweep for `void &lt;non-call-expression&gt;` reactive reads across all `.svelte`/`.svelte.ts` finds exactly two sites (`LogPanel:65`, `CoverageMap:20`); both received the disable. Every other `void ` in the tree is on a call expression (`void (async()=&gt;...)()`, `void wavesurfer.play()`, `void audioContext?.close()`) which the rule legitimately does not flag, so nothing was missed. The `no-meaningless-void-operator` disable count is exactly 2.
+
+5. **Trash2 → Trash rename is complete and consistent.** No `Trash2` remains anywhere in `src/` (grep: none). All 5 files import and render `Trash`. `@lucide/svelte@1.44.0` dist ships both `trash.svelte` and `trash-2.svelte`, so `Trash` is a valid export (not a broken/half rename). Each rename replaced `Trash2` in-place within the existing named-import list, so no import-ordering convention was newly broken (these lists were not alphabetized to begin with). All 6 files pass ESLint (exit 0).
+
+### On the consistency question (explicitly asked) — LOW, no change needed
+
+CoverageMap already carries a preceding block comment (lines 16-17) explaining the reset intent, plus the `-- intentional reactive-dependency read` reason on its disable line; LogPanel got a new sentence explaining the length-read mechanism plus the same reason string. So both sites are adequately documented — they just document slightly different facets (CoverageMap: *why the effect resets state*; LogPanel: *why a value is read and discarded*). CoverageMap's existing comment is sufficient; adding LogPanel's exact sentence there is optional polish, not required for correctness or clarity. LogPanel's extra sentence is mildly redundant with the disable-directive reason but harmless and improves readability. This is a nit, not a defect.
+
+### COVERAGE
+
+| File | Status |
+| --- | --- |
+| AnnotationSidePanel.svelte | CLEAN — Trash2→Trash rename only, complete, lint-clean |
+| LogPanel.svelte | CLEAN — [CHANGED] eslint-disable + comment verified truthful/accurate/minimal; rename complete. (LOW nit: intent comment slightly redundant with disable reason; acceptable) |
+| SettingsPanel.svelte | CLEAN — Trash2→Trash rename only, complete, lint-clean |
+| gallery/CoverageMap.svelte | CLEAN — [CHANGED] eslint-disable verified truthful/minimal; existing reset comment sufficient. (LOW nit: lacks LogPanel's dependency-read sentence; optional) |
+| gallery/InstalledModelCard.svelte | CLEAN — Trash2→Trash rename only, complete, lint-clean |
+| pages/SpeciesPage.svelte | CLEAN — Trash2→Trash rename only, complete, lint-clean |
+
+No [CHANGED] or [PRE-EXISTING] defects found across the six reviewable files.</result>
+<usage><subagent_tokens>96879</subagent_tokens><tool_uses>12</tool_uses><duration_ms>179511</duration_ms></usage>
+</task-notification>
+
+---
+
+<task-notification>
+<task-id>a8ae2acd65c1cda92</task-id>
+<tool-use-id>toolu_01TKMBttqFLEiZUqZ8tJbrKd</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-e909385-src-birda-gui/2660e9f8-229c-4430-b352-e97bf0701d2c/tasks/a8ae2acd65c1cda92.output</output-file>
+<status>completed</status>
+<summary>Agent "Gate Agent 2: correctness" finished</summary>
+<note>A task-notification fires each time this agent stops with no live background children of its own. The user can send it another message and resume it, so the same task-id may notify more than once.</note>
+<result>All verification complete. Every check passed with concrete evidence. Here is my report.
+
+---
+
+## Gate Review Agent 2 (Correctness &amp; Safety) - Report
+
+**Checklist read:** `/tmp/gate-checklists/agent2.md` (sliced from `patterns-agent2.md` + `-part2` + `-part3`). **27 items loaded (sliced from 45; 18 suppressed as inapplicable).** The 18 suppressed items are all Go/Rust/backend/http/path/url/container items with no bearing on a frontend TS/Svelte icon rename; none was mis-suppressed. Relevant live items for this changeset: item 4 (async `$effect` races / stale closures), item 5 (subscriptions/listeners cleanup), item 7 (Svelte `$state`/`$effect` bugs), item 11/11a (security / third-party defaults). No item fired.
+
+### Verification performed (all empirical)
+
+1. **`Trash` resolves as a real, non-deprecated export of @lucide/svelte 1.44.** Installed version is 1.44.0. `node_modules/@lucide/svelte/dist/icons/index.js:1672` exports `Trash` from `./trash.svelte`, re-exported through the main entry (`export * from './icons/index.js'`). Import path is valid.
+
+2. **`Trash2` is genuinely deprecated in 1.44.** `aliases.d.ts:723-724` carries `@deprecated ... use {@link Trash} instead.`, so the rename addresses a real `@typescript-eslint/no-deprecated` finding (that rule is active on `.svelte` files, confirmed via `--print-config`).
+
+3. **No leftover `Trash2` anywhere** in `src/` or `shared/` (grep clean). Each of the 5 renamed files has exactly one `Trash` import and one `Trash` usage, fully consistent (AnnotationSidePanel 2/94, LogPanel 2/94, SettingsPanel 9/908, SpeciesPage 2/312, InstalledModelCard 3/103). No orphan import, no orphan usage.
+
+4. **No name collision.** No local identifier named `Trash` (no `const/let/var/function/class Trash`, no `Trash =`) anywhere in `src/`/`shared/`.
+
+5. **Reactive dependencies remain intact** for both `$effect` changes. The diff added only comment lines; the `void &lt;expr&gt;;` reads are unchanged. `void logState.entries.length;` (LogPanel:65) still reads `.length`, and `void src;` (CoverageMap:20) still reads the `$derived` `src` value, so Svelte 5 still tracks the dependency and both effects re-run when their source changes. `void` evaluates its operand before discarding; the property read (the tracking anchor) still happens. No infinite-loop risk: CoverageMap's effect writes `loaded`/`failed` but never reads them, so writes do not retrigger it.
+
+6. **Both eslint-disable directives are actively used and correctly named.** `npx eslint --report-unused-disable-directives` on LogPanel + CoverageMap exits 0 (a dead directive, or one naming the wrong rule, would report unused). `no-meaningless-void-operator` is confirmed enabled on `.svelte` files, and `svelte-eslint-parser` is applied (files are truly linted, not skipped).
+
+7. **The only two `void &lt;non-call&gt;;` statements in the entire repo are exactly the two that were patched.** Every other `void ...;` is a floating-promise suppression on a function call (governed by `no-floating-promises`, `ignoreVoid: true`), which the void-operator rule does not touch. Nothing was missed elsewhere.
+
+8. **Full `eslint src/ shared/` passes clean (exit 0)** with the patched tree. Lint invocation is `eslint .` / `eslint src/ shared/` with no `--max-warnings 0`, so warnings could not break CI regardless.
+
+### Findings
+
+**None (correctness &amp; safety).** No Critical/High/Medium/Low defects. The changeset is a mechanical deprecation-driven rename plus two purely-cosmetic lint-suppression comments; behavior is unchanged and verified.
+
+One non-correctness handoff note for the UX reviewer (Agent 8), not a defect: lucide combined `Trash2` into `Trash`, so the two are slightly different glyphs. The rendered trash-can icon changes appearance marginally at the 5 delete buttons. Intended and unavoidable given the deprecation; flagging only so it is a conscious visual choice.
+
+### COVERAGE
+
+| File | Status |
+| --- | --- |
+| src/renderer/src/lib/components/AnnotationSidePanel.svelte | CLEAN |
+| src/renderer/src/lib/components/LogPanel.svelte | CLEAN |
+| src/renderer/src/lib/components/SettingsPanel.svelte | CLEAN |
+| src/renderer/src/lib/components/gallery/CoverageMap.svelte | CLEAN |
+| src/renderer/src/lib/components/gallery/InstalledModelCard.svelte | CLEAN |
+| src/renderer/src/pages/SpeciesPage.svelte | CLEAN |
+
+All classifications would be [CHANGED] had any defect existed; none did. No [PRE-EXISTING] issues surfaced in the reviewed regions.</result>
+<usage><subagent_tokens>88848</subagent_tokens><tool_uses>15</tool_uses><duration_ms>303852</duration_ms></usage>
+</task-notification>

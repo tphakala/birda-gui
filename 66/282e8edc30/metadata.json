@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.5",
+  "checkpoint_id": "66282e8edc30",
+  "strategy": "manual-commit",
+  "branch": "chore/npm-deps-refresh",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "package-lock.json",
+    "src/renderer/src/lib/components/AnnotationSidePanel.svelte",
+    "src/renderer/src/lib/components/LogPanel.svelte",
+    "src/renderer/src/lib/components/SettingsPanel.svelte",
+    "src/renderer/src/lib/components/gallery/CoverageMap.svelte",
+    "src/renderer/src/lib/components/gallery/InstalledModelCard.svelte",
+    "src/renderer/src/pages/SpeciesPage.svelte"
+  ],
+  "sessions": [
+    {
+      "metadata": "/66/282e8edc30/0/metadata.json",
+      "transcript": "/66/282e8edc30/0/full.jsonl",
+      "compact_transcript": "/66/282e8edc30/0/transcript.jsonl",
+      "content_hash": "/66/282e8edc30/0/content_hash.txt",
+      "prompt": "/66/282e8edc30/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 120,
+    "cache_creation_tokens": 194530,
+    "cache_read_tokens": 8017608,
+    "output_tokens": 94809,
+    "api_call_count": 60,
+    "subagent_tokens": {
+      "input_tokens": 78,
+      "cache_creation_tokens": 270344,
+      "cache_read_tokens": 2730174,
+      "output_tokens": 49584,
+      "api_call_count": 39
+    }
+  }
+}
