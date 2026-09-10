@@ -66,6 +66,68 @@
         "label": "Skill: gate",
         "default_collapsed": true
       }
+    },
+    {
+      "id": "claude-skill-toolu_01BzCq2o7RR4zdiaS5ngwwqH",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "watch-pr"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "b3ce0d1587fb",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 654,
+        "end": 655,
+        "entry_ids": [
+          "e60a63ec-0fa0-4988-a666-d4484b0b803a"
+        ],
+        "tool_use_id": "toolu_01BzCq2o7RR4zdiaS5ngwwqH"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01BzCq2o7RR4zdiaS5ngwwqH"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: watch-pr",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "claude-skill-toolu_01QatmVyaxvSVJ4jjvpG4JFz",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "wrapup"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "b3ce0d1587fb",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 777,
+        "end": 778,
+        "entry_ids": [
+          "24cbe7f8-5d9b-401e-9aa8-aa22c3966b64"
+        ],
+        "tool_use_id": "toolu_01QatmVyaxvSVJ4jjvpG4JFz"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01QatmVyaxvSVJ4jjvpG4JFz"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: wrapup",
+        "default_collapsed": true
+      }
     }
   ],
   "session_metrics": {
