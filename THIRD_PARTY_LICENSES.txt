@@ -515,7 +515,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The following npm package may be included in this product:
 
- - content-type@2.0.0
+ - content-type@2.1.0
 
 This package contains the following license:
 
@@ -747,7 +747,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 The following npm package may be included in this product:
 
- - suncalc@2.0.1
+ - suncalc@2.0.2
 
 This package contains the following license:
 
@@ -882,7 +882,7 @@ MIT
 
 The following npm package may be included in this product:
 
- - node-abi@4.33.0
+ - node-abi@4.35.0
 
 This package contains the following license:
 
@@ -912,7 +912,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - daisyui@5.7.16
+ - daisyui@5.7.32
 
 This package contains the following license:
 
@@ -972,7 +972,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - zod@4.4.3
+ - zod@4.6.1
 
 This package contains the following license:
 
@@ -1050,7 +1050,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm package may be included in this product:
 
- - undici@6.28.0
+ - undici@6.28.1
 
 This package contains the following license:
 
@@ -1256,7 +1256,7 @@ THE SOFTWARE.
 
 The following npm package may be included in this product:
 
- - node-addon-api@8.9.1
+ - node-addon-api@8.9.2
 
 This package contains the following license:
 
@@ -1304,7 +1304,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - picomatch@4.0.5
+ - picomatch@4.0.7
 
 This package contains the following license:
 
@@ -1394,6 +1394,24 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
+ - music-metadata@11.15.0
+
+This package contains the following license:
+
+The MIT License (MIT)
+
+Copyright © 2026 Borewit
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----------
+
+The following npm package may be included in this product:
+
  - @borewit/text-codec@0.2.2
 
 This package contains the following license:
@@ -1412,7 +1430,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm packages may be included in this product:
 
- - music-metadata@11.14.0
  - token-types@6.1.2
  - win-guid@0.2.1
 
