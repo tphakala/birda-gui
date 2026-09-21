@@ -1,8 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createServer, build, type ViteDevServer } from 'vite';
-import type { RollupWatcher } from 'rollup';
+import { createServer, build, type Rollup, type ViteDevServer } from 'vite';
 import electron from 'electron';
 
 // `import electron from 'electron'` in a Node context resolves to the path of
@@ -83,7 +82,7 @@ async function main(): Promise<void> {
   //    RollupWatcher. Sequence is START -> BUNDLE_START -> BUNDLE_END -> END on
   //    success, and START -> BUNDLE_START -> ERROR -> END on failure, so END
   //    alone is not proof of success: track an error flag per run.
-  const attach = (watcher: RollupWatcher, mark: (ok: boolean) => void, label: string): void => {
+  const attach = (watcher: Rollup.RollupWatcher, mark: (ok: boolean) => void, label: string): void => {
     let errored = false;
     watcher.on('event', (event) => {
       if (event.code === 'BUNDLE_START') {
@@ -112,7 +111,7 @@ async function main(): Promise<void> {
   const mainWatcher = (await build({
     configFile: configFor('main'),
     build: { watch: {} },
-  })) as RollupWatcher;
+  })) as Rollup.RollupWatcher;
   attach(
     mainWatcher,
     (ok) => {
@@ -124,7 +123,7 @@ async function main(): Promise<void> {
   const preloadWatcher = (await build({
     configFile: configFor('preload'),
     build: { watch: {} },
-  })) as RollupWatcher;
+  })) as Rollup.RollupWatcher;
   attach(
     preloadWatcher,
     (ok) => {

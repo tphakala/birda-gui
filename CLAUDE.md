@@ -37,19 +37,19 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 
 ## Tech Stack
 
-| Layer        | Technology                       | Version                                |
-| ------------ | -------------------------------- | -------------------------------------- |
-| Runtime      | Electron                         | 40.x                                   |
-| UI Framework | Svelte                           | 5.x (runes API, **not** legacy stores) |
-| CSS          | Tailwind CSS v4 + daisyUI v5     | 4.1.x / 5.5.x                          |
-| Language     | TypeScript                       | 5.9.x (strict mode)                    |
-| Bundler      | Vite via electron-vite           | 7.x / 5.x                              |
-| Database     | better-sqlite3                   | 12.x                                   |
-| i18n         | Paraglide (compile-time)         | 2.x                                    |
-| Maps         | MapLibre GL + svelte-maplibre-gl | 5.x / 1.x                              |
-| Audio        | WaveSurfer.js                    | 7.x                                    |
-| Icons        | Lucide Svelte                    | latest                                 |
-| Validation   | Zod                              | 3.x                                    |
+| Layer        | Technology                         | Version                                |
+| ------------ | ---------------------------------- | -------------------------------------- |
+| Runtime      | Electron                           | 40.x                                   |
+| UI Framework | Svelte                             | 5.x (runes API, **not** legacy stores) |
+| CSS          | Tailwind CSS v4 + daisyUI v5       | 4.1.x / 5.5.x                          |
+| Language     | TypeScript                         | 5.9.x (strict mode)                    |
+| Bundler      | Vite (direct configs + dev script) | 7.x                                    |
+| Database     | better-sqlite3                     | 12.x                                   |
+| i18n         | Paraglide (compile-time)           | 2.x                                    |
+| Maps         | MapLibre GL + svelte-maplibre-gl   | 5.x / 1.x                              |
+| Audio        | WaveSurfer.js                      | 7.x                                    |
+| Icons        | Lucide Svelte                      | latest                                 |
+| Validation   | Zod                                | 3.x                                    |
 
 ## Project Structure
 
@@ -104,8 +104,8 @@ Task runner: **Taskfile.yml** (Go Task) or npm scripts.
 
 ```bash
 # Development
-task dev                    # electron-vite dev with HMR
-task build                  # electron-vite build (main + preload + renderer)
+task dev                    # renderer HMR + Electron via scripts/dev.ts (restarts on main/preload change)
+task build                  # direct Vite build (main + preload + renderer) via npm run build
 
 # Linting & Type Checking
 task lint                   # ESLint + svelte-check + tsc (all three in parallel)

@@ -4,10 +4,9 @@
     "src/main/index.ts",
     "src/preload/index.ts",
     "src/renderer/src/main.ts",
-    "shared/types.ts",
-    "electron.vite.config.ts"
+    "shared/types.ts"
   ],
-  "project": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/renderer/**/*.{ts,svelte}", "shared/**/*.ts"],
+  "project": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/renderer/**/*.{ts,svelte}", "shared/**/*.ts", "build/vite/**/*.ts"],
   "paths": {
     "$shared/*": ["./shared/*"],
     "$lib/*": ["./src/renderer/src/lib/*"],
