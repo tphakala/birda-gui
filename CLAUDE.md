@@ -39,7 +39,7 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 
 | Layer        | Technology                         | Version                                |
 | ------------ | ---------------------------------- | -------------------------------------- |
-| Runtime      | Electron                           | 40.x                                   |
+| Runtime      | Electron                           | 43.x                                   |
 | UI Framework | Svelte                             | 5.x (runes API, **not** legacy stores) |
 | CSS          | Tailwind CSS v4 + daisyUI v5       | 4.1.x / 5.5.x                          |
 | Language     | TypeScript                         | 5.9.x (strict mode)                    |

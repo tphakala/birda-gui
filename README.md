@@ -71,7 +71,7 @@ The build automatically fetches the bundled birda CLI binary. For development, t
 - **WaveSurfer.js** - Audio waveform visualization
 - **MapLibre GL** - Map visualization
 - **Paraglide** - Compile-time i18n
-- **electron-vite** - Build tooling
+- **Vite** + **electron-builder** - Build tooling and packaging
 
 ## License
 

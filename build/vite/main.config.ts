@@ -14,7 +14,7 @@ const esmShim = [
   `const __dirname = import.meta.dirname;`,
 ].join('\n');
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   root,
   resolve: {
     alias: {
@@ -26,7 +26,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     minify: false,
-    sourcemap: false,
+    // Inline sourcemaps in dev (main-process stack traces map to TS source),
+    // none in the production build, matching electron-vite.
+    sourcemap: mode === 'development' ? 'inline' : false,
     lib: {
       entry: resolve(root, 'src/main/index.ts'),
       formats: ['es'],
@@ -39,4 +41,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

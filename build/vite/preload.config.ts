@@ -4,14 +4,15 @@ import { isExternal } from './externalize';
 
 const root = resolve(import.meta.dirname, '../..');
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   root,
   build: {
     outDir: resolve(root, 'out/preload'),
     emptyOutDir: true,
     target: 'es2022',
     minify: false,
-    sourcemap: false,
+    // Inline sourcemaps in dev, none in the production build (electron-vite parity).
+    sourcemap: mode === 'development' ? 'inline' : false,
     lib: {
       entry: resolve(root, 'src/preload/index.ts'),
       formats: ['cjs'],
@@ -21,4 +22,4 @@ export default defineConfig({
       external: isExternal,
     },
   },
-});
+}));
