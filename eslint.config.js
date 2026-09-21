@@ -36,12 +36,6 @@ export default tseslint.config(
     },
   },
 
-  // Disable type-checked rules for config files (safety net)
-  {
-    files: ['**/*.config.*'],
-    extends: [tseslint.configs.disableTypeChecked],
-  },
-
   // Svelte files: use TypeScript parser for script blocks
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],
