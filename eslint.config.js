@@ -22,7 +22,7 @@ export default tseslint.config(
 
   // Additional ignores not covered by .gitignore
   {
-    ignores: ['*.config.*', 'shared/**/*.js'],
+    ignores: ['**/*.config.*', 'shared/**/*.js'],
   },
 
   // Enable type-aware linting with explicit tsconfig paths
