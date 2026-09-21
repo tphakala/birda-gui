@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "exactOptionalPropertyTypes": true,
@@ -13,5 +14,5 @@
       "$shared/*": ["./shared/*"]
     }
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "shared/**/*", "scripts/**/*"]
+  "include": ["src/main/**/*", "src/preload/**/*", "shared/**/*", "scripts/**/*", "build/vite/**/*"]
 }

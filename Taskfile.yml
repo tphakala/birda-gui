@@ -13,9 +13,9 @@ tasks:
   # === Development ===
 
   dev:
-    desc: Start dev server (electron-vite HMR + Electron)
+    desc: Start dev server (renderer HMR + Electron, restart on main/preload change)
     cmds:
-      - npx electron-vite dev
+      - npm run dev
 
   # === Building ===
 
@@ -29,7 +29,7 @@ tasks:
     deps:
       - fetch-cli
     cmds:
-      - npx electron-vite build
+      - npm run build
 
   # === Linting & Type Checking ===
 

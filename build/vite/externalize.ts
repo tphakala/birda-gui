@@ -1,0 +1,34 @@
+import { builtinModules } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+interface PackageJson {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+}
+
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../package.json'), 'utf8')) as PackageJson;
+
+// Every runtime dependency (including peer and optional) must stay external,
+// matching electron-vite's externalizeDepsPlugin.
+const runtimeDeps = [
+  ...Object.keys(pkg.dependencies ?? {}),
+  ...Object.keys(pkg.peerDependencies ?? {}),
+  ...Object.keys(pkg.optionalDependencies ?? {}),
+];
+const builtins = new Set<string>(builtinModules);
+
+/**
+ * Replaces electron-vite's externalizeDepsPlugin for the main and preload
+ * bundles. Node builtins, electron (including its subpaths), and every runtime
+ * dependency (including subpath imports such as `better-sqlite3/lib/foo`) are
+ * kept external so they are required at runtime instead of bundled. Native
+ * modules like better-sqlite3 must never be bundled.
+ */
+export function isExternal(id: string): boolean {
+  if (id === 'electron' || id.startsWith('electron/')) return true;
+  if (id.startsWith('node:')) return true;
+  if (builtins.has(id)) return true;
+  return runtimeDeps.some((dep) => id === dep || id.startsWith(`${dep}/`));
+}

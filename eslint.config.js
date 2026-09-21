@@ -22,7 +22,7 @@ export default tseslint.config(
 
   // Additional ignores not covered by .gitignore
   {
-    ignores: ['*.config.*', 'shared/**/*.js'],
+    ignores: ['**/*.config.*', 'shared/**/*.js'],
   },
 
   // Enable type-aware linting with explicit tsconfig paths
@@ -34,12 +34,6 @@ export default tseslint.config(
         extraFileExtensions: ['.svelte'],
       },
     },
-  },
-
-  // Disable type-checked rules for config files (safety net)
-  {
-    files: ['**/*.config.*'],
-    extends: [tseslint.configs.disableTypeChecked],
   },
 
   // Svelte files: use TypeScript parser for script blocks
