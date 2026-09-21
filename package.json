@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "electron-vite dev",
     "prebuild": "tsx scripts/fetch-birda-cli.ts",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
+    "build": "vite build -c build/vite/main.config.ts && vite build -c build/vite/preload.config.ts && vite build -c build/vite/renderer.config.ts",
+    "preview": "npm run build && electron .",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild-sqlite": "electron-rebuild -f -w better-sqlite3",
     "check": "svelte-check --tsconfig ./tsconfig.json",

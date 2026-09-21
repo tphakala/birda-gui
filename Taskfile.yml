@@ -29,7 +29,7 @@ tasks:
     deps:
       - fetch-cli
     cmds:
-      - npx electron-vite build
+      - npm run build
 
   # === Linting & Type Checking ===
 
