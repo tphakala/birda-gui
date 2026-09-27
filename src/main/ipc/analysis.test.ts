@@ -304,13 +304,17 @@ describe('birda:analyze outcomes', () => {
     expect(createLocation).not.toHaveBeenCalled();
   });
 
-  it('reports a Stop as cancelled even when the analysis then throws', async () => {
+  it('reports an analysis that throws after a Stop as failed, like its run', async () => {
     const run = analyze();
-    const handle = await started();
+    await started();
     cancel();
-    handle.reject(new Error('birda exited with code 1'));
-    await expect(run).rejects.toThrow();
-    expect(lastStatusEvent()).toMatchObject({ state: 'idle', finished: { status: 'cancelled' } });
+    vi.mocked(finishRun).mockImplementationOnce(() => {
+      throw new Error('database is locked');
+    });
+    h.handles[0].reject(new AnalysisCancelledError());
+    await expect(run).rejects.toThrow('database is locked');
+    expect(finishRun).toHaveBeenLastCalledWith(expect.any(Number), 'failed');
+    expect(lastStatusEvent()).toMatchObject({ state: 'idle', finished: { status: 'failed' } });
   });
 
   it('removes the temporary output of a cancelled directory run', async () => {

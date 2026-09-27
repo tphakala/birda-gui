@@ -506,9 +506,10 @@ export function registerAnalysisHandlers(): void {
       finished = result;
       return result;
     } catch (err) {
+      // A throw records the run as failed, even after a Stop.
       finished = {
         runId: session.runId,
-        status: session.cancelRequested ? 'cancelled' : 'failed',
+        status: 'failed',
         discardedPartial: false,
         error: (err as Error).message,
       };
