@@ -1,4 +1,5 @@
 import { getCatalogStats } from '$lib/utils/ipc';
+import type { RunningAnalysisSettings } from '$shared/types';
 
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
@@ -25,8 +26,10 @@ interface AppState {
   theme: 'system' | 'light' | 'dark';
   settingsHasUnsavedChanges: boolean;
   selectedSpeciesListId: number | null;
-  /** Bumped whenever an analysis ends, so views that list runs reload them. */
+  /** Bumped whenever the catalog's runs change (an analysis ends, a run is deleted, the catalog is cleared), so views that show runs reload them. */
   runsVersion: number;
+  /** Settings of a running analysis this window joined; the analysis page takes them over once. */
+  joinedSettings: RunningAnalysisSettings | null;
 }
 
 export const appState = $state<AppState>({
@@ -52,7 +55,14 @@ export const appState = $state<AppState>({
   settingsHasUnsavedChanges: false,
   selectedSpeciesListId: null,
   runsVersion: 0,
+  joinedSettings: null,
 });
+
+/** The catalog's runs changed: views that show runs reload, and so do the status bar counts. */
+export function catalogChanged(): void {
+  appState.runsVersion++;
+  void refreshCatalogStats();
+}
 
 /** Reloads the status bar counts. A failure keeps the last counts; they refresh on the next change. */
 export async function refreshCatalogStats(): Promise<void> {

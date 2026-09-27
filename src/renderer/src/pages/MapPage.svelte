@@ -2,12 +2,26 @@
   import SpeciesSearch from '$lib/components/SpeciesSearch.svelte';
   import MapView from '$lib/components/MapView.svelte';
   import { mapState } from '$lib/stores/map.svelte';
+  import { appState } from '$lib/stores/app.svelte';
   import { getLocationsWithCounts, getSpeciesLocations } from '$lib/utils/ipc';
   import { SvelteSet } from 'svelte/reactivity';
   import { onMount } from 'svelte';
   import type { EnrichedSpeciesSummary } from '$shared/types';
 
-  onMount(async () => {
+  // Reload when the catalog's runs change; the page stays mounted while hidden.
+  let seenRunsVersion = appState.runsVersion;
+  $effect(() => {
+    if (appState.runsVersion !== seenRunsVersion) {
+      seenRunsVersion = appState.runsVersion;
+      void loadLocations();
+    }
+  });
+
+  onMount(() => {
+    void loadLocations();
+  });
+
+  async function loadLocations() {
     mapState.loading = true;
     try {
       const locations = await getLocationsWithCounts();
@@ -24,7 +38,7 @@
     } finally {
       mapState.loading = false;
     }
-  });
+  }
 
   async function handleSpeciesSelect(species: EnrichedSpeciesSummary) {
     mapState.selectedSpecies = species.scientific_name;

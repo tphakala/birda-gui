@@ -14,7 +14,7 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, refreshCatalogStats } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
   import { followModelInstalls } from '$lib/stores/modelInstall.svelte';
   import {
@@ -99,13 +99,23 @@
 
   type Outcome = AnalysisResult & { error?: string | undefined };
 
+  // Stop outcomes can say results were deleted, so they stay up longer than the default toast.
+  const STOP_TOAST_MS = 8000;
+
   /** Shows how an analysis ended and reloads what it changed in the catalog. */
   function showOutcome(outcome: Outcome) {
     if (outcome.status === 'cancelled') {
-      analysisState.status = 'idle';
-      if (outcome.runId === null) showToast(m.analysis_stopped());
-      else if (outcome.discardedPartial) showToast(m.analysis_stoppedDiscarded());
-      else showToast(m.analysis_stoppedKept());
+      // The panel stays, showing what was analysed before the Stop.
+      const nothingKept = outcome.runId === null || analysisState.totalDetections === 0;
+      analysisState.status = 'stopped';
+      showToast(
+        outcome.discardedPartial
+          ? m.analysis_stoppedDiscarded()
+          : nothingKept
+            ? m.analysis_stopped()
+            : m.analysis_stoppedKept(),
+        { durationMs: STOP_TOAST_MS },
+      );
     } else if (outcome.status === 'failed') {
       analysisState.status = 'failed';
       // A returned failure is a run in which no file was analysed or imported.
@@ -113,8 +123,7 @@
     } else {
       analysisState.status = 'completed';
     }
-    appState.runsVersion++;
-    void refreshCatalogStats();
+    catalogChanged();
   }
 
   function applyAnalysisStatus(status: AnalysisStatus) {
@@ -124,15 +133,20 @@
     appState.isAnalysisRunning = status.state !== 'idle';
     appState.isAnalysisStopping = status.state === 'stopping';
     if (status.state !== 'idle') {
-      // Joining a running analysis: show its source, so Stop is on screen, and its counts so far.
-      appState.sourcePath ??= status.sourcePath;
-      if (analysisState.status === 'idle') joinRunningAnalysis(status.progress);
+      // Joining a running analysis: show its source (so Stop is on screen), its
+      // settings and its counts so far.
+      if (analysisState.status === 'idle' || analysisState.status === 'stopped') {
+        appState.sourcePath = status.sourcePath;
+        appState.selectedModel = status.settings.model;
+        appState.analysisConfidence = status.settings.min_confidence;
+        appState.joinedSettings = status.settings;
+        joinRunningAnalysis(status.progress);
+      }
     } else if (status.finished && analysisState.status !== 'idle') {
       // The panel may already say complete from birda's pipeline_completed event.
       showOutcome(status.finished);
     } else if (status.finished) {
-      appState.runsVersion++;
-      void refreshCatalogStats();
+      catalogChanged();
     }
   }
 
@@ -257,6 +271,10 @@
       }),
       setupMenuListeners({
         onOpenFile: (path: string) => {
+          if (appState.isAnalysisRunning) {
+            showToast(m.analysis_lockedDuringRun(), { severity: 'warning' });
+            return;
+          }
           appState.sourcePath = path;
         },
         onFocusSearch: () => {

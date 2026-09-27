@@ -511,7 +511,15 @@ export function registerAnalysisHandlers(): void {
   ipcMain.handle('birda:analyze', async (_event, rawRequest: unknown): Promise<AnalysisResult> => {
     const request = AnalysisRequestSchema.parse(rawRequest);
     // Taken synchronously, before the first await, so two requests cannot both start
-    const session = analysisLock.acquire(request.source_path);
+    const session = analysisLock.acquire(request.source_path, {
+      model: request.model,
+      min_confidence: request.min_confidence,
+      latitude: request.latitude,
+      longitude: request.longitude,
+      location_name: request.location_name,
+      month: request.month,
+      day: request.day,
+    });
     let finished: (AnalysisResult & { error?: string }) | undefined;
     try {
       sendAnalysisStatus();

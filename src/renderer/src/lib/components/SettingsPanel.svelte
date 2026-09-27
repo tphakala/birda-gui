@@ -43,7 +43,7 @@
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged } from '$lib/stores/app.svelte';
   import type {
     AppSettings,
     BirdaCheckResponse,
@@ -334,7 +334,7 @@
       // Clear all, which opened the dialog, is disabled while clearing and once the catalog is empty.
       await tick();
       focusIfLost(dbContentHeading);
-      await refreshCatalogStats();
+      catalogChanged();
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {
@@ -905,7 +905,8 @@
                 clearError = null;
                 showClearConfirm = true;
               }}
-              disabled={clearing || appState.catalogStats.total_detections === 0}
+              disabled={clearing || appState.catalogStats.total_detections === 0 || appState.isAnalysisRunning}
+              title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
               class="btn btn-error btn-sm gap-1.5"
             >
               <Trash size={14} />

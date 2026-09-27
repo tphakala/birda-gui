@@ -1,6 +1,8 @@
 <script lang="ts">
   import { AudioLines, CircleAlert, CircleSlash, Loader, Trash, X } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import { tick } from 'svelte';
+  import { focusIfLost } from '$lib/utils/dialog';
   import { formatDate } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
@@ -15,7 +17,7 @@
     runs: RunWithStats[];
     selectedRunId: number | null;
     onselect: (runId: number) => void;
-    ondelete?: (runId: number) => void;
+    ondelete?: (runId: number) => Promise<void>;
     loading?: boolean;
   } = $props();
 
@@ -26,30 +28,35 @@
   // A run with detections is deleted only after a confirmation; its annotations go with it.
   let confirmOpen = $state(false);
   let pendingDelete = $state<RunWithStats | null>(null);
+  let listHeading = $state<HTMLHeadingElement | undefined>();
+
+  async function deleteRun(run: RunWithStats) {
+    await ondelete?.(run.id);
+    // The deleted row held focus; once it is gone, keep focus in the list.
+    await tick();
+    focusIfLost(listHeading);
+  }
 
   function requestDelete(run: RunWithStats) {
     if (run.detection_count > 0) {
       pendingDelete = run;
       confirmOpen = true;
     } else {
-      ondelete?.(run.id);
+      void deleteRun(run);
     }
   }
 
   function confirmDelete() {
-    if (pendingDelete) ondelete?.(pendingDelete.id);
+    const run = pendingDelete;
     pendingDelete = null;
     confirmOpen = false;
-    // The deleted row held focus; keep it in the list.
-    listHeading?.focus();
+    if (run) void deleteRun(run);
   }
 
   function cancelDelete() {
     pendingDelete = null;
     confirmOpen = false;
   }
-
-  let listHeading = $state<HTMLHeadingElement | undefined>();
 
   function detectionLabel(count: number): string {
     return count === 1
@@ -60,13 +67,19 @@
 
 <div class="border-base-300 bg-base-200 flex w-64 shrink-0 flex-col overflow-hidden border-r">
   <div class="border-base-300 flex items-center gap-1.5 border-b px-3 py-2">
-    <h3 bind:this={listHeading} tabindex="-1" class="text-sm font-medium focus:outline-none">{m.runs_title()}</h3>
+    <h3
+      bind:this={listHeading}
+      tabindex="-1"
+      class="focus-visible:outline-primary text-sm font-medium focus-visible:outline-2"
+    >
+      {m.runs_title()}
+    </h3>
   </div>
 
   <div class="flex-1 overflow-y-auto">
     {#if loading}
       <div class="flex items-center justify-center py-8">
-        <Loader size={20} class="text-base-content/40 animate-spin" />
+        <Loader size={20} class="text-base-content/40 motion-safe:animate-spin" />
       </div>
     {:else if runs.length === 0}
       <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
@@ -142,9 +155,16 @@
   icon={Trash}
   iconClass="text-error"
   descriptionId="run-delete-body"
+  alert
+  showCloseButton={false}
 >
   <p id="run-delete-body" class="text-base-content/80 text-sm">
-    {m.runs_confirmDelete_body({ source: pendingDelete ? sourceName(pendingDelete.source_path) : '' })}
+    {#if pendingDelete}
+      {m.runs_confirmDelete_body({
+        source: sourceName(pendingDelete.source_path),
+        detections: detectionLabel(pendingDelete.detection_count),
+      })}
+    {/if}
   </p>
   {#snippet actions()}
     <button type="button" class="btn btn-sm" onclick={cancelDelete}>{m.common_button_cancel()}</button>

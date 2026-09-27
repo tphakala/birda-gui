@@ -4,7 +4,7 @@
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import SpeciesCards from '$lib/components/SpeciesCards.svelte';
   import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
-  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
   import {
     getRuns,
@@ -89,12 +89,30 @@
     };
   }
 
-  async function refreshRuns() {
+  // One getRuns at a time: an analysis that ends and selects its new run asks
+  // for the list twice in the same moment.
+  let runsRequest: Promise<void> | null = null;
+
+  function refreshRuns(): Promise<void> {
+    runsRequest ??= loadRuns().finally(() => {
+      runsRequest = null;
+    });
+    return runsRequest;
+  }
+
+  async function loadRuns() {
+    const previous = runs.find((r) => r.id === appState.selectedRunId);
     try {
       runs = await getRuns();
-      // A selected run can be gone, e.g. replaced by a newer analysis of the same source.
       if (appState.selectedRunId !== null && !runs.some((r) => r.id === appState.selectedRunId)) {
-        appState.selectedRunId = null;
+        // The selected run is gone, e.g. replaced by a newer analysis of the
+        // same source and model: select that one, or nothing.
+        const replacement = previous
+          ? runs
+              .filter((r) => r.source_path === previous.source_path && r.model === previous.model)
+              .sort((a, b) => b.id - a.id)[0]
+          : undefined;
+        appState.selectedRunId = replacement?.id ?? null;
       }
     } catch {
       runs = [];
@@ -103,12 +121,16 @@
     }
   }
 
-  // Reload the run list whenever an analysis ends, whether or not a run was selected.
+  // Reload the run list whenever the catalog's runs change, and the shown
+  // detections when the selected run survives (a Stop can discard its rows).
   let seenRunsVersion = appState.runsVersion;
   $effect(() => {
     if (appState.runsVersion !== seenRunsVersion) {
       seenRunsVersion = appState.runsVersion;
-      void refreshRuns();
+      const selected = appState.selectedRunId;
+      void refreshRuns().then(() => {
+        if (selected !== null && appState.selectedRunId === selected) loadActiveView();
+      });
     }
   });
 
@@ -190,18 +212,18 @@
     appState.selectedRunId = runId;
   }
 
-  async function handleRunDelete(runId: number) {
+  async function handleRunDelete(runId: number): Promise<void> {
     try {
       await deleteRun(runId);
       runs = runs.filter((r) => r.id !== runId);
       if (appState.selectedRunId === runId) {
         appState.selectedRunId = null;
       }
+      catalogChanged();
     } catch (error) {
       console.error('Failed to delete run', runId, error);
       showToast(m.runs_deleteFailed(), { severity: 'error' });
     }
-    await refreshCatalogStats();
   }
 
   function handleSort(column: string) {
@@ -322,7 +344,7 @@
         {#if selectedRun.is_directory}
           <span class="truncate font-medium" title={selectedRun.source_path}>{selectedRun.source_path}</span>
           <span class="text-base-content/40">|</span>
-          <span class="text-base-content/60">{selectedRun.file_count} files</span>
+          <span class="text-base-content/60">{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span>
         {:else}
           <span class="font-medium">{sourceFileName}</span>
         {/if}
@@ -388,8 +410,11 @@
           />
           {#if speciesQuery}
             <button
+              type="button"
               onclick={clearSpeciesFilter}
-              class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
+              aria-label={m.common_button_clear()}
+              title={m.common_button_clear()}
+              class="text-base-content/60 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
             >
               <X size={12} />
             </button>

@@ -14,6 +14,8 @@
     showCloseButton?: boolean | undefined;
     /** Id of an element in the content that describes the dialog. */
     descriptionId?: string | undefined;
+    /** For a confirmation of a destructive action: announced as an alert dialog. */
+    alert?: boolean | undefined;
     children?: Snippet | undefined;
     actions?: Snippet | undefined;
   }
@@ -28,6 +30,7 @@
     maxWidth = 'max-w-lg',
     showCloseButton = true,
     descriptionId,
+    alert = false,
     children,
     actions,
   }: Props = $props();
@@ -41,7 +44,14 @@
 </script>
 
 {#if open}
-  <dialog class="modal" {@attach showModal} onclose={close} aria-labelledby={titleId} aria-describedby={descriptionId}>
+  <dialog
+    class="modal"
+    role={alert ? 'alertdialog' : undefined}
+    {@attach showModal}
+    onclose={close}
+    aria-labelledby={titleId}
+    aria-describedby={descriptionId}
+  >
     <div class="modal-box {maxWidth}">
       <!-- Header -->
       <div class="flex items-center justify-between">

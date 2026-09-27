@@ -17,7 +17,8 @@
 
 {#if toast.message}
   <div class="toast toast-end toast-bottom z-[100]">
-    <div role="alert" class="alert {severityClass} text-sm">
+    <!-- Errors interrupt a screen reader; other toasts wait their turn. -->
+    <div role={toast.severity === 'error' ? 'alert' : 'status'} class="alert {severityClass} text-sm">
       <span>{toast.message}</span>
       <button
         type="button"

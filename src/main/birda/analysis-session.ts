@@ -1,4 +1,4 @@
-import type { AnalysisProgressSnapshot, AnalysisStatus } from '$shared/types';
+import type { AnalysisProgressSnapshot, AnalysisStatus, RunningAnalysisSettings } from '$shared/types';
 
 /** Rejects an analysis that ended because the user cancelled it. */
 export class AnalysisCancelledError extends Error {
@@ -34,7 +34,10 @@ export class AnalysisSession {
     completedFiles: [],
   };
 
-  constructor(readonly sourcePath: string) {}
+  constructor(
+    readonly sourcePath: string,
+    readonly settings: RunningAnalysisSettings,
+  ) {}
 
   /** A run was created and its final status is not recorded yet. */
   get runPending(): boolean {
@@ -65,7 +68,7 @@ export class AnalysisLock {
     return this.current;
   }
 
-  acquire(sourcePath: string): AnalysisSession {
+  acquire(sourcePath: string, settings: RunningAnalysisSettings): AnalysisSession {
     if (this.current) {
       throw new Error(
         this.current.cancelRequested
@@ -73,7 +76,7 @@ export class AnalysisLock {
           : 'An analysis is already running. Stop it first.',
       );
     }
-    this.current = new AnalysisSession(sourcePath);
+    this.current = new AnalysisSession(sourcePath, settings);
     return this.current;
   }
 
@@ -86,6 +89,7 @@ export class AnalysisLock {
     return {
       state: this.current.cancelRequested ? 'stopping' : 'running',
       sourcePath: this.current.sourcePath,
+      settings: this.current.settings,
       progress: { ...this.current.progress, completedFiles: [...this.current.progress.completedFiles] },
     };
   }

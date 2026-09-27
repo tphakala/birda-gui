@@ -324,7 +324,7 @@
           <div class="card-body gap-4 p-6">
             {#if birdaStatus === null}
               <div class="text-base-content/50 flex items-center gap-2 text-sm">
-                <Loader size={16} class="animate-spin" />
+                <Loader size={16} class="motion-safe:animate-spin" />
                 <span>{m.wizard_cli_checking()}</span>
               </div>
             {:else if birdaStatus.available}
@@ -442,7 +442,7 @@
                     </span>
                   {:else if isInstalling}
                     <span class="text-primary flex items-center gap-1.5 text-xs">
-                      <Loader size={12} class="animate-spin" />
+                      <Loader size={12} class="motion-safe:animate-spin" />
                       {m.settings_models_installing()}
                     </span>
                   {:else}
@@ -475,7 +475,7 @@
             </div>
           {:else}
             <div class="text-base-content/50 py-8 text-center text-sm">
-              <Loader size={20} class="mx-auto mb-2 animate-spin opacity-30" />
+              <Loader size={20} class="mx-auto mb-2 opacity-30 motion-safe:animate-spin" />
               <p>{m.settings_models_loadingCatalog()}</p>
             </div>
           {/if}
@@ -489,6 +489,7 @@
           <button
             onclick={nextStep}
             disabled={installedModels.length === 0 || installing !== null}
+            title={installing !== null ? m.settings_models_installing() : undefined}
             class="btn btn-primary gap-1"
           >
             {m.wizard_next()}

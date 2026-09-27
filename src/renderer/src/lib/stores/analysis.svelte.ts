@@ -17,7 +17,7 @@ interface AnalysisProgress {
   filesFailed: number;
   totalDetections: number;
   currentFile: FileProgress | null;
-  status: 'idle' | 'running' | 'completed' | 'failed';
+  status: 'idle' | 'running' | 'completed' | 'failed' | 'stopped';
   error: string | null;
   events: BirdaEventEnvelope[];
 }
@@ -34,7 +34,7 @@ export const analysisState = $state<AnalysisProgress>({
 });
 
 export function dismissAnalysis(): void {
-  if (analysisState.status === 'completed' || analysisState.status === 'failed') {
+  if (analysisState.status !== 'idle' && analysisState.status !== 'running') {
     analysisState.status = 'idle';
   }
 }

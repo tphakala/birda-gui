@@ -233,6 +233,15 @@ describe('birda:analyze', () => {
     expect(status()).toEqual({
       state: 'running',
       sourcePath: sourceFile,
+      settings: {
+        model: 'birdnet',
+        min_confidence: 0.1,
+        latitude: undefined,
+        longitude: undefined,
+        location_name: undefined,
+        month: undefined,
+        day: undefined,
+      },
       progress: {
         totalFiles: 3,
         filesProcessed: 2,

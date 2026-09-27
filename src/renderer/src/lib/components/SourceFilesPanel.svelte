@@ -258,12 +258,15 @@
                 </td>
               {/if}
               <td class="text-center">
+                <!-- Unavailable during a run: a stopped re-analysis can discard the run an annotation would be saved on. -->
                 <button
+                  type="button"
                   class="btn btn-outline btn-primary btn-xs"
+                  disabled={analysisRunning}
                   onclick={() => {
                     void annotate(file.path);
                   }}
-                  title={m.annotation_annotateFile()}
+                  title={analysisRunning ? m.analysis_lockedDuringRun() : m.annotation_annotateFile()}
                 >
                   {m.annotation_annotate()}
                 </button>

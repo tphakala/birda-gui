@@ -314,9 +314,20 @@ export interface AnalysisProgressSnapshot {
  * Only the event's idle status carries finished, the outcome of the analysis
  * that just ended.
  */
+/** The settings of the analysis that holds the lock, for a window that joins it. */
+export type RunningAnalysisSettings = Pick<
+  AnalysisRequest,
+  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day'
+>;
+
 export type AnalysisStatus =
   | { state: 'idle'; finished?: AnalysisResult & { error?: string } }
-  | { state: 'running' | 'stopping'; sourcePath: string; progress: AnalysisProgressSnapshot };
+  | {
+      state: 'running' | 'stopping';
+      sourcePath: string;
+      settings: RunningAnalysisSettings;
+      progress: AnalysisProgressSnapshot;
+    };
 
 export interface DetectionFilter {
   species?: string | undefined;

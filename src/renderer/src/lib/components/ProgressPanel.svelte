@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileHeadphone, CircleCheckBig, CircleX, X } from '@lucide/svelte';
+  import { FileHeadphone, CircleCheckBig, CircleSlash, CircleX, X } from '@lucide/svelte';
   import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import { formatNumber } from '$lib/utils/format';
@@ -11,9 +11,9 @@
     analysisState.totalFiles > 0 ? Math.round((analysisState.filesProcessed / analysisState.totalFiles) * 100) : 0,
   );
 
-  // Auto-dismiss on success after delay
+  // Auto-dismiss a clean success after a delay; one with failed files stays until dismissed.
   $effect(() => {
-    if (analysisState.status === 'completed') {
+    if (analysisState.status === 'completed' && analysisState.filesFailed === 0) {
       const timer = setTimeout(dismissAnalysis, AUTO_DISMISS_DELAY_MS);
       return () => {
         clearTimeout(timer);
@@ -40,9 +40,19 @@
               <CircleX size={16} />
               {m.progress_failed()}
             </span>
+          {:else if analysisState.status === 'stopped'}
+            <span class="text-warning flex items-center gap-1">
+              <CircleSlash size={16} />
+              {m.progress_stopped()}
+            </span>
+          {/if}
+          {#if analysisState.filesFailed > 0 && analysisState.status !== 'running'}
+            <span class="text-error text-xs font-normal"
+              >{m.progress_filesFailed({ count: String(analysisState.filesFailed) })}</span
+            >
           {/if}
         </span>
-        {#if analysisState.status === 'completed' || analysisState.status === 'failed'}
+        {#if analysisState.status !== 'running'}
           <button
             type="button"
             onclick={dismissAnalysis}
