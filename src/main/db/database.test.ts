@@ -4,9 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { closeDb, getDb, getDbPath, initializeCatalog } from './database';
-import { SCHEMA_SQL } from './schema';
 
+// A default no catalog can be created in: better-sqlite3 refuses a path whose
+// directory does not exist, so a stray getDb() outside the getDb tests throws.
+const NO_USER_DATA = path.join(os.tmpdir(), 'birda-gui-test-no-such-dir', 'userData');
 const dirs = vi.hoisted(() => ({ userData: '' }));
+dirs.userData = NO_USER_DATA;
 vi.mock('electron', () => ({ app: { getPath: () => dirs.userData } }));
 
 // v1.0.0's SCHEMA_SQL.
@@ -93,20 +96,99 @@ INSERT INTO locations (id, name, latitude, longitude) VALUES (1, 'Pond', 60.1, 2
 INSERT INTO analysis_runs (id, location_id, source_path, model, status) VALUES
     (1, 1, '/rec', 'birdnet', 'completed'),
     (2, 1, '/rec/other.wav', 'birdnet', 'completed');
-INSERT INTO detections (run_id, location_id, source_file, start_time, end_time, scientific_name, confidence) VALUES
-    (1, 1, '/rec/20240501_053000.wav', 0, 3, 'Turdus merula', 0.9),
-    (1, 1, '/rec/20240501_053000.wav', 3, 6, 'Erithacus rubecula', 0.8),
-    (1, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.7),
-    (2, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.6);
+INSERT INTO detections
+    (run_id, location_id, source_file, start_time, end_time, scientific_name, confidence, clip_path, detected_at) VALUES
+    (1, 1, '/rec/20240501_053000.wav', 0, 3, 'Turdus merula', 0.9, '/clips/1.wav', '2024-05-02 10:00:00'),
+    (1, 1, '/rec/20240501_053000.wav', 3, 6, 'Erithacus rubecula', 0.8, NULL, '2024-05-02 10:00:01'),
+    (1, NULL, '/rec/other.wav', 1.5, 4.5, 'Parus major', 0.7, NULL, '2024-05-02 10:00:02'),
+    (2, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.6, '/clips/4.wav', '2024-05-03 09:00:00');
+`;
+
+// v1.1.0 through v1.2.1 shipped this SCHEMA_SQL (the current one without the
+// annotations table). Frozen here so the fixture keeps matching those releases
+// when the current schema changes.
+const V1_2_1_SCHEMA = `
+CREATE TABLE IF NOT EXISTS locations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT,
+    latitude    REAL NOT NULL,
+    longitude   REAL NOT NULL,
+    description TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS analysis_runs (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    location_id         INTEGER REFERENCES locations(id),
+    source_path         TEXT NOT NULL,
+    model               TEXT NOT NULL,
+    min_confidence      REAL NOT NULL DEFAULT 0.1,
+    settings_json       TEXT,
+    status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending','running','completed','failed','completed_with_errors')),
+    started_at          TEXT,
+    completed_at        TEXT,
+    timezone_offset_min INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS detections (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id          INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+    location_id     INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    audio_file_id   INTEGER NOT NULL REFERENCES audio_files(id) ON DELETE CASCADE,
+    start_time      REAL NOT NULL,
+    end_time        REAL NOT NULL,
+    scientific_name TEXT NOT NULL,
+    confidence      REAL NOT NULL,
+    clip_path       TEXT,
+    detected_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_detections_species ON detections(scientific_name);
+CREATE INDEX IF NOT EXISTS idx_detections_location ON detections(location_id);
+CREATE INDEX IF NOT EXISTS idx_detections_run ON detections(run_id);
+CREATE INDEX IF NOT EXISTS idx_detections_confidence ON detections(confidence);
+CREATE INDEX IF NOT EXISTS idx_detections_audio_file ON detections(audio_file_id);
+
+CREATE TABLE IF NOT EXISTS audio_files (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id                  INTEGER NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
+    file_path               TEXT NOT NULL,
+    file_name               TEXT NOT NULL,
+    recording_start         TEXT,
+    timezone_offset_min     INTEGER,
+    duration_sec            REAL,
+    sample_rate             INTEGER,
+    channels                INTEGER,
+    audiomoth_device_id     TEXT,
+    audiomoth_gain          TEXT,
+    audiomoth_battery_v     REAL,
+    audiomoth_temperature_c REAL,
+    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_files_run ON audio_files(run_id);
+CREATE INDEX IF NOT EXISTS idx_audio_files_path ON audio_files(file_path);
+CREATE INDEX IF NOT EXISTS idx_audio_files_device ON audio_files(audiomoth_device_id);
+CREATE INDEX IF NOT EXISTS idx_audio_files_recording_start ON audio_files(recording_start);
+
+CREATE VIEW IF NOT EXISTS species_summary AS
+SELECT
+    scientific_name,
+    COUNT(DISTINCT location_id) AS location_count,
+    COUNT(*) AS detection_count,
+    MAX(detected_at) AS last_detected,
+    AVG(confidence) AS avg_confidence
+FROM detections
+GROUP BY scientific_name;
 `;
 
 // A catalog as v1.1.0 through v1.2.1 left it, up to the formatting schemaShape
-// ignores. Their SCHEMA_SQL is the current one without the annotations table, and
-// a new catalog recorded migrations 1 to 5 on its first launch and 6 on its second.
+// ignores. A new catalog recorded migrations 1 to 5 on its first launch and 6 on
+// its second.
 function v121Catalog(versions: number[]): Database.Database {
   const db = memoryDb();
-  db.exec(SCHEMA_SQL);
-  db.exec('DROP TABLE annotations');
+  db.exec(V1_2_1_SCHEMA);
   db.exec(MIGRATION_TABLES);
   const insert = db.prepare('INSERT INTO schema_migrations (version) VALUES (?)');
   for (const v of versions) insert.run(v);
@@ -126,7 +208,7 @@ afterEach(() => {
 });
 
 // Every schema object with its CREATE statement, ignoring formatting that differs
-// between SCHEMA_SQL and the migrations: whitespace, IF NOT EXISTS, and the quotes
+// between SCHEMA_SQL and the migrations: whitespace and the quotes
 // SQLite adds when a table is renamed into place.
 function schemaShape(db: Database.Database) {
   const rows = db.prepare('SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name').all() as {
@@ -139,8 +221,7 @@ function schemaShape(db: Database.Database) {
     ...r,
     sql:
       r.sql
-        ?.replace(/IF NOT EXISTS/g, '')
-        .replace(/"/g, '')
+        ?.replace(/"/g, '')
         .replace(/\s+/g, ' ')
         .replace(/\s*([(),])\s*/g, '$1')
         .trim() ?? null,
@@ -164,6 +245,7 @@ describe('initializeCatalog', () => {
 
     expect(schemaShape(upgraded)).toEqual(schemaShape(fresh));
     expect(appliedVersions(upgraded)).toEqual(appliedVersions(fresh));
+    expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
     // Migration 4 widened the status CHECK; the upgraded table must accept the new value.
     upgraded
       .prepare("INSERT INTO analysis_runs (source_path, model, status) VALUES ('/x', 'm', 'completed_with_errors')")
@@ -182,6 +264,7 @@ describe('initializeCatalog', () => {
 
     expect(schemaShape(upgraded)).toEqual(schemaShape(fresh));
     expect(appliedVersions(upgraded)).toEqual(appliedVersions(fresh));
+    expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
   it('keeps v1.0.0 detections, linked to one audio_files row per run and source file', () => {
@@ -225,6 +308,59 @@ describe('initializeCatalog', () => {
     expect(a).toBe(b);
     expect(new Set([a, c, d]).size).toBe(3);
     expect(db.prepare('SELECT COUNT(*) AS n FROM audio_files').get()).toEqual({ n: 3 });
+    expect(
+      db
+        .prepare(
+          `SELECT id, run_id, location_id, start_time, end_time, scientific_name, confidence, clip_path, detected_at
+           FROM detections ORDER BY id`,
+        )
+        .all(),
+    ).toEqual([
+      {
+        id: 1,
+        run_id: 1,
+        location_id: 1,
+        start_time: 0,
+        end_time: 3,
+        scientific_name: 'Turdus merula',
+        confidence: 0.9,
+        clip_path: '/clips/1.wav',
+        detected_at: '2024-05-02 10:00:00',
+      },
+      {
+        id: 2,
+        run_id: 1,
+        location_id: 1,
+        start_time: 3,
+        end_time: 6,
+        scientific_name: 'Erithacus rubecula',
+        confidence: 0.8,
+        clip_path: null,
+        detected_at: '2024-05-02 10:00:01',
+      },
+      {
+        id: 3,
+        run_id: 1,
+        location_id: null,
+        start_time: 1.5,
+        end_time: 4.5,
+        scientific_name: 'Parus major',
+        confidence: 0.7,
+        clip_path: null,
+        detected_at: '2024-05-02 10:00:02',
+      },
+      {
+        id: 4,
+        run_id: 2,
+        location_id: 1,
+        start_time: 0,
+        end_time: 3,
+        scientific_name: 'Turdus merula',
+        confidence: 0.6,
+        clip_path: '/clips/4.wav',
+        detected_at: '2024-05-03 09:00:00',
+      },
+    ]);
     expect(db.pragma('foreign_key_check')).toEqual([]);
   });
 
@@ -253,6 +389,7 @@ describe('getDb', () => {
   afterEach(() => {
     closeDb();
     fs.rmSync(dirs.userData, { recursive: true, force: true });
+    dirs.userData = NO_USER_DATA;
   });
 
   it('does not keep a connection whose initialization failed', () => {
