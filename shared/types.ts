@@ -1,3 +1,4 @@
+import type { RUN_STATUSES } from './constants';
 // === CUDA Library Management ===
 
 export interface CudaStatus {
@@ -114,7 +115,7 @@ export interface Location {
   created_at: string;
 }
 
-export type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'completed_with_errors' | 'cancelled';
+export type RunStatus = (typeof RUN_STATUSES)[number];
 
 /** The status a run ends with. */
 export type FinishedRunStatus = Extract<RunStatus, 'completed' | 'completed_with_errors' | 'failed' | 'cancelled'>;

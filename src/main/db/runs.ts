@@ -27,27 +27,9 @@ export function createRun(
   return run;
 }
 
-function updateRunStatus(id: number, status: AnalysisRun['status']): void {
-  const db = getDb();
-  if (status !== 'pending' && status !== 'running') {
-    db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
-  } else {
-    db.prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, id);
-  }
-}
-
 function getRunById(id: number): AnalysisRun | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
-}
-
-function findEarlierCompletedRuns(run: AnalysisRun): AnalysisRun[] {
-  const db = getDb();
-  return db
-    .prepare(
-      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND id != ? AND status IN ('completed', 'completed_with_errors')",
-    )
-    .all(run.source_path, run.model, run.id) as AnalysisRun[];
 }
 
 export function deleteRun(id: number): void {
@@ -95,24 +77,50 @@ export function getRunsWithStats(): RunWithStats[] {
   }));
 }
 
+/** What finishRun did to other results for the same source and model. */
+export interface FinishRunEffect {
+  /** Earlier runs deleted because this run replaced them. */
+  replaced: number;
+  /** This run's own detections were deleted because an earlier complete result exists. */
+  discardedPartial: boolean;
+}
+
 /**
- * Records the status a run ended with. A completed run replaces the earlier
- * completed runs for the same source and model, so re-analysing a source keeps
- * the earlier results until the new run has completed. Returns the number of
- * runs replaced.
+ * Records the status a run ended with and keeps one result set per source and
+ * model, so no detection is counted twice:
+ * - A completed run replaces every earlier finished run for the same source
+ *   and model (their detections, audio files and annotations cascade), unless
+ *   replaceEarlier is false because the run analysed no files.
+ * - A cancelled or failed run keeps its partial detections only when no earlier
+ *   completed run exists; otherwise they are deleted and the run is kept as a
+ *   record with no results.
  */
-export function finishRun(id: number, status: FinishedRunStatus): number {
+export function finishRun(id: number, status: FinishedRunStatus, replaceEarlier = true): FinishRunEffect {
   const db = getDb();
 
-  return db.transaction(() => {
-    updateRunStatus(id, status);
-    if (status !== 'completed' && status !== 'completed_with_errors') return 0;
+  return db.transaction((): FinishRunEffect => {
+    db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
     const run = getRunById(id);
-    if (!run) return 0;
-    const earlier = findEarlierCompletedRuns(run);
-    for (const r of earlier) {
-      deleteRun(r.id);
+    if (!run) return { replaced: 0, discardedPartial: false };
+
+    if (status === 'completed' || status === 'completed_with_errors') {
+      if (!replaceEarlier) return { replaced: 0, discardedPartial: false };
+      const { changes } = db
+        .prepare(
+          "DELETE FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status NOT IN ('pending', 'running')",
+        )
+        .run(run.source_path, run.model, run.id);
+      return { replaced: changes, discardedPartial: false };
     }
-    return earlier.length;
+
+    const earlierComplete = db
+      .prepare(
+        "SELECT 1 FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status IN ('completed', 'completed_with_errors')",
+      )
+      .get(run.source_path, run.model, run.id);
+    if (!earlierComplete) return { replaced: 0, discardedPartial: false };
+    // Detections and annotations cascade from audio_files.
+    db.prepare('DELETE FROM audio_files WHERE run_id = ?').run(run.id);
+    return { replaced: 0, discardedPartial: true };
   })();
 }

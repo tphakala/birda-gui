@@ -1,9 +1,16 @@
 import Database from 'better-sqlite3';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
 import { createRun, finishRun } from './runs';
 
-vi.mock('electron', () => ({ app: { getPath: () => '' } }));
+// A userData directory that does not exist, so a real getDb() reached by a
+// broken mock fails instead of creating a catalog in the working directory.
+vi.mock('electron', () => ({
+  app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir', 'userData') },
+}));
 
 const conn = vi.hoisted(() => ({ db: null as Database.Database | null }));
 vi.mock('./database', async (importOriginal) => ({
@@ -30,7 +37,7 @@ afterEach(() => {
 });
 
 // A run with one audio file, detection and annotation, so cascades are visible.
-function runWithResults(source: string, model: string, status: string): number {
+function runWithResults(source: string, model: string, status: RunStatus): number {
   const run = createRun(source, model, 0.1);
   db().prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, run.id);
   const file = db()
@@ -58,66 +65,117 @@ function status(id: number): string | undefined {
     ?.status;
 }
 
-// Rows left in the tables a run's deletion cascades to: audio files, detections, annotations.
-function resultRows(): number[] {
+// Rows per run in the tables a run's results live in: audio files, detections, annotations.
+function resultRows(runId: number): number[] {
   const row = db()
     .prepare(
-      'SELECT (SELECT COUNT(*) FROM audio_files) AS f, (SELECT COUNT(*) FROM detections) AS d, (SELECT COUNT(*) FROM annotations) AS a',
+      `SELECT (SELECT COUNT(*) FROM audio_files WHERE run_id = ?) AS f,
+              (SELECT COUNT(*) FROM detections WHERE run_id = ?) AS d,
+              (SELECT COUNT(*) FROM annotations a JOIN audio_files af ON af.id = a.audio_file_id WHERE af.run_id = ?) AS a`,
     )
-    .get() as { f: number; d: number; a: number };
+    .get(runId, runId, runId) as { f: number; d: number; a: number };
   return [row.f, row.d, row.a];
 }
 
 describe('finishRun', () => {
-  it('replaces earlier completed runs for the same source and model once the new run completes', () => {
-    const earlier = runWithResults('/rec', 'birdnet', 'completed');
-    const withErrors = runWithResults('/rec', 'birdnet', 'completed_with_errors');
-    const current = createRun('/rec', 'birdnet', 0.1).id;
+  it.each(['completed', 'completed_with_errors'] as const)(
+    'replaces every earlier finished run for the same source and model when the new run is %s',
+    (finalStatus) => {
+      const earlier = [
+        runWithResults('/rec', 'birdnet', 'completed'),
+        runWithResults('/rec', 'birdnet', 'completed_with_errors'),
+        runWithResults('/rec', 'birdnet', 'cancelled'),
+        runWithResults('/rec', 'birdnet', 'failed'),
+      ];
+      const current = createRun('/rec', 'birdnet', 0.1).id;
 
-    expect(finishRun(current, 'completed')).toBe(2);
-    expect(runIds()).toEqual([current]);
-    expect(status(current)).toBe('completed');
-    expect(status(earlier)).toBeUndefined();
-    expect(status(withErrors)).toBeUndefined();
-    expect(resultRows()).toEqual([0, 0, 0]);
-  });
+      expect(finishRun(current, finalStatus)).toEqual({ replaced: 4, discardedPartial: false });
+      expect(runIds()).toEqual([current]);
+      expect(status(current)).toBe(finalStatus);
+      for (const id of earlier) expect(resultRows(id)).toEqual([0, 0, 0]);
+    },
+  );
 
-  it('also replaces them when the new run completes with errors', () => {
-    const earlier = runWithResults('/rec', 'birdnet', 'completed');
-    const current = createRun('/rec', 'birdnet', 0.1).id;
-
-    expect(finishRun(current, 'completed_with_errors')).toBe(1);
-    expect(runIds()).toEqual([current]);
-    expect(status(earlier)).toBeUndefined();
-  });
-
-  it.each(['cancelled', 'failed'] as const)('keeps earlier results when the new run is %s', (finalStatus) => {
+  it('keeps earlier runs when the completed run analysed no files', () => {
     const earlier = runWithResults('/rec', 'birdnet', 'completed');
     const current = createRun('/rec', 'birdnet', 0.1).id;
 
-    expect(finishRun(current, finalStatus)).toBe(0);
+    expect(finishRun(current, 'completed', false)).toEqual({ replaced: 0, discardedPartial: false });
     expect(runIds()).toEqual([earlier, current]);
-    expect(status(current)).toBe(finalStatus);
-    expect(resultRows()).toEqual([1, 1, 1]);
+    expect(resultRows(earlier)).toEqual([1, 1, 1]);
   });
 
-  it('keeps runs of another source or model, and earlier runs that did not complete', () => {
+  it('keeps runs of another source or model, and runs still in progress', () => {
     const otherSource = runWithResults('/other', 'birdnet', 'completed');
     const otherModel = runWithResults('/rec', 'perch', 'completed');
-    const cancelled = runWithResults('/rec', 'birdnet', 'cancelled');
-    const failed = runWithResults('/rec', 'birdnet', 'failed');
+    const running = runWithResults('/rec', 'birdnet', 'running');
     const current = createRun('/rec', 'birdnet', 0.1).id;
 
-    expect(finishRun(current, 'completed')).toBe(0);
-    expect(runIds()).toEqual([otherSource, otherModel, cancelled, failed, current]);
+    expect(finishRun(current, 'completed')).toEqual({ replaced: 0, discardedPartial: false });
+    expect(runIds()).toEqual([otherSource, otherModel, running, current]);
   });
 
-  it('sets completed_at on every finished status', () => {
+  it('never replaces a later run', () => {
     const current = createRun('/rec', 'birdnet', 0.1).id;
-    finishRun(current, 'cancelled');
-    const row = db().prepare('SELECT completed_at FROM analysis_runs WHERE id = ?').get(current) as {
-      completed_at: string | null;
-    };
-    expect(row.completed_at).not.toBeNull();
+    const later = runWithResults('/rec', 'birdnet', 'completed');
+
+    expect(finishRun(current, 'completed')).toEqual({ replaced: 0, discardedPartial: false });
+    expect(runIds()).toEqual([current, later]);
+  });
+
+  it.each(['cancelled', 'failed'] as const)(
+    'drops a %s run’s partial results when an earlier complete result exists',
+    (finalStatus) => {
+      const earlier = runWithResults('/rec', 'birdnet', 'completed');
+      const current = runWithResults('/rec', 'birdnet', 'running');
+
+      expect(finishRun(current, finalStatus)).toEqual({ replaced: 0, discardedPartial: true });
+      expect(runIds()).toEqual([earlier, current]);
+      expect(status(current)).toBe(finalStatus);
+      expect(resultRows(current)).toEqual([0, 0, 0]);
+      expect(resultRows(earlier)).toEqual([1, 1, 1]);
+    },
+  );
+
+  it.each(['cancelled', 'failed'] as const)(
+    'keeps a %s run’s partial results when no earlier complete result exists',
+    (finalStatus) => {
+      const earlierFailed = runWithResults('/rec', 'birdnet', 'failed');
+      const current = runWithResults('/rec', 'birdnet', 'running');
+
+      expect(finishRun(current, finalStatus)).toEqual({ replaced: 0, discardedPartial: false });
+      expect(runIds()).toEqual([earlierFailed, current]);
+      expect(resultRows(current)).toEqual([1, 1, 1]);
+    },
+  );
+
+  it.each(['completed', 'completed_with_errors', 'failed', 'cancelled'] satisfies FinishedRunStatus[])(
+    'sets completed_at when the run is %s',
+    (finalStatus) => {
+      const current = createRun('/rec', 'birdnet', 0.1).id;
+      const completedAt = () =>
+        (
+          db().prepare('SELECT completed_at FROM analysis_runs WHERE id = ?').get(current) as {
+            completed_at: string | null;
+          }
+        ).completed_at;
+      expect(completedAt()).toBeNull();
+
+      finishRun(current, finalStatus);
+      expect(completedAt()).not.toBeNull();
+    },
+  );
+
+  it('changes nothing when a replacement fails part way', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'completed');
+    const current = createRun('/rec', 'birdnet', 0.1).id;
+    db().exec(`
+      CREATE TRIGGER block_run_delete BEFORE DELETE ON analysis_runs
+      BEGIN SELECT RAISE(ABORT, 'blocked'); END;
+    `);
+
+    expect(() => finishRun(current, 'completed')).toThrow('blocked');
+    expect(status(current)).toBe('running');
+    expect(runIds()).toEqual([earlier, current]);
   });
 });

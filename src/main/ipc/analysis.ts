@@ -418,7 +418,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
     }
 
     sendLog('info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
-    const replaced = finishRun(run.id, finalStatus);
+    const { replaced } = finishRun(run.id, finalStatus);
     if (replaced > 0) {
       sendLog('info', 'analysis', `Replaced ${replaced} previous run(s) (same source + model)`);
     }

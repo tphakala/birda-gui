@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
-import { SCHEMA_SQL } from './schema';
+import { RUN_STATUS_CHECK, SCHEMA_SQL } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
 let db: Database.Database | null = null;
@@ -130,46 +130,7 @@ function runMigrations(db: Database.Database): void {
   // Migration 4: Add completed_with_errors status
   if (!applied.has(4)) {
     console.log('Migrating to version 4: Add completed_with_errors status');
-
-    // Temporarily disable foreign keys for table recreation
-    db.pragma('foreign_keys = OFF');
-
-    try {
-      db.transaction(() => {
-        db.exec(`
-          -- Create new table with updated constraint
-          CREATE TABLE analysis_runs_new (
-            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-            location_id         INTEGER REFERENCES locations(id),
-            source_path         TEXT NOT NULL,
-            model               TEXT NOT NULL,
-            min_confidence      REAL NOT NULL DEFAULT 0.1,
-            settings_json       TEXT,
-            status              TEXT NOT NULL DEFAULT 'pending'
-                                CHECK (status IN ('pending','running','completed','failed','completed_with_errors')),
-            started_at          TEXT,
-            completed_at        TEXT,
-            timezone_offset_min INTEGER
-          );
-
-          -- Copy existing data
-          INSERT INTO analysis_runs_new
-            SELECT id, location_id, source_path, model, min_confidence, settings_json,
-                   status, started_at, completed_at, timezone_offset_min
-            FROM analysis_runs;
-
-          -- Drop old table
-          DROP TABLE analysis_runs;
-
-          -- Rename new table
-          ALTER TABLE analysis_runs_new RENAME TO analysis_runs;
-        `);
-        db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(4);
-      })();
-    } finally {
-      // Re-enable foreign keys even if migration fails
-      db.pragma('foreign_keys = ON');
-    }
+    rebuildAnalysisRuns(db, "CHECK (status IN ('pending','running','completed','failed','completed_with_errors'))", 4);
   }
 
   // Migration 5: Add audio_files table and migrate existing data
@@ -289,36 +250,52 @@ function runMigrations(db: Database.Database): void {
   // migration 4 rebuilds their analysis_runs with the older CHECK.
   if (!applied.has(8)) {
     console.log('Migrating to version 8: Add cancelled status');
-    // Rebuilt with foreign keys off, like migration 4.
-    db.pragma('foreign_keys = OFF');
-    try {
-      db.transaction(() => {
-        db.exec(`
-          CREATE TABLE analysis_runs_new (
-            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-            location_id         INTEGER REFERENCES locations(id),
-            source_path         TEXT NOT NULL,
-            model               TEXT NOT NULL,
-            min_confidence      REAL NOT NULL DEFAULT 0.1,
-            settings_json       TEXT,
-            status              TEXT NOT NULL DEFAULT 'pending'
-                                CHECK (status IN ('pending','running','completed','failed','completed_with_errors','cancelled')),
-            started_at          TEXT,
-            completed_at        TEXT,
-            timezone_offset_min INTEGER
-          );
-          INSERT INTO analysis_runs_new
-            SELECT id, location_id, source_path, model, min_confidence, settings_json,
-                   status, started_at, completed_at, timezone_offset_min
-            FROM analysis_runs;
-          DROP TABLE analysis_runs;
-          ALTER TABLE analysis_runs_new RENAME TO analysis_runs;
-        `);
-        db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(8);
-      })();
-    } finally {
-      db.pragma('foreign_keys = ON');
-    }
+    rebuildAnalysisRuns(db, RUN_STATUS_CHECK, 8);
+  }
+}
+
+/**
+ * Rebuilds analysis_runs with a new status CHECK, which SQLite cannot change
+ * in place, and records the migration. Rows keep their ids, and the
+ * AUTOINCREMENT sequence is restored so a deleted run's id is not reused.
+ */
+function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version: number): void {
+  // Foreign keys are off so dropping the old table does not cascade into the
+  // tables that reference it (database.test.ts pins that their rows survive).
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      const seq = db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'analysis_runs'").get() as
+        { seq: number } | undefined;
+      db.exec(`
+        CREATE TABLE analysis_runs_new (
+          id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+          location_id         INTEGER REFERENCES locations(id),
+          source_path         TEXT NOT NULL,
+          model               TEXT NOT NULL,
+          min_confidence      REAL NOT NULL DEFAULT 0.1,
+          settings_json       TEXT,
+          status              TEXT NOT NULL DEFAULT 'pending'
+                              ${statusCheck},
+          started_at          TEXT,
+          completed_at        TEXT,
+          timezone_offset_min INTEGER
+        );
+        INSERT INTO analysis_runs_new
+          SELECT id, location_id, source_path, model, min_confidence, settings_json,
+                 status, started_at, completed_at, timezone_offset_min
+          FROM analysis_runs;
+        DROP TABLE analysis_runs;
+        ALTER TABLE analysis_runs_new RENAME TO analysis_runs;
+      `);
+      if (seq) {
+        db.prepare("DELETE FROM sqlite_sequence WHERE name = 'analysis_runs'").run();
+        db.prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('analysis_runs', ?)").run(seq.seq);
+      }
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(version);
+    })();
+  } finally {
+    db.pragma('foreign_keys = ON');
   }
 }
 

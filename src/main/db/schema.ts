@@ -1,3 +1,8 @@
+import { RUN_STATUSES } from '$shared/constants';
+
+/** The status CHECK for analysis_runs, shared by SCHEMA_SQL and the migration that last changed it. */
+export const RUN_STATUS_CHECK = `CHECK (status IN (${RUN_STATUSES.map((s) => `'${s}'`).join(',')}))`;
+
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS locations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +21,7 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
     min_confidence      REAL NOT NULL DEFAULT 0.1,
     settings_json       TEXT,
     status              TEXT NOT NULL DEFAULT 'pending'
-                        CHECK (status IN ('pending','running','completed','failed','completed_with_errors','cancelled')),
+                        ${RUN_STATUS_CHECK},
     started_at          TEXT,
     completed_at        TEXT,
     timezone_offset_min INTEGER

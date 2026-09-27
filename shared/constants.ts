@@ -6,6 +6,15 @@ export const BIRDA_GITHUB_URL = 'https://github.com/tphakala/birda';
 export const BIRDA_RELEASES_URL = 'https://github.com/tphakala/birda/releases/latest';
 export const BIRDA_REPO = 'tphakala/birda';
 export const CUDA_LIBS_DIR_NAME = 'cuda-libs';
+/** Every analysis run status. The catalog's status CHECK constraint is built from this list. */
+export const RUN_STATUSES = [
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'completed_with_errors',
+  'cancelled',
+] as const;
 export const CUDA_VERSION_FILE = '.cuda-version';
 /**
  * Must match the birda CLI release whose CUDA assets we download, which is the

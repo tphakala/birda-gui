@@ -268,6 +268,29 @@ describe('initializeCatalog', () => {
     expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
+  it('keeps every analysis_runs value and the id sequence through the status rebuilds', () => {
+    const db = v121Catalog([1, 2, 3, 4, 5, 6]);
+    db.exec(`
+      INSERT INTO analysis_runs
+        (id, location_id, source_path, model, min_confidence, settings_json, status, started_at, completed_at, timezone_offset_min)
+      VALUES
+        (1, NULL, '/rec/a', 'birdnet', 0.25, '{"k":1}', 'completed', '2024-05-01 10:00:00', '2024-05-01 10:05:00', 180),
+        (2, NULL, '/rec/b', 'perch', 0.5, NULL, 'completed_with_errors', '2024-05-02 11:00:00', '2024-05-02 11:30:00', -300),
+        (3, NULL, '/rec/c', 'birdnet', 0.1, NULL, 'failed', '2024-05-03 12:00:00', NULL, NULL);
+      DELETE FROM analysis_runs WHERE id = 3;
+    `);
+    const before = db.prepare('SELECT * FROM analysis_runs ORDER BY id').all();
+
+    initializeCatalog(db);
+
+    expect(db.prepare('SELECT * FROM analysis_runs ORDER BY id').all()).toEqual(before);
+    // The deleted run's id is not handed out again.
+    const { lastInsertRowid } = db
+      .prepare("INSERT INTO analysis_runs (source_path, model, status) VALUES ('/rec/d', 'birdnet', 'cancelled')")
+      .run();
+    expect(lastInsertRowid).toBe(4);
+  });
+
   it('keeps v1.0.0 detections, linked to one audio_files row per run and source file', () => {
     const db = memoryDb();
     db.exec(V1_0_0_CATALOG);
