@@ -39,7 +39,7 @@ jobs:
           RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.id')
           echo "id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
 
-      - uses: cssnr/virustotal-action@v2
+      - uses: cssnr/virustotal-action@5edfa4c982eb0caec6d568ea27cf715269f5c23b # v2.0.0
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           release_id: ${{ inputs.release_id || steps.release.outputs.id }}
