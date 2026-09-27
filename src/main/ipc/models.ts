@@ -9,7 +9,7 @@ import {
   cancelInstall,
 } from '../birda/models';
 import { registerCoverageUrls } from '../birda/coverageCache';
-import { getInstallStatus, ModelInstallCancelledError } from '../birda/models';
+import { getInstallStatus, ModelInstallBusyError, ModelInstallCancelledError } from '../birda/models';
 import { sendToWindows } from './broadcast';
 import type { ModelInstallFinished, ModelInstallRequest } from '$shared/types';
 import { setDefaultModel } from '../birda/config';
@@ -57,7 +57,10 @@ export function registerModelHandlers(): void {
         finished('installed');
         return result;
       } catch (err) {
-        finished(err instanceof ModelInstallCancelledError ? 'cancelled' : 'failed', (err as Error).message);
+        // A request refused because another install is running never started, so it has no outcome to report.
+        if (!(err instanceof ModelInstallBusyError)) {
+          finished(err instanceof ModelInstallCancelledError ? 'cancelled' : 'failed', (err as Error).message);
+        }
         throw err;
       }
     },

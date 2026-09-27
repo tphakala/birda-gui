@@ -78,6 +78,14 @@ export function cancelInstall(): boolean {
 // Read through a function so TS does not narrow the post-await check to a literal.
 const cancelRequested = (): boolean => cancelState.requested;
 
+/** Rejects an install requested while another one holds the single install slot. */
+export class ModelInstallBusyError extends Error {
+  constructor() {
+    super('Another model install is already running');
+    this.name = 'ModelInstallBusyError';
+  }
+}
+
 /** Rejects an install that ended because it was cancelled. */
 export class ModelInstallCancelledError extends Error {
   constructor() {
@@ -103,7 +111,7 @@ export async function installModel(
   // reservation and cancel state are released in the finally when this operation
   // settles, so cancellation before close stays cancellation.
   if (installInProgress) {
-    throw new Error('Another model install is already running');
+    throw new ModelInstallBusyError();
   }
   installInProgress = true;
   currentRequest = { id: opts.id, region: opts.region, variant: opts.variant };

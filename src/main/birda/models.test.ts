@@ -17,7 +17,7 @@ vi.mock('child_process', async (importOriginal) => ({
 }));
 
 const { CANCEL_KILL_TIMEOUT_MS, setBirdaPath } = await import('./runner');
-const { cancelInstall, getInstallStatus, installModel } = await import('./models');
+const { ModelInstallCancelledError, cancelInstall, getInstallStatus, installModel } = await import('./models');
 
 const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-models-test-'));
 const birdaPath = path.join(binDir, 'birda');
@@ -60,7 +60,7 @@ describe('cancelInstall', () => {
     expect(child.signals).toEqual(['SIGTERM', 'SIGKILL']);
 
     child.exit(null, 'SIGKILL');
-    await expect(install).rejects.toThrow('Model install cancelled');
+    await expect(install).rejects.toBeInstanceOf(ModelInstallCancelledError);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -69,7 +69,7 @@ describe('cancelInstall', () => {
     const child = await spawnedChild();
     cancelInstall();
     child.exit(null, 'SIGTERM');
-    await expect(install).rejects.toThrow('Model install cancelled');
+    await expect(install).rejects.toBeInstanceOf(ModelInstallCancelledError);
 
     spawned.children = [];
     const next = installModel({ id: 'perch' });
@@ -87,6 +87,13 @@ describe('cancelInstall', () => {
     child.exit(0);
     await install;
     expect(getInstallStatus()).toBeNull();
+  });
+
+  it('reports a cancel while birda is being located as a cancel, without spawning', async () => {
+    const install = installModel({ id: 'birdnet' });
+    cancelInstall();
+    await expect(install).rejects.toBeInstanceOf(ModelInstallCancelledError);
+    expect(spawned.children).toHaveLength(0);
   });
 
   it('returns false when no install is running', () => {

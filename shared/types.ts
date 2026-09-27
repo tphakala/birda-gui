@@ -407,7 +407,6 @@ export interface ModelManifest {
   variants: ManifestVariant[];
 }
 
-/** Structured install progress parsed from birda's stderr progress bar. */
 /** What birda:models-install was asked to install. */
 export interface ModelInstallRequest {
   id: string;
@@ -422,6 +421,7 @@ export interface ModelInstallFinished {
   error?: string | undefined;
 }
 
+/** Structured install progress parsed from birda's stderr progress bar. */
 export interface ModelInstallProgress {
   line: string;
   percent?: number;

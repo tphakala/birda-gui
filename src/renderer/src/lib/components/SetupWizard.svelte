@@ -177,12 +177,9 @@
     installProgress = '';
     offInstallProgress?.();
     offInstallProgress = null;
+    await refreshModels();
+    // After the refresh, which clears modelsError.
     if (error !== undefined) modelsError = error;
-    try {
-      await refreshModels();
-    } catch {
-      // birda may not be available
-    }
   }
 
   async function adoptRunningInstall() {

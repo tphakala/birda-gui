@@ -35,6 +35,20 @@ export const galleryStore: GalleryState = $state({
   error: null,
 });
 
+/**
+ * The single in-flight install, by variant key. Kept here rather than in the
+ * gallery component so a gallery remounted mid-install (a settings sub-tab
+ * switch) shares it with the instance that started the install. Not reactive.
+ */
+export const installTracker = {
+  /** The install this window started or adopted. */
+  currentKey: null as string | null,
+  /** The install the user cancelled, so its rejection is reported as a cancel. */
+  cancelledKey: null as string | null,
+  /** An install this window did not start, e.g. one still running after a reload. */
+  adoptedKey: null as string | null,
+};
+
 // Pure key helpers live in the framework-free logic module (unit tested there);
 // re-exported here so components keep importing them from the store.
 export { variantKey, licenseKey } from '$lib/gallery/logic';

@@ -19,7 +19,7 @@
     onModelInstallFinished,
     getModelInstallStatus,
   } from '$lib/utils/ipc';
-  import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
+  import { galleryStore, installTracker, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
   import type { InstalledModel, ManifestVariant, ModelInstallFinished, ModelManifest } from '$shared/types';
@@ -35,12 +35,6 @@
   let removeTarget = $state<InstalledModel | null>(null);
   let busyId = $state<string | null>(null);
   let announce = $state('');
-
-  // Plain (non-reactive) trackers for the single in-flight install.
-  let currentInstallKey: string | null = null;
-  let cancelledKey: string | null = null;
-  // An install this window did not start, e.g. one still running after a reload.
-  let adoptedKey: string | null = null;
 
   const selectedManifest = $derived(manifestOf(galleryStore.family));
   const defaultId = $derived(galleryStore.installed.find((mo) => mo.is_default)?.id ?? '');
@@ -114,11 +108,15 @@
   }
 
   function finishAdopted(key: string, finished: ModelInstallFinished | null): void {
-    adoptedKey = null;
-    if (currentInstallKey === key) currentInstallKey = null;
+    installTracker.adoptedKey = null;
+    if (installTracker.currentKey === key) installTracker.currentKey = null;
+    if (installTracker.cancelledKey === key) installTracker.cancelledKey = null;
     busyId = null;
     clearDownload(key);
-    const model = finished?.request.region ?? finished?.request.id ?? '';
+    const request = finished?.request;
+    const model = request
+      ? (manifestOf(request.id)?.variants.find((v) => v.region === request.region)?.region_name ?? request.id)
+      : '';
     if (!finished || finished.outcome === 'installed') {
       void refreshInstalled();
       if (finished) announce = m.gallery_installedToast({ model });
@@ -131,27 +129,32 @@
 
   async function adoptRunningInstall(): Promise<void> {
     const request = await getModelInstallStatus();
-    if (!request || currentInstallKey) return;
+    if (!request || installTracker.currentKey) return;
     const key = variantKey(request.id, request.region);
-    adoptedKey = key;
-    currentInstallKey = key;
+    installTracker.adoptedKey = key;
+    installTracker.currentKey = key;
     busyId = key;
     galleryStore.downloads[key] ??= {};
     // It may have finished before the finished listener could see it.
-    if ((await getModelInstallStatus()) === null && adoptedKey === key) finishAdopted(key, null);
+    if ((await getModelInstallStatus()) === null && installTracker.adoptedKey === key) finishAdopted(key, null);
   }
 
   onMount(() => {
     loadAcceptedLicenses();
+    // A remount during this window's own install keeps it busy.
+    busyId = installTracker.currentKey;
     const unsubscribes = [
       onModelInstallProgress((p) => {
-        const k = currentInstallKey;
+        const k = installTracker.currentKey;
         if (!k) return;
         if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
       }),
       onModelInstallFinished((finished) => {
         const key = variantKey(finished.request.id, finished.request.region);
-        if (key === adoptedKey) finishAdopted(key, finished);
+        if (key === installTracker.adoptedKey) finishAdopted(key, finished);
+        // An install this window neither started nor adopted (it ended before
+        // adoption) still changes the installed list.
+        else if (key !== installTracker.currentKey && finished.outcome === 'installed') void refreshInstalled();
       }),
     ];
     void load();
@@ -178,7 +181,7 @@
   // Returns true on success, false on cancel or error, so updateAll can stop.
   async function doInstall(family: string, variant: ManifestVariant): Promise<boolean> {
     const key = variantKey(family, variant.region);
-    currentInstallKey = key;
+    installTracker.currentKey = key;
     busyId = key;
     galleryStore.downloads[key] = {};
     try {
@@ -189,7 +192,7 @@
       return true;
     } catch (e) {
       clearDownload(key);
-      if (cancelledKey === key) {
+      if (installTracker.cancelledKey === key) {
         announce = m.gallery_download_cancelled();
       } else {
         galleryStore.error = m.gallery_download_failed({
@@ -199,10 +202,10 @@
       }
       return false;
     } finally {
-      if (currentInstallKey === key) currentInstallKey = null;
+      if (installTracker.currentKey === key) installTracker.currentKey = null;
       // Always clear the cancel flag for this key, so a cancel that missed the
       // process (install completed anyway) cannot mislabel a later failure.
-      if (cancelledKey === key) cancelledKey = null;
+      if (installTracker.cancelledKey === key) installTracker.cancelledKey = null;
       busyId = null;
     }
   }
@@ -234,7 +237,7 @@
     // Cancel the single in-flight install; key off the ACTUAL in-flight key
     // (not the browsed family) so doInstall reports it as cancelled, including
     // during updateAll where the install may span a different family.
-    cancelledKey = currentInstallKey;
+    installTracker.cancelledKey = installTracker.currentKey;
     await cancelInstall();
   }
 

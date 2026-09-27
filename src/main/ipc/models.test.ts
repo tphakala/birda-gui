@@ -35,7 +35,7 @@ vi.mock('../birda/coverageCache', () => ({ registerCoverageUrls: vi.fn() }));
 vi.mock('../birda/config', () => ({ setDefaultModel: vi.fn() }));
 
 const { registerModelHandlers } = await import('./models');
-const { ModelInstallCancelledError } = await import('../birda/models');
+const { ModelInstallBusyError, ModelInstallCancelledError } = await import('../birda/models');
 registerModelHandlers();
 
 function install(): Promise<unknown> {
@@ -73,10 +73,17 @@ describe('birda:models-install', () => {
     expect(finishedEvents()).toMatchObject([{ outcome: 'cancelled' }]);
   });
 
-  it('reports any other error as failed', async () => {
+  it('reports any other error as failed, even one whose message mentions a cancel', async () => {
     const run = install();
-    h.settle?.reject(new Error('Model install failed: disk full'));
-    await expect(run).rejects.toThrow('disk full');
-    expect(finishedEvents()).toMatchObject([{ outcome: 'failed', error: 'Model install failed: disk full' }]);
+    h.settle?.reject(new Error('Model install cancelled'));
+    await expect(run).rejects.toThrow('Model install cancelled');
+    expect(finishedEvents()).toMatchObject([{ outcome: 'failed', error: 'Model install cancelled' }]);
+  });
+
+  it('reports no outcome for a request refused because another install is running', async () => {
+    const run = install();
+    h.settle?.reject(new ModelInstallBusyError());
+    await expect(run).rejects.toThrow('already running');
+    expect(finishedEvents()).toEqual([]);
   });
 });
