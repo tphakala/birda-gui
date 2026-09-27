@@ -63,7 +63,7 @@ tasks:
       - npm run lint:fix
 
   typecheck:main:
-    desc: Type check main, preload, shared, scripts and build configs (tsconfig.node.json)
+    desc: Type check main, preload, shared, scripts/*.ts and build configs (tsconfig.node.json)
     cmds:
       - npm run typecheck
 

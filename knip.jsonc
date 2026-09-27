@@ -11,9 +11,4 @@
     "shared/**/*.ts",
     "build/vite/**/*.ts",
   ],
-  "paths": {
-    "$shared/*": ["./shared/*"],
-    "$lib/*": ["./src/renderer/src/lib/*"],
-    "$paraglide/*": ["./src/renderer/src/paraglide/*"],
-  },
 }

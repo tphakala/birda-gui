@@ -33,6 +33,10 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
+      # Compile once; the steps below skip their own pre-hook compile.
+      - name: Compile messages
+        run: npm run paraglide
+
       - name: Validate translations
         run: npm run validate:translations
 
@@ -40,16 +44,16 @@ jobs:
         run: npm run format:check
 
       - name: Lint
-        run: npm run lint
+        run: npm run --ignore-scripts lint
 
       - name: Type check
         run: npm run typecheck
 
       - name: Test
-        run: npm run test
+        run: npm run --ignore-scripts test
 
       - name: Unused dependencies & exports
-        run: npm run knip
+        run: npm run --ignore-scripts knip
 
       - name: Audit dependencies
         run: npm audit --omit=dev

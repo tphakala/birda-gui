@@ -23,11 +23,11 @@ Built with Electron, Svelte 5, and Tailwind CSS.
 
 Pre-built binaries for Windows, Linux, and macOS are available on the [Releases](https://github.com/tphakala/birda-gui/releases) page.
 
-| Platform | Formats                      |
-| -------- | ---------------------------- |
-| Windows  | NSIS installer, portable exe |
-| Linux    | AppImage, deb                |
-| macOS    | dmg (signed & notarized)     |
+| Platform | Formats                                   |
+| -------- | ----------------------------------------- |
+| Windows  | NSIS installer, portable exe (x64)        |
+| Linux    | AppImage, deb (x64)                       |
+| macOS    | dmg, signed and notarized (Apple silicon) |
 
 ## Development
 

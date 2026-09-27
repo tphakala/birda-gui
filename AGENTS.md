@@ -30,6 +30,9 @@ src/
     db/               # SQLite database layer (schema, migrations, CRUD modules)
     ipc/              # IPC handler modules (one per domain)
     labels/           # Species name localization service
+    settings/         # Settings schema, loader and store
+    cuda/             # CUDA library download and management
+    gpu/              # GPU detection
   preload/
     index.ts          # contextBridge: exposes window.birda with allowlisted channels
   renderer/           # Svelte 5 frontend (browser context)
@@ -41,6 +44,8 @@ src/
       pages/          # Page-level components (Analysis, Detections, Map, Species, Settings)
       lib/
         components/   # Reusable UI components (PascalCase .svelte files)
+        gallery/      # Framework-free model gallery logic (unit tested)
+        i18n/         # UI language list and detection
         stores/       # State management (.svelte.ts files using $state runes)
         utils/        # Helpers (ipc.ts wrappers, format.ts, shortcuts.ts)
 shared/
@@ -63,7 +68,7 @@ build/                # Electron-builder resources (macOS entitlements, NSIS ins
 Two separate tsconfig files (never mix them):
 
 - **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib`, `$shared` and `$paraglide` aliases.
-- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/`, `build/vite/` and `vitest.config.ts`. `allowImportingTsExtensions` is on so the Vite configs import local modules as `./externalize.ts`; Vite's planned native config loader needs the extension. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
+- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/*.ts`, `build/vite/` and `vitest.config.ts` (no `allowJs`, so the `.js` scripts are linted but not type-checked). `allowImportingTsExtensions` is on so the Vite configs import local modules as `./externalize.ts`; Vite's planned native config loader needs the extension. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 
@@ -74,7 +79,7 @@ Task runner: **Taskfile.yml** (Go Task) or npm scripts.
 ```bash
 # Development
 task dev                    # renderer HMR + Electron via scripts/dev.ts (restarts on main/preload change)
-task build                  # direct Vite build (main + preload + renderer) plus node --check of the bundles, via npm run build
+task build                  # direct Vite build (main + preload + renderer), node --check of the bundles and a check that every message compiled, via npm run build
 
 # Linting & Type Checking
 task lint                   # npm run lint (ESLint + svelte-check) alongside tsc on tsconfig.node.json
