@@ -61,6 +61,7 @@
     <Search size={16} class="text-base-content/40 absolute top-1/2 left-2.5 -translate-y-1/2" />
     <input
       type="text"
+      data-focus-search
       bind:value={query}
       oninput={handleInput}
       onfocus={() => {
@@ -68,10 +69,16 @@
       }}
       onblur={() => setTimeout(() => (showDropdown = false), 200)}
       {placeholder}
+      aria-label={placeholder}
       class="input input-bordered input-sm w-full pr-8 pl-8"
     />
     {#if query}
-      <button onclick={clear} class="btn btn-ghost btn-xs btn-square absolute top-1/2 right-1 -translate-y-1/2">
+      <button
+        type="button"
+        onclick={clear}
+        aria-label={m.common_button_clear()}
+        class="btn btn-ghost btn-xs btn-square absolute top-1/2 right-1 -translate-y-1/2"
+      >
         <X size={14} />
       </button>
     {/if}

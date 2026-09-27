@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import {
     Bird,
     CircleCheckBig,
@@ -335,7 +336,7 @@
                   <span>{m.wizard_cli_found({ path: birdaStatus.path })}</span>
                 </div>
                 <div class="text-base-content/70 flex items-center gap-2 pl-7 text-xs">
-                  <span>Version: {birdaStatus.version}</span>
+                  <span>{m.settings_cli_version({ version: birdaStatus.version })}</span>
                 </div>
               </div>
             {:else}
@@ -346,7 +347,7 @@
                 </div>
                 {#if birdaStatus.version && birdaStatus.minVersion}
                   <div class="text-warning text-xs">
-                    Found version {birdaStatus.version}, but {birdaStatus.minVersion} or higher is required.
+                    {m.wizard_cli_outdated({ current: birdaStatus.version, required: birdaStatus.minVersion })}
                   </div>
                 {/if}
                 <p class="text-base-content/50 text-xs">{m.wizard_cli_notFoundHint()}</p>
@@ -539,11 +540,21 @@
 
 <!-- License Acceptance Modal -->
 {#if licenseModel}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (licenseModel = null)}
+    aria-labelledby="wizard-license-title"
+    aria-describedby="wizard-license-agree"
+  >
     <div class="modal-box">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">{m.settings_licenseModal_title()}</h2>
-        <button onclick={() => (licenseModel = null)} class="btn btn-ghost btn-sm btn-square">
+        <h2 id="wizard-license-title" class="text-lg font-semibold">{m.settings_licenseModal_title()}</h2>
+        <button
+          onclick={() => (licenseModel = null)}
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label={m.common_button_close()}
+        >
           <X size={20} />
         </button>
       </div>
@@ -579,7 +590,7 @@
           </div>
         </div>
 
-        <p class="text-base-content/50 text-xs">
+        <p id="wizard-license-agree" class="text-base-content/70 text-sm">
           {m.settings_licenseModal_agree({ license: licenseModel.license })}
         </p>
       </div>
@@ -595,7 +606,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (licenseModel = null)}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

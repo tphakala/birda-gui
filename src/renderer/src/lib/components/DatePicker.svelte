@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
+  import { getLocale } from '$paraglide/runtime';
   import { parseLocalDate } from '$lib/utils/format';
+  import { tick } from 'svelte';
 
   const {
     value,
@@ -78,6 +81,45 @@
   let dateInput = $state('');
   let dateInputError = $state(false);
 
+  // Roving tab stop for the day grid (the ARIA date picker dialog pattern):
+  // one day is tabbable, arrow keys move it, PageUp/PageDown change month.
+  let focusDate = $state(new Date(initialCalDate.getFullYear(), initialCalDate.getMonth(), initialCalDate.getDate()));
+  let gridEl = $state<HTMLDivElement>();
+  const fullDate = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'full' });
+
+  function isFocusDay(day: number, month: number, year: number): boolean {
+    return focusDate.getDate() === day && focusDate.getMonth() === month && focusDate.getFullYear() === year;
+  }
+
+  async function moveFocus(next: Date) {
+    focusDate = next;
+    calYear = next.getFullYear();
+    calMonth = next.getMonth();
+    await tick();
+    gridEl?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus();
+  }
+
+  function handleGridKeydown(e: KeyboardEvent) {
+    const d = focusDate;
+    const y = d.getFullYear();
+    const mo = d.getMonth();
+    const day = d.getDate();
+    const weekday = (d.getDay() + 6) % 7;
+    let next: Date | null = null;
+    if (e.key === 'ArrowLeft') next = new Date(y, mo, day - 1);
+    else if (e.key === 'ArrowRight') next = new Date(y, mo, day + 1);
+    else if (e.key === 'ArrowUp') next = new Date(y, mo, day - 7);
+    else if (e.key === 'ArrowDown') next = new Date(y, mo, day + 7);
+    else if (e.key === 'Home') next = new Date(y, mo, day - weekday);
+    else if (e.key === 'End') next = new Date(y, mo, day + 6 - weekday);
+    else if (e.key === 'PageUp') next = new Date(y, mo - 1, Math.min(day, new Date(y, mo, 0).getDate()));
+    else if (e.key === 'PageDown') next = new Date(y, mo + 1, Math.min(day, new Date(y, mo + 2, 0).getDate()));
+    if (next) {
+      e.preventDefault();
+      void moveFocus(next);
+    }
+  }
+
   function prevMonth() {
     if (calMonth === 0) {
       calMonth = 11;
@@ -85,6 +127,7 @@
     } else {
       calMonth--;
     }
+    focusDate = new Date(calYear, calMonth, 1);
   }
 
   function nextMonth() {
@@ -94,6 +137,7 @@
     } else {
       calMonth++;
     }
+    focusDate = new Date(calYear, calMonth, 1);
   }
 
   function selectDate(day: number, month: number, year: number) {
@@ -158,28 +202,48 @@
   }
 </script>
 
-<dialog class="modal modal-open" style="z-index: 1000;">
+<dialog class="modal" {@attach showModal} {onclose} aria-labelledby="date-picker-title">
   <div class="modal-box max-w-xs p-4">
+    <h2 id="date-picker-title" class="sr-only">{m.calendar_dialogTitle()}</h2>
     <!-- Month/year header -->
     <div class="flex items-center justify-between">
-      <button type="button" onclick={prevMonth} class="btn btn-ghost btn-sm btn-square">
+      <button
+        type="button"
+        onclick={prevMonth}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={m.calendar_previousMonth()}
+      >
         <ChevronLeft size={18} />
       </button>
-      <span class="text-sm font-semibold">{MONTH_NAMES[calMonth]} {calYear}</span>
-      <button type="button" onclick={nextMonth} class="btn btn-ghost btn-sm btn-square">
+      <span class="text-sm font-semibold" aria-live="polite">{MONTH_NAMES[calMonth]} {calYear}</span>
+      <button
+        type="button"
+        onclick={nextMonth}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={m.calendar_nextMonth()}
+      >
         <ChevronRight size={18} />
       </button>
     </div>
 
     <!-- Type date -->
     <div class="mt-2">
+      <!-- Start in the typed-date field rather than on the month buttons. -->
+      <!-- svelte-ignore a11y_autofocus -->
       <input
         type="text"
+        autofocus
+        aria-label={m.calendar_dateInputLabel()}
+        aria-invalid={dateInputError}
+        aria-describedby={dateInputError ? 'date-input-error' : undefined}
         bind:value={dateInput}
         onkeydown={handleDateInputKeydown}
         placeholder={m.calendar_datePlaceholder()}
         class="input input-bordered input-sm w-full text-center {dateInputError ? 'input-error' : ''}"
       />
+      {#if dateInputError}
+        <p id="date-input-error" class="text-error mt-1 text-xs">{m.calendar_dateInputError()}</p>
+      {/if}
     </div>
 
     <!-- Weekday headers -->
@@ -190,12 +254,22 @@
     </div>
 
     <!-- Day grid -->
-    <div class="grid grid-cols-7 text-center text-sm">
+    <div
+      bind:this={gridEl}
+      class="grid grid-cols-7 text-center text-sm"
+      onkeydown={handleGridKeydown}
+      role="presentation"
+    >
       {#each calendarDays as { day, month, year, current }, i (i)}
         {@const selected = isSelectedDay(day, month, year)}
         {@const today = isTodayDay(day, month, year)}
         <button
           type="button"
+          tabindex={isFocusDay(day, month, year) ? 0 : -1}
+          aria-label={fullDate.format(new Date(year, month, day))}
+          aria-pressed={selected}
+          aria-current={today ? 'date' : undefined}
+          onfocus={() => (focusDate = new Date(year, month, day))}
           onclick={() => {
             selectDate(day, month, year);
           }}
@@ -217,6 +291,6 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button onclick={onclose}>close</button>
+    <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
   </form>
 </dialog>

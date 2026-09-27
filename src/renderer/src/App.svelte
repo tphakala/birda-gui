@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$paraglide/messages';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
   import ProgressPanel from '$lib/components/ProgressPanel.svelte';
@@ -6,6 +7,7 @@
   import SetupWizard from '$lib/components/SetupWizard.svelte';
   import LicenseViewer from '$lib/components/LicenseViewer.svelte';
   import AnnotationEditor from '$lib/components/AnnotationEditor.svelte';
+  import { annotationEditor } from '$lib/stores/annotation.svelte';
   import ToastOutlet from '$lib/components/ToastOutlet.svelte';
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
@@ -60,6 +62,16 @@
     const tab = appState.activeTab;
     if (tab in visited) {
       visited[tab as keyof typeof visited] = true;
+    }
+  });
+
+  // Kept-alive pages are hidden, not unmounted, on a tab switch. A modal
+  // dialog left open inside one would stay modal while invisible and block
+  // the whole window, so close it; its close event resets its own state.
+  $effect(() => {
+    const _tab = appState.activeTab; // re-run on every tab switch
+    for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
+      if (!dialog.checkVisibility()) dialog.close();
     }
   });
 
@@ -187,8 +199,9 @@
         appState.sourcePath = path;
       },
       onFocusSearch: () => {
-        const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="species"]');
-        searchInput?.focus();
+        // The visible species search that is not behind the annotation editor.
+        const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
+        [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
       },
     });
 
@@ -220,14 +233,15 @@
 
 {#if showWizard === null}
   <main class="bg-base-100 flex h-screen items-center justify-center select-none">
-    <span class="loading loading-spinner loading-lg text-primary" role="status" aria-label="Loading"></span>
+    <span class="loading loading-spinner loading-lg text-primary" role="status" aria-label={m.common_loading()}></span>
   </main>
 {:else if showWizard}
   <main class="bg-base-100 text-base-content h-screen select-none">
     <SetupWizard oncomplete={handleWizardComplete} />
   </main>
 {:else}
-  <main class="bg-base-100 text-base-content flex h-screen select-none">
+  <!-- The annotation editor overlays the app; keep the page behind it out of reach. -->
+  <main class="bg-base-100 text-base-content flex h-screen select-none" inert={annotationEditor.open}>
     <Sidebar />
 
     <div class="flex flex-1 flex-col overflow-hidden">

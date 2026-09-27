@@ -25,21 +25,28 @@
   <div class="border-base-300 bg-base-200 space-y-2 border-t p-3">
     <div class="flex items-center justify-between text-sm">
       <span class="text-base-content flex items-center gap-1 font-medium">
-        {#if analysisState.status === 'running'}
-          {m.status_analyzing()}
-        {:else if analysisState.status === 'completed'}
-          <span class="text-success flex items-center gap-1">
-            <CircleCheckBig size={16} />
-            {m.progress_complete()}
-          </span>
-        {:else if analysisState.status === 'failed'}
-          <span class="text-error flex items-center gap-1">
-            <CircleX size={16} />
-            {m.progress_failed()}
-          </span>
-        {/if}
+        <!-- Mounted once the analysis reports it is running, so a later change to complete or failed is announced. -->
+        <span role="status" class="flex items-center gap-1">
+          {#if analysisState.status === 'running'}
+            {m.status_analyzing()}
+          {:else if analysisState.status === 'completed'}
+            <span class="text-success flex items-center gap-1">
+              <CircleCheckBig size={16} />
+              {m.progress_complete()}
+            </span>
+          {:else if analysisState.status === 'failed'}
+            <span class="text-error flex items-center gap-1">
+              <CircleX size={16} />
+              {m.progress_failed()}
+            </span>
+          {/if}
+        </span>
         {#if analysisState.status === 'completed' || analysisState.status === 'failed'}
-          <button onclick={dismissAnalysis} class="btn btn-ghost btn-xs btn-square" aria-label="Dismiss">
+          <button
+            onclick={dismissAnalysis}
+            class="btn btn-ghost btn-xs btn-square"
+            aria-label={m.common_button_close()}
+          >
             <X size={14} />
           </button>
         {/if}

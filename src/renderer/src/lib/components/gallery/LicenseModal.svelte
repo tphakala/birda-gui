@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { X } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import type { ModelLicense } from '$shared/types';
@@ -11,12 +12,9 @@
   }: { license: ModelLicense; modelName: string; onAccept: () => void; onCancel: () => void } = $props();
 
   let dialog = $state<HTMLDialogElement>();
-  $effect(() => {
-    dialog?.showModal();
-  });
 </script>
 
-<dialog class="modal" bind:this={dialog} onclose={onCancel} aria-labelledby="license-modal-title">
+<dialog class="modal" bind:this={dialog} {@attach showModal} onclose={onCancel} aria-labelledby="license-modal-title">
   <div class="modal-box">
     <div class="mb-3 flex items-center justify-between">
       <h3 id="license-modal-title" class="text-base font-semibold">{m.gallery_license_title()}</h3>
@@ -59,6 +57,6 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button aria-label={m.common_button_close()}>close</button>
+    <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
   </form>
 </dialog>

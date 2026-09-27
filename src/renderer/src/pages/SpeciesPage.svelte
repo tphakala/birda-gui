@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { focusIfLost, showModal } from '$lib/utils/dialog';
   import { Bird, Download, Plus, Search, Trash, X, Funnel, MapPin } from '@lucide/svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import { appState } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
   import {
     fetchSpeciesList,
     saveSpeciesList,
@@ -13,9 +15,10 @@
     resolveAllLabels,
   } from '$lib/utils/ipc';
   import type { SpeciesList, EnrichedSpeciesListEntry, BirdaSpeciesResponse } from '$shared/types';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import * as m from '$paraglide/messages';
+  import { getLocale } from '$paraglide/runtime';
 
   // --- List panel state ---
   let lists = $state<SpeciesList[]>([]);
@@ -53,6 +56,8 @@
   let customError = $state<string | null>(null);
   let customSearchQuery = $state('');
   let customSearchResults = $state<{ scientific_name: string; common_name: string }[]>([]);
+  // The query customSearchResults belong to; the count is announced only once they match.
+  let customResultsQuery = $state('');
   const customSelected = new SvelteMap<string, string>(); // scientific_name -> common_name
   let customSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -83,7 +88,12 @@
     void loadEntries(listId);
   }
 
-  async function handleListDelete(id: number) {
+  let pendingDelete = $state<SpeciesList | null>(null);
+  let listsHeading = $state<HTMLHeadingElement>();
+
+  async function handleListDelete(target: SpeciesList) {
+    const id = target.id;
+    pendingDelete = null;
     try {
       await deleteSpeciesListById(id);
       lists = lists.filter((l) => l.id !== id);
@@ -91,8 +101,12 @@
         appState.selectedSpeciesListId = null;
         entries = [];
       }
+      // The delete button that opened the confirmation is gone with its row.
+      await tick();
+      focusIfLost(listsHeading);
     } catch (err) {
       console.error('Failed to delete species list', id, err);
+      showToast(m.species_deleteFailed({ name: target.name, error: (err as Error).message }), { severity: 'error' });
     }
   }
 
@@ -105,7 +119,12 @@
   }
 
   // --- Fetch modal ---
+  // Bumped whenever the dialog opens, so a fetch that finishes after its
+  // dialog was closed cannot write into a newer one.
+  let fetchSeq = 0;
+
   function openFetchModal() {
+    fetchSeq++;
     fetchLat = 0;
     fetchLon = 0;
     fetchWeek = undefined;
@@ -127,21 +146,25 @@
       return;
     }
 
+    const seq = fetchSeq;
+    // The inputs stay editable while the fetch runs; name the list after the request that was sent.
+    const request = { latitude: fetchLat, longitude: fetchLon, week: fetchWeek, threshold: fetchThreshold };
     fetchLoading = true;
     fetchError = null;
     try {
-      fetchResult = await fetchSpeciesList({
-        latitude: fetchLat,
-        longitude: fetchLon,
-        week: fetchWeek,
-        threshold: fetchThreshold,
-      });
+      const result = await fetchSpeciesList(request);
+      if (seq !== fetchSeq) return;
+      fetchResult = result;
       // Auto-generate a default name
-      fetchListName = `${fetchLat.toFixed(2)}, ${fetchLon.toFixed(2)} — Week ${fetchWeek}`;
+      fetchListName = m.species_fetch_defaultName({
+        lat: request.latitude.toFixed(2),
+        lon: request.longitude.toFixed(2),
+        week: String(request.week),
+      });
     } catch (err) {
-      fetchError = (err as Error).message;
+      if (seq === fetchSeq) fetchError = (err as Error).message;
     } finally {
-      fetchLoading = false;
+      if (seq === fetchSeq) fetchLoading = false;
     }
   }
 
@@ -165,25 +188,33 @@
     customError = null;
     customSearchQuery = '';
     customSearchResults = [];
+    customResultsQuery = '';
     customSelected.clear();
     showCustomModal = true;
   }
 
   async function doCustomSearch() {
-    if (!customSearchQuery.trim()) {
+    const query = customSearchQuery;
+    if (!query.trim()) {
       customSearchResults = [];
+      customResultsQuery = query;
       return;
     }
+    let results: typeof customSearchResults;
     try {
-      const scientificNames = await searchByCommonName(customSearchQuery);
+      const scientificNames = await searchByCommonName(query);
       const nameMap = await resolveAllLabels(scientificNames);
-      customSearchResults = scientificNames.slice(0, 50).map((sn) => ({
+      results = scientificNames.slice(0, 50).map((sn) => ({
         scientific_name: sn,
         common_name: nameMap[sn] ?? sn,
       }));
     } catch {
-      customSearchResults = [];
+      results = [];
     }
+    // The query changed (or was cleared) while this search was running.
+    if (query !== customSearchQuery) return;
+    customSearchResults = results;
+    customResultsQuery = query;
   }
 
   function handleCustomSearch() {
@@ -221,9 +252,8 @@
 
   // Week-to-month helper
   function weekToMonth(week: number): string {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const idx = Math.min(Math.floor((week - 1) / 4), 11);
-    return months[idx];
+    return new Intl.DateTimeFormat(getLocale(), { month: 'short' }).format(new Date(2000, idx, 1));
   }
 
   onMount(() => {
@@ -246,7 +276,7 @@
   <!-- Left panel: Species list sidebar -->
   <div class="border-base-300 flex w-64 shrink-0 flex-col border-r">
     <div class="border-base-300 flex items-center justify-between border-b px-3 py-2">
-      <h2 class="text-sm font-semibold">{m.species_title()}</h2>
+      <h2 bind:this={listsHeading} tabindex="-1" class="text-sm font-semibold">{m.species_title()}</h2>
     </div>
 
     <!-- Action buttons -->
@@ -274,24 +304,21 @@
       {:else}
         {#each lists as list (list.id)}
           <div
-            role="button"
-            tabindex="0"
-            onclick={() => {
-              handleListSelect(list.id);
-            }}
-            onkeydown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleListSelect(list.id);
-              }
-            }}
-            class="group border-base-300 flex w-full cursor-pointer items-start gap-2 border-b px-3 py-2.5 text-left transition-colors
+            class="group border-base-300 flex w-full items-start gap-2 border-b pr-3 transition-colors
               {appState.selectedSpeciesListId === list.id
               ? 'bg-primary/10 border-l-primary border-l-2'
               : 'hover:bg-base-200/50'}"
           >
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-medium">{list.name}</div>
-              <div class="text-base-content/50 flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onclick={() => {
+                handleListSelect(list.id);
+              }}
+              aria-current={appState.selectedSpeciesListId === list.id ? 'true' : undefined}
+              class="min-w-0 flex-1 cursor-pointer py-2.5 pl-3 text-left"
+            >
+              <span class="block truncate text-sm font-medium">{list.name}</span>
+              <span class="text-base-content/50 flex items-center gap-2 text-xs">
                 <span
                   class="rounded px-1 py-0.5 text-[10px] font-medium
                   {list.source === 'fetched' ? 'bg-info/20 text-info' : 'bg-success/20 text-success'}"
@@ -299,15 +326,14 @@
                   {list.source === 'fetched' ? m.species_sourceFetched() : m.species_sourceCustom()}
                 </span>
                 <span>{m.species_speciesCount({ count: String(list.species_count) })}</span>
-              </div>
-            </div>
+              </span>
+            </button>
             <button
-              onclick={(e) => {
-                e.stopPropagation();
-                void handleListDelete(list.id);
-              }}
-              class="text-base-content/30 hover:text-error mt-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+              type="button"
+              onclick={() => (pendingDelete = list)}
+              class="text-base-content/30 hover:text-error mt-3 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100"
               title={m.species_deleteList()}
+              aria-label={m.species_deleteList()}
             >
               <Trash size={14} />
             </button>
@@ -355,12 +381,15 @@
           <input
             type="text"
             placeholder={m.species_searchInList()}
+            aria-label={m.species_searchInList()}
             bind:value={entryFilter}
             class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
           />
           {#if entryFilter}
             <button
+              type="button"
               onclick={() => (entryFilter = '')}
+              aria-label={m.common_button_clear()}
               class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
             >
               <X size={12} />
@@ -427,13 +456,19 @@
 
 <!-- Fetch Species Modal -->
 {#if showFetchModal}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showFetchModal = false)}
+    aria-labelledby="fetch-modal-title"
+    aria-describedby="fetch-modal-subtitle"
+  >
     <div class="modal-box max-w-lg">
       <div class="flex items-center gap-2">
         <Download size={18} class="text-primary" />
-        <h3 class="text-lg font-semibold">{m.species_fetch_title()}</h3>
+        <h3 id="fetch-modal-title" class="text-lg font-semibold">{m.species_fetch_title()}</h3>
       </div>
-      <p class="text-base-content/60 mt-1 text-sm">{m.species_fetch_subtitle()}</p>
+      <p id="fetch-modal-subtitle" class="text-base-content/60 mt-1 text-sm">{m.species_fetch_subtitle()}</p>
 
       <div class="mt-4 space-y-4">
         <CoordinateInput bind:latitude={fetchLat} bind:longitude={fetchLon} />
@@ -529,18 +564,23 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showFetchModal = false)}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
 
 <!-- Custom Species List Modal -->
 {#if showCustomModal}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showCustomModal = false)}
+    aria-labelledby="custom-modal-title"
+  >
     <div class="modal-box max-w-lg">
       <div class="flex items-center gap-2">
         <Plus size={18} class="text-primary" />
-        <h3 class="text-lg font-semibold">{m.species_custom_title()}</h3>
+        <h3 id="custom-modal-title" class="text-lg font-semibold">{m.species_custom_title()}</h3>
       </div>
 
       <div class="mt-4 space-y-3">
@@ -573,30 +613,50 @@
               type="text"
               bind:value={customSearchQuery}
               oninput={handleCustomSearch}
+              onkeydown={(e) => {
+                // Escape clears a non-empty search instead of closing the dialog.
+                if (e.key === 'Escape' && customSearchQuery) {
+                  e.preventDefault();
+                  if (customSearchTimeout) clearTimeout(customSearchTimeout);
+                  customSearchQuery = '';
+                  customSearchResults = [];
+                  customResultsQuery = '';
+                }
+              }}
               class="input input-bordered input-sm w-full pl-7"
               placeholder={m.species_custom_searchAdd()}
+              aria-label={m.species_custom_searchAdd()}
             />
           </div>
 
+          <p class="sr-only" aria-live="polite">
+            {customSearchQuery && customResultsQuery === customSearchQuery
+              ? m.species_custom_resultCount({ count: String(customSearchResults.length) })
+              : ''}
+          </p>
           {#if customSearchResults.length > 0}
             <div class="border-base-300 mt-1 max-h-40 overflow-y-auto rounded border">
               {#each customSearchResults as result (result.scientific_name)}
                 {@const isSelected = customSelected.has(result.scientific_name)}
-                <button
-                  onclick={() => {
-                    if (isSelected) {
-                      removeFromCustomList(result.scientific_name);
-                    } else {
-                      addToCustomList(result.scientific_name, result.common_name);
-                    }
-                  }}
-                  class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors
+                <label
+                  class="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors
                     {isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}"
                 >
-                  <input type="checkbox" checked={isSelected} class="checkbox checkbox-xs checkbox-primary" />
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onchange={() => {
+                      if (isSelected) {
+                        removeFromCustomList(result.scientific_name);
+                      } else {
+                        addToCustomList(result.scientific_name, result.common_name);
+                      }
+                    }}
+                    class="checkbox checkbox-xs checkbox-primary"
+                  />
                   <span class="flex-1">{result.common_name}</span>
                   <span class="text-base-content/40 italic">{result.scientific_name}</span>
-                </button>
+                </label>
               {/each}
             </div>
           {/if}
@@ -613,9 +673,11 @@
                 <span class="badge badge-sm gap-1">
                   {common}
                   <button
+                    type="button"
                     onclick={() => {
                       removeFromCustomList(sci);
                     }}
+                    aria-label={m.species_custom_removeSpecies({ name: common })}
                     class="hover:text-error"
                   >
                     <X size={10} />
@@ -646,7 +708,36 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showCustomModal = false)}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
+    </form>
+  </dialog>
+{/if}
+
+<!-- Delete Species List Confirmation -->
+{#if pendingDelete}
+  {@const target = pendingDelete}
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (pendingDelete = null)}
+    role="alertdialog"
+    aria-labelledby="delete-list-title"
+    aria-describedby="delete-list-body"
+  >
+    <div class="modal-box max-w-sm">
+      <h3 id="delete-list-title" class="text-lg font-semibold">{m.species_deleteConfirm_title()}</h3>
+      <p id="delete-list-body" class="text-base-content/70 mt-2 text-sm">
+        {m.species_deleteConfirm_body({ name: target.name })}
+      </p>
+      <div class="modal-action">
+        <button type="button" onclick={() => (pendingDelete = null)} class="btn">{m.common_button_cancel()}</button>
+        <button type="button" onclick={() => void handleListDelete(target)} class="btn btn-error">
+          {m.species_deleteList()}
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
