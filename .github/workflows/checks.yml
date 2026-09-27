@@ -1,7 +1,8 @@
 name: Checks
 
 # Shared validation run by ci.yml and release.yml, so a release tag goes
-# through the same checks as a pull request.
+# through the same checks as a pull request. The release passes build: false
+# because its platform jobs build the app themselves.
 on:
   workflow_call:
     inputs:
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   check:
-    name: Lint, Type Check & Build
+    name: Checks
     runs-on: ubuntu-latest
 
     steps:
