@@ -39,6 +39,7 @@ tasks:
   eslint:
     desc: Run ESLint (same files as the ESLint step of npm run lint)
     cmds:
+      - npm run paraglide
       - npx eslint .
 
   lint:

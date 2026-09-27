@@ -1,1 +1,6 @@
+# Type-aware ESLint reads the generated Paraglide output (gitignored), so
+# compile it when it is missing or when staged message catalogs change.
+if [ ! -d src/renderer/src/paraglide ] || ! git diff --cached --quiet -- messages project.inlang; then
+  npm run --silent paraglide
+fi
 npx lint-staged

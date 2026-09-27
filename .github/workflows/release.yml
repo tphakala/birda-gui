@@ -39,7 +39,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+          if [[ "$GITHUB_REF_TYPE" != "tag" || "$GITHUB_REF_NAME" != v* ]]; then
             echo "::error::Releases run from a v* tag ref, not $GITHUB_REF_TYPE $GITHUB_REF_NAME"
             exit 1
           fi
