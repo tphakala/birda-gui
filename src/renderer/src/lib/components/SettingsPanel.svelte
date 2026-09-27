@@ -915,7 +915,9 @@
                 clearError = null;
                 showClearConfirm = true;
               }}
-              disabled={clearing || appState.catalogStats.total_detections === 0 || appState.isAnalysisRunning}
+              disabled={clearing ||
+                (appState.catalogStats.total_detections === 0 && appState.catalogStats.saved_locations === 0) ||
+                appState.isAnalysisRunning}
               title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
               class="btn btn-error btn-sm gap-1.5"
             >
