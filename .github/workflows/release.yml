@@ -59,15 +59,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The arch is explicit so the file names in the release notes do not
+          # depend on the runner's architecture.
           - platform: linux
             os: ubuntu-latest
             dist-flag: --linux
+            arch-flag: --x64
           - platform: windows
             os: windows-latest
             dist-flag: --win
+            arch-flag: --x64
           - platform: macos
             os: macos-latest
             dist-flag: --mac
+            arch-flag: --arm64
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -115,7 +120,7 @@ jobs:
       # by default (to the repository package.json names), and without a token
       # that would fail the job.
       - name: Package
-        run: npx electron-builder ${{ matrix.dist-flag }} --publish never
+        run: npx electron-builder ${{ matrix.dist-flag }} ${{ matrix.arch-flag }} --publish never
         env:
           APPLE_TEAM_ID: ${{ matrix.platform == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           APPLE_ID: ${{ matrix.platform == 'macos' && secrets.APPLE_ID || '' }}
