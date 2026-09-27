@@ -40,6 +40,7 @@
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
   import { onMount } from 'svelte';
   import type { AnalysisResult, AnalysisStatus } from '$shared/types';
+  import { COMPLETE_RUN_STATUSES } from '$shared/constants';
 
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
@@ -48,6 +49,8 @@
   async function syncDefaultModel(): Promise<void> {
     try {
       const models = await listModels();
+      // A joined running analysis has set its own model.
+      if (appState.isAnalysisRunning) return;
       const defaultModel = models.find((m) => m.is_default);
       appState.selectedModel = defaultModel?.id ?? '';
     } catch {
@@ -108,6 +111,7 @@
       // The panel stays, showing what was analysed before the Stop.
       const nothingKept = outcome.runId === null || analysisState.totalDetections === 0;
       analysisState.status = 'stopped';
+      analysisState.discarded = outcome.discardedPartial;
       // The file that was being analysed was not finished.
       analysisState.currentFile = null;
       showToast(
@@ -120,10 +124,12 @@
       );
     } else if (outcome.status === 'failed') {
       analysisState.status = 'failed';
+      analysisState.currentFile = null;
       // A returned failure is a run in which no file was analysed or imported.
       analysisState.error = outcome.error ?? m.analysis_allFilesFailed();
     } else {
       analysisState.status = 'completed';
+      analysisState.hadErrors = outcome.status === 'completed_with_errors';
     }
     catalogChanged();
   }
@@ -145,7 +151,6 @@
         joinRunningAnalysis(status.progress);
       }
     } else if (status.finished && analysisState.status !== 'idle') {
-      // The panel may already say complete from birda's pipeline_completed event.
       showOutcome(status.finished);
     } else if (status.finished) {
       catalogChanged();
@@ -201,7 +206,7 @@
       });
       showOutcome(result);
       shownOwnOutcome = true;
-      if (result.runId !== null && (result.status === 'completed' || result.status === 'completed_with_errors')) {
+      if (result.runId !== null && (COMPLETE_RUN_STATUSES as readonly string[]).includes(result.status)) {
         appState.lastRunId = result.runId;
         appState.lastSourceFile = sourcePath;
         appState.selectedRunId = result.runId;
@@ -272,12 +277,14 @@
         showLicenses = true;
       }),
       setupMenuListeners({
+        canOpenFile: () => {
+          if (!appState.isAnalysisRunning) return true;
+          showToast(m.analysis_lockedDuringRun(), { severity: 'warning' });
+          return false;
+        },
         onOpenFile: (path: string) => {
-          if (appState.isAnalysisRunning) {
-            showToast(m.analysis_lockedDuringRun(), { severity: 'warning' });
-            return;
-          }
-          appState.sourcePath = path;
+          // The analysis may have started while the dialog was open.
+          if (!appState.isAnalysisRunning) appState.sourcePath = path;
         },
         onFocusSearch: () => {
           // The visible species search that is not behind the annotation editor.
@@ -288,7 +295,10 @@
       // One progress listener for the window's lifetime, so a Stop then Start
       // never leaves two listeners counting the same events.
       onAnalysisProgress((envelope) => {
-        handleAnalysisEvent(envelope as BirdaEventEnvelope);
+        const event = envelope as BirdaEventEnvelope;
+        handleAnalysisEvent(event);
+        // The run exists once birda starts; views that list runs can show it.
+        if (event.event === 'pipeline_started') appState.runsVersion++;
       }),
       onAnalysisStatusChanged(applyAnalysisStatus),
       followModelInstalls(),

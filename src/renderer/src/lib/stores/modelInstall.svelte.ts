@@ -10,8 +10,10 @@ import type { ModelInstallFinished, ModelInstallProgress, ModelInstallRequest } 
 interface ModelInstallState {
   /** The install holding birda's single install slot, whichever component or window started it. */
   current: { request: ModelInstallRequest; progress: ModelInstallProgress | null } | null;
-  /** The last install that ended. seq grows by one per install, so a component handles each once. */
+  /** The last install that ended. seq grows by one per install. */
   lastFinished: (ModelInstallFinished & { seq: number }) | null;
+  /** seq of the last outcome a component showed; one that ended while none was mounted is shown by the next. */
+  reportedSeq: number;
 }
 
 /**
@@ -19,7 +21,7 @@ interface ModelInstallState {
  * with the main process for the window's lifetime, so a component that is not
  * mounted when an install ends cannot leave it stuck.
  */
-export const modelInstall = $state<ModelInstallState>({ current: null, lastFinished: null });
+export const modelInstall = $state<ModelInstallState>({ current: null, lastFinished: null, reportedSeq: 0 });
 
 let finishedCount = 0;
 
@@ -53,24 +55,44 @@ export function followModelInstalls(): () => void {
 }
 
 /**
- * Starts an install unless one is running. Resolves true when it installed;
- * how it ended is also reported through lastFinished, for every component.
+ * Starts an install. Resolves true when it installed, false when it was
+ * cancelled, failed or refused (another install is running); how it ended is
+ * reported through lastFinished.
  */
 export async function startModelInstall(request: ModelInstallRequest): Promise<boolean> {
   if (modelInstall.current) return false;
-  modelInstall.current = { request, progress: null };
+  const mine = { request, progress: null };
+  modelInstall.current = mine;
   const seenAt = finishedCount;
   try {
     await installModel(request);
     return true;
   } catch {
-    // Refused before it started (another install holds the slot): no finished
-    // event will come, so take the running install's state from main.
-    if (finishedCount === seenAt) await syncFromMain().catch(() => undefined);
+    if (finishedCount === seenAt) {
+      // Refused before it started (another install holds the slot): no
+      // finished event will come, so show the install main is running.
+      if (modelInstall.current === mine) modelInstall.current = null;
+      await syncFromMain().catch(() => undefined);
+    }
     return false;
+  } finally {
+    // The install has settled. Its finished event may arrive after this reply;
+    // clear it now so a caller such as Update all can start the next one.
+    if (modelInstall.current === mine) modelInstall.current = null;
   }
 }
 
-export async function cancelModelInstall(): Promise<void> {
-  await cancelInstall();
+/**
+ * Shows each install outcome once, from a component: one that ended while no
+ * component was mounted is shown when one mounts. Call during component init.
+ */
+export function reportInstallOutcomes(report: (finished: ModelInstallFinished) => void): void {
+  $effect(() => {
+    const finished = modelInstall.lastFinished;
+    if (!finished || finished.seq <= modelInstall.reportedSeq) return;
+    modelInstall.reportedSeq = finished.seq;
+    report(finished);
+  });
 }
+
+export { cancelInstall as cancelModelInstall };

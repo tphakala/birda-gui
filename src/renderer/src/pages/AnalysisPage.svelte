@@ -15,6 +15,8 @@
   import DatePicker from '$lib/components/DatePicker.svelte';
   import SourceFilesPanel from '$lib/components/SourceFilesPanel.svelte';
   import { appState } from '$lib/stores/app.svelte';
+  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
+  import { lockedTitle } from '$lib/utils/runLock';
   import {
     openFileDialog,
     openFolderDialog,
@@ -72,8 +74,8 @@
   );
 
   // --- Derived values for analysis config ---
-  const configSourceFileName = $derived(appState.sourcePath ? (appState.sourcePath.split(/[\\/]/).pop() ?? '') : '');
-  const fileDate = $derived(configSourceFileName ? parseRecordingStart(configSourceFileName) : null);
+  // The whole path, parsed the way the main process parses it for birda.
+  const fileDate = $derived(appState.sourcePath ? parseRecordingStart(appState.sourcePath) : null);
   const needsDateInput = $derived(!fileDate);
   const hasCoords = $derived(latitude !== 0 || longitude !== 0);
   const hasDate = $derived(!!fileDate || !!recordingDate);
@@ -89,6 +91,8 @@
     const currentPath = appState.sourcePath;
     if (currentPath && currentPath !== prevSourcePath) {
       prevSourcePath = currentPath;
+      // A finished or stopped analysis's per-file statuses belong to its source, not this one.
+      if (!appState.isAnalysisRunning) dismissAnalysis();
       // Scan source files
       scanning = true;
       scanResult = null;
@@ -109,8 +113,10 @@
           }
         }
       })();
-      // Auto-detect coordinates
+      // Auto-detect coordinates, except for a running analysis this window
+      // joined: the form shows that analysis's own coordinates.
       void (async () => {
+        if (appState.isAnalysisRunning) return;
         try {
           const coords = await readCoordinates(pathAtStart);
           if (coords && appState.sourcePath === pathAtStart) {
@@ -192,15 +198,28 @@
     onstart({ locationName, latitude, longitude, month, day, timezoneOffsetMin });
   }
 
-  // Settings of a running analysis this window joined (after a reload) replace the form's once.
+  // The location and date of a running analysis this window joined (after a
+  // reload) replace the form's once; App sets its model and confidence.
   $effect(() => {
     const joined = appState.joinedSettings;
     if (!joined) return;
     latitude = joined.latitude ?? 0;
     longitude = joined.longitude ?? 0;
     locationName = joined.location_name ?? '';
+    // Only month and day reach birda; the year is a placeholder.
+    recordingDate =
+      joined.month !== undefined && joined.day !== undefined
+        ? `${new Date().getFullYear()}-${String(joined.month).padStart(2, '0')}-${String(joined.day).padStart(2, '0')}`
+        : '';
     appState.joinedSettings = null;
   });
+
+  async function backFromWarning() {
+    showNoFilterWarning = false;
+    // The warning is replaced by the Start/Stop button again; keep focus on it.
+    await tick();
+    startStopButton?.focus();
+  }
 
   async function handleOpenFile() {
     const path = await openFileDialog();
@@ -267,7 +286,8 @@
           type="button"
           onclick={handleOpenFile}
           disabled={appState.isAnalysisRunning}
-          title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
+          title={lockedTitle()}
+          aria-describedby={appState.isAnalysisRunning ? 'analysis-locked' : undefined}
           class="btn btn-outline btn-sm flex-1 gap-1.5"
         >
           <FileHeadphone size={14} />
@@ -277,7 +297,8 @@
           type="button"
           onclick={handleOpenFolder}
           disabled={appState.isAnalysisRunning}
-          title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
+          title={lockedTitle()}
+          aria-describedby={appState.isAnalysisRunning ? 'analysis-locked' : undefined}
           class="btn btn-outline btn-sm flex-1 gap-1.5"
         >
           <FolderOpen size={14} />
@@ -294,17 +315,21 @@
           onclick={() => (appState.sourcePath = null)}
           disabled={appState.isAnalysisRunning}
           class="btn btn-ghost btn-xs btn-square"
-          title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : m.common_button_clear()}
+          title={lockedTitle(m.common_button_clear())}
           aria-label={m.common_button_clear()}
         >
           <X size={14} />
         </button>
       </div>
 
-      <!-- The configuration applies to the next analysis, so it is locked while one runs. -->
+      <!-- The configuration applies to the next analysis, so it is locked while
+           one runs, with the reason shown for everyone, not only on hover. -->
+      {#if appState.isAnalysisRunning}
+        <p id="analysis-locked" class="text-base-content/60 text-xs">{m.analysis_lockedDuringRun()}</p>
+      {/if}
       <fieldset
         disabled={appState.isAnalysisRunning}
-        title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
+        aria-describedby={appState.isAnalysisRunning ? 'analysis-locked' : undefined}
         class="space-y-4"
       >
         <!-- Model -->
@@ -419,13 +444,17 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <button type="button" onclick={() => (showNoFilterWarning = false)} class="btn btn-sm flex-1"
-            >{m.common_button_back()}</button
+          <button
+            type="button"
+            onclick={() => void backFromWarning()}
+            onkeydown={ignoreKeyRepeat}
+            class="btn btn-sm flex-1">{m.common_button_back()}</button
           >
           <button
             type="button"
             bind:this={startAnywayButton}
             onclick={() => void startAnyway()}
+            onkeydown={ignoreKeyRepeat}
             class="btn btn-warning btn-sm flex-1">{m.analysis_startAnyway()}</button
           >
         </div>
@@ -454,8 +483,6 @@
             {m.analysis_startAnalysis()}
           {/if}
         </button>
-        <!-- A label change on a focused button is not reliably announced. -->
-        <span class="sr-only" aria-live="polite">{appState.isAnalysisStopping ? m.analysis_stopping() : ''}</span>
       {/if}
     </div>
 

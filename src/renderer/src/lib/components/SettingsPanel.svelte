@@ -44,6 +44,7 @@
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
   import { appState, catalogChanged } from '$lib/stores/app.svelte';
+  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
     BirdaCheckResponse,
@@ -154,11 +155,14 @@
   let showCudaRemoveConfirm = $state(false);
   // Progress and the outcome of a CUDA download, whichever window started it,
   // for as long as this panel is mounted.
+  // Counts cuda:download-finished events, to tell a refused download from one that ended.
+  let cudaFinishedCount = 0;
   const offCudaListeners = [
     onCudaDownloadProgress((progress) => {
       if (cudaDownloading) cudaProgress = progress;
     }),
     onCudaDownloadFinished((finished) => {
+      cudaFinishedCount++;
       cudaDownloading = false;
       cudaProgress = null;
       if (finished.outcome === 'failed') cudaError = finished.error ?? '';
@@ -242,12 +246,14 @@
     cudaDownloading = true;
     cudaError = null;
     cudaProgress = null;
+    const seenAt = cudaFinishedCount;
     try {
       await downloadCudaLibs(BIRDA_CLI_VERSION);
     } catch {
-      // The outcome, a failure included, arrives on cuda:download-finished. A
-      // download refused because one is running sends none: follow that one.
-      await refreshCudaStatus();
+      // The outcome, a failure included, arrives on cuda:download-finished,
+      // which refreshes the status. Only a download refused because another
+      // is running sends none; cudaDownloading stays set until that one ends.
+      if (cudaFinishedCount === seenAt) await refreshCudaStatus();
     }
   }
 
@@ -335,6 +341,8 @@
       await tick();
       focusIfLost(dbContentHeading);
       catalogChanged();
+      // A finished analysis's panel may describe results that are gone now.
+      dismissAnalysis();
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {
@@ -756,7 +764,7 @@
       <div class="flex items-center gap-3">
         <button onclick={save} disabled={saving} class="btn btn-primary gap-1.5">
           {#if saving}
-            <Loader size={14} class="animate-spin" />
+            <Loader size={14} class="motion-safe:animate-spin" />
           {:else}
             <Save size={14} />
           {/if}
@@ -831,7 +839,7 @@
           <div>
             <button onclick={runHealthCheck} disabled={checkingHealth} class="btn btn-outline btn-sm gap-1.5">
               {#if checkingHealth}
-                <Loader size={14} class="animate-spin" />
+                <Loader size={14} class="motion-safe:animate-spin" />
                 {m.settings_data_checking()}
               {:else}
                 <RefreshCw size={14} />
@@ -854,7 +862,7 @@
             <div class="flex items-center gap-3">
               <button onclick={runOptimize} disabled={optimizing} class="btn btn-outline btn-sm gap-1.5">
                 {#if optimizing}
-                  <Loader size={14} class="animate-spin" />
+                  <Loader size={14} class="motion-safe:animate-spin" />
                 {:else}
                   <RefreshCw size={14} />
                 {/if}
@@ -869,7 +877,7 @@
             <div class="flex items-center gap-3">
               <button onclick={runVacuum} disabled={vacuuming} class="btn btn-outline btn-sm gap-1.5">
                 {#if vacuuming}
-                  <Loader size={14} class="animate-spin" />
+                  <Loader size={14} class="motion-safe:animate-spin" />
                 {:else}
                   <Database size={14} />
                 {/if}
@@ -978,7 +986,7 @@
         </button>
         <button onclick={confirmClearDatabase} disabled={clearing} class="btn btn-error gap-1.5">
           {#if clearing}
-            <Loader size={14} class="animate-spin" />
+            <Loader size={14} class="motion-safe:animate-spin" />
           {/if}
           {m.settings_clearModal_deleteAll()}
         </button>

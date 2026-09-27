@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { AudioLines, CircleAlert, CircleSlash, Loader, Trash, X } from '@lucide/svelte';
+  import { AudioLines, CircleAlert, CircleSlash, Loader, Trash } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import { tick } from 'svelte';
   import { focusIfLost } from '$lib/utils/dialog';
-  import { formatDate } from '$lib/utils/format';
+  import { formatDate, formatNumber } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -60,8 +60,8 @@
 
   function detectionLabel(count: number): string {
     return count === 1
-      ? m.runs_detectionCountSingular({ count: String(count) })
-      : m.runs_detectionCount({ count: String(count) });
+      ? m.runs_detectionCountSingular({ count: formatNumber(count) })
+      : m.runs_detectionCount({ count: formatNumber(count) });
   }
 </script>
 
@@ -140,7 +140,7 @@
               title={m.runs_deleteRun()}
               aria-label={m.runs_deleteRun()}
             >
-              <X size={14} />
+              <Trash size={14} />
             </button>
           {/if}
         </div>

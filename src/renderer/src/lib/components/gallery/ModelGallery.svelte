@@ -9,7 +9,12 @@
   import * as m from '$paraglide/messages';
   import { listModels, listAvailableModels, getModelManifest, setDefaultModel, removeModel } from '$lib/utils/ipc';
   import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
-  import { cancelModelInstall, modelInstall, startModelInstall } from '$lib/stores/modelInstall.svelte';
+  import {
+    cancelModelInstall,
+    modelInstall,
+    reportInstallOutcomes,
+    startModelInstall,
+  } from '$lib/stores/modelInstall.svelte';
   import DownloadProgress from './DownloadProgress.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
@@ -106,11 +111,7 @@
 
   // Report each install that ends once, wherever it was started: this window's
   // own installs and one followed after a reload or remount.
-  let seenFinished = modelInstall.lastFinished?.seq ?? 0;
-  $effect(() => {
-    const finished = modelInstall.lastFinished;
-    if (!finished || finished.seq === seenFinished) return;
-    seenFinished = finished.seq;
+  reportInstallOutcomes((finished) => {
     const model = modelName(finished.request);
     if (finished.outcome === 'installed') {
       void refreshInstalled();
@@ -163,8 +164,8 @@
     void doInstall(family, variant);
   }
 
-  function handleCancel(): Promise<void> {
-    return cancelModelInstall();
+  async function handleCancel(): Promise<void> {
+    await cancelModelInstall();
   }
 
   async function handleSetDefault(id: string): Promise<void> {

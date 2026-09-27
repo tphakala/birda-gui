@@ -6,6 +6,7 @@
   import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
   import { appState, catalogChanged } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
+  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import {
     getRuns,
     getDetections,
@@ -90,21 +91,37 @@
   }
 
   // One getRuns at a time: an analysis that ends and selects its new run asks
-  // for the list twice in the same moment.
+  // for the list twice in the same moment. A call made while one is in flight
+  // asks for one more load after it, so no caller gets a list from before its change.
   let runsRequest: Promise<void> | null = null;
+  let runsWanted = 0;
 
   function refreshRuns(): Promise<void> {
-    runsRequest ??= loadRuns().finally(() => {
+    runsWanted++;
+    if (runsRequest) return runsRequest;
+    runsRequest = (async () => {
+      let loaded;
+      do {
+        loaded = runsWanted;
+        await loadRuns();
+      } while (runsWanted !== loaded);
+    })().finally(() => {
       runsRequest = null;
     });
     return runsRequest;
   }
 
   async function loadRuns() {
-    const previous = runs.find((r) => r.id === appState.selectedRunId);
+    const selectedAtStart = appState.selectedRunId;
+    const previous = runs.find((r) => r.id === selectedAtStart);
     try {
       runs = await getRuns();
-      if (appState.selectedRunId !== null && !runs.some((r) => r.id === appState.selectedRunId)) {
+      // A selection made during the request is newer than this list; leave it.
+      if (
+        appState.selectedRunId === selectedAtStart &&
+        selectedAtStart !== null &&
+        !runs.some((r) => r.id === selectedAtStart)
+      ) {
         // The selected run is gone, e.g. replaced by a newer analysis of the
         // same source and model: select that one, or nothing.
         const replacement = previous
@@ -128,8 +145,10 @@
     if (appState.runsVersion !== seenRunsVersion) {
       seenRunsVersion = appState.runsVersion;
       const selected = appState.selectedRunId;
+      // A selection that changes in this same update is loaded by the selection effect.
+      const selectionChanging = selected !== prevSelectedRunId;
       void refreshRuns().then(() => {
-        if (selected !== null && appState.selectedRunId === selected) loadActiveView();
+        if (!selectionChanging && selected !== null && appState.selectedRunId === selected) loadActiveView();
       });
     }
   });
@@ -220,6 +239,8 @@
         appState.selectedRunId = null;
       }
       catalogChanged();
+      // A finished analysis's panel may describe results that are gone now.
+      dismissAnalysis();
     } catch (error) {
       console.error('Failed to delete run', runId, error);
       showToast(m.runs_deleteFailed(), { severity: 'error' });
@@ -508,7 +529,7 @@
     <!-- No run selected -->
     <div class="flex flex-1 flex-col items-center justify-center gap-3">
       <List size={40} class="text-base-content/15" />
-      <p class="text-base-content/40 text-sm">{m.runs_selectRun()}</p>
+      <p class="text-base-content/60 text-sm">{runs.length > 0 ? m.runs_selectRun() : m.runs_empty()}</p>
     </div>
   {/if}
 </div>

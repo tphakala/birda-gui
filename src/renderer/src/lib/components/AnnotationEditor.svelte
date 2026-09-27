@@ -497,9 +497,9 @@
           disabled={loading}
           aria-label={m.annotation_play()}
         >
-          {#if loading}<LoaderCircle size={16} class="animate-spin" />{:else if playing}<Pause size={16} />{:else}<Play
+          {#if loading}<LoaderCircle size={16} class="motion-safe:animate-spin" />{:else if playing}<Pause
               size={16}
-            />{/if}
+            />{:else}<Play size={16} />{/if}
         </button>
         <button class="btn btn-ghost btn-sm" onclick={zoomOut} aria-label={m.annotation_zoomOut()}
           ><ZoomOut size={14} /></button

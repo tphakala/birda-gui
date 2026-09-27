@@ -28,7 +28,7 @@
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { onMount } from 'svelte';
-  import { modelInstall, startModelInstall } from '$lib/stores/modelInstall.svelte';
+  import { modelInstall, reportInstallOutcomes, startModelInstall } from '$lib/stores/modelInstall.svelte';
   import * as m from '$paraglide/messages';
   import { LANGUAGES, getLanguage } from '$lib/i18n/languages';
   import { detectLanguage } from '$lib/i18n/detect';
@@ -138,11 +138,7 @@
   }
 
   // Report each install that ends once, including one followed after a reload.
-  let seenFinished = modelInstall.lastFinished?.seq ?? 0;
-  $effect(() => {
-    const finished = modelInstall.lastFinished;
-    if (!finished || finished.seq === seenFinished) return;
-    seenFinished = finished.seq;
+  reportInstallOutcomes((finished) => {
     const modelId = finished.request.id;
     if (finished.outcome === 'installed') {
       installAnnouncement = m.gallery_installedToast({ model: modelId });

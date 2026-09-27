@@ -8,10 +8,13 @@ export function isTab(value: unknown): value is Tab {
 }
 
 export function setupMenuListeners(callbacks: {
+  /** Whether a source may be opened now; called before the dialog opens. */
+  canOpenFile: () => boolean;
   onOpenFile: (path: string) => void;
   onFocusSearch: () => void;
 }): () => void {
   const handleOpenFile = () => {
+    if (!callbacks.canOpenFile()) return;
     void (async () => {
       const path = await openFileDialog();
       if (path) callbacks.onOpenFile(path);
@@ -19,6 +22,7 @@ export function setupMenuListeners(callbacks: {
   };
 
   const handleOpenFolder = () => {
+    if (!callbacks.canOpenFile()) return;
     void (async () => {
       const path = await openFolderDialog();
       if (path) callbacks.onOpenFile(path);

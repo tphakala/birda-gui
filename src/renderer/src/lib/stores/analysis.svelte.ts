@@ -18,6 +18,10 @@ interface AnalysisProgress {
   totalDetections: number;
   currentFile: FileProgress | null;
   status: 'idle' | 'running' | 'completed' | 'failed' | 'stopped';
+  /** Completed, but some files failed to analyse or import. */
+  hadErrors: boolean;
+  /** Stopped, and the partial results were discarded for earlier complete ones. */
+  discarded: boolean;
   error: string | null;
   events: BirdaEventEnvelope[];
 }
@@ -29,6 +33,8 @@ export const analysisState = $state<AnalysisProgress>({
   totalDetections: 0,
   currentFile: null,
   status: 'idle',
+  hadErrors: false,
+  discarded: false,
   error: null,
   events: [],
 });
@@ -46,6 +52,8 @@ export function resetAnalysis(): void {
   analysisState.totalDetections = 0;
   analysisState.currentFile = null;
   analysisState.status = 'idle';
+  analysisState.hadErrors = false;
+  analysisState.discarded = false;
   analysisState.error = null;
   analysisState.events = [];
 }
@@ -103,10 +111,6 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
     }
     case 'file_completed': {
       analysisState.currentFile = null;
-      break;
-    }
-    case 'pipeline_completed': {
-      analysisState.status = 'completed';
       break;
     }
   }

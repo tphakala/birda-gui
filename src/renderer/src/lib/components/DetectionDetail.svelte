@@ -9,6 +9,8 @@
   import { formatTime, formatConfidence } from '$lib/utils/format';
   import { toBirdaMediaUrl } from '$lib/utils/media-url';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
+  import { lockedTitle } from '$lib/utils/runLock';
+  import { appState } from '$lib/stores/app.svelte';
   import type { EnrichedDetection } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -348,7 +350,7 @@
       <!-- Play button -->
       <button onclick={togglePlay} disabled={loading} class="btn btn-primary btn-circle btn-sm mt-1 shrink-0">
         {#if loading}
-          <LoaderCircle size={16} class="animate-spin" />
+          <LoaderCircle size={16} class="motion-safe:animate-spin" />
         {:else if playing}
           <Pause size={16} />
         {:else}
@@ -363,7 +365,14 @@
           <span>{detection.common_name}</span>
           <span class="text-base-content/40">({formatConfidence(detection.confidence)})</span>
           {#if detection.audio_file}
-            <button class="btn btn-primary btn-xs" onclick={annotateFile} title={m.annotation_annotateFile()}>
+            <!-- Unavailable during a run: a stopped re-analysis can discard the run an annotation would be saved on. -->
+            <button
+              type="button"
+              class="btn btn-primary btn-xs"
+              onclick={annotateFile}
+              disabled={appState.isAnalysisRunning}
+              title={lockedTitle(m.annotation_annotateFile())}
+            >
               {m.annotation_annotateFile()}
             </button>
           {/if}

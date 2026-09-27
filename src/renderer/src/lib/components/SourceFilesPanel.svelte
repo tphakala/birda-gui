@@ -20,6 +20,7 @@
   import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
   import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
   import * as m from '$paraglide/messages';
+  import { lockedTitle } from '$lib/utils/runLock';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
   import { resolveAnnotationFile } from '$lib/utils/ipc';
@@ -90,7 +91,7 @@
 
 {#if scanning}
   <div class="flex flex-1 items-center justify-center">
-    <Loader size={24} class="text-primary animate-spin" />
+    <Loader size={24} class="text-primary motion-safe:animate-spin" />
     <span class="text-base-content/50 ml-2 text-sm">{m.sourceFiles_scanning()}</span>
   </div>
 {:else if scanResult?.files.length === 1}
@@ -243,17 +244,20 @@
                 <td class="text-center">
                   {#if status === 'processing'}
                     <div class="flex items-center justify-center gap-1">
-                      <Loader size={12} class="text-primary animate-spin" />
+                      <Loader size={12} class="text-primary motion-safe:animate-spin" />
                       <span class="text-primary text-xs tabular-nums">{getPercent(file.path).toFixed(0)}%</span>
                     </div>
                   {:else if status === 'completed'}
-                    <Check size={14} class="text-success mx-auto" />
+                    <Check size={14} class="text-success mx-auto" aria-hidden="true" />
+                    <span class="sr-only">{m.sourceFiles_statusDone()}</span>
                   {:else if status === 'failed'}
-                    <X size={14} class="text-error mx-auto" />
+                    <X size={14} class="text-error mx-auto" aria-hidden="true" />
+                    <span class="sr-only">{m.sourceFiles_statusFailed()}</span>
                   {:else if status === 'skipped'}
                     <span class="text-warning text-xs">{m.sourceFiles_statusSkip()}</span>
                   {:else if status === 'pending'}
-                    <span class="text-base-content/20 text-xs">...</span>
+                    <span class="text-base-content/50 text-xs" aria-hidden="true">...</span>
+                    <span class="sr-only">{m.sourceFiles_statusPending()}</span>
                   {/if}
                 </td>
               {/if}
@@ -266,7 +270,7 @@
                   onclick={() => {
                     void annotate(file.path);
                   }}
-                  title={analysisRunning ? m.analysis_lockedDuringRun() : m.annotation_annotateFile()}
+                  title={lockedTitle(m.annotation_annotateFile())}
                 >
                   {m.annotation_annotate()}
                 </button>
