@@ -471,7 +471,10 @@ export interface AppSettings {
 export interface CatalogStats {
   total_detections: number;
   total_species: number;
+  /** Locations with detections from finished runs. */
   total_locations: number;
+  /** Every saved location, including those without detections, as Clear Database deletes them. */
+  saved_locations: number;
 }
 
 export interface ClearDatabaseResult {

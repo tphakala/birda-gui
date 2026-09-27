@@ -40,16 +40,19 @@ export function findLocationByCoords(latitude: number, longitude: number): Locat
     .get(latitude, longitude) as Location | undefined;
 }
 
+/**
+ * Locations with detections from finished runs, for the map. A location whose
+ * runs ended without detections (failed, stopped early or found nothing) stays
+ * saved for the analysis form's location picker (getLocations) but has no marker.
+ */
 export function getLocationsWithCounts(): (Location & { detection_count: number; species_count: number })[] {
   const db = getDb();
   return db
     .prepare(
       `
-    SELECT l.*,
-      COALESCE(d.detection_count, 0) as detection_count,
-      COALESCE(d.species_count, 0) as species_count
+    SELECT l.*, d.detection_count, d.species_count
     FROM locations l
-    LEFT JOIN (
+    JOIN (
       SELECT location_id,
         COUNT(*) as detection_count,
         COUNT(DISTINCT scientific_name) as species_count

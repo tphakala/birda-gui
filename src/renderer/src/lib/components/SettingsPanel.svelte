@@ -906,7 +906,7 @@
           <div class="text-base-content/70 flex items-center gap-6 text-sm">
             <span>{m.settings_data_detections({ count: appState.catalogStats.total_detections })}</span>
             <span>{m.settings_data_species({ count: appState.catalogStats.total_species })}</span>
-            <span>{m.settings_data_locations({ count: appState.catalogStats.total_locations })}</span>
+            <span>{m.settings_data_locations({ count: appState.catalogStats.saved_locations })}</span>
           </div>
 
           <div class="flex items-center gap-3">
@@ -977,7 +977,7 @@
       </p>
       <div class="border-base-300 bg-base-200 mt-2 rounded-lg border p-3 text-sm">
         <p>{m.settings_clearModal_detectionsRemoved({ count: appState.catalogStats.total_detections })}</p>
-        <p>{m.settings_clearModal_locationsRemoved({ count: appState.catalogStats.total_locations })}</p>
+        <p>{m.settings_clearModal_locationsRemoved({ count: appState.catalogStats.saved_locations })}</p>
       </div>
       {#if clearError}
         <p role="alert" class="text-error mt-3 text-sm">{clearError}</p>

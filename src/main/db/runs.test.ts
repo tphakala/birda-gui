@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
-import { createRun, finishRun, markStaleRunsAsFailed } from './runs';
+import { createRun, deleteRun, finishRun, getRunsWithStats, markStaleRunsAsFailed } from './runs';
 import {
   getCatalogStats,
   getDetections,
@@ -10,7 +10,7 @@ import {
   getSpeciesLocations,
   getSpeciesSummary,
 } from './detections';
-import { getLocationsWithCounts } from './locations';
+import { getLocations, getLocationsWithCounts } from './locations';
 
 // A userData directory that does not exist, so a real getDb() reached by a
 // broken mock fails instead of creating a catalog in the working directory.
@@ -76,6 +76,10 @@ function runIds(): number[] {
 function status(id: number): string | undefined {
   return (db().prepare('SELECT status FROM analysis_runs WHERE id = ?').get(id) as { status: string } | undefined)
     ?.status;
+}
+
+function location(lat: number): number {
+  return Number(db().prepare('INSERT INTO locations (latitude, longitude) VALUES (?, 0)').run(lat).lastInsertRowid);
 }
 
 // Rows per run in the tables a run's results live in: audio files, detections, annotations.
@@ -310,18 +314,16 @@ describe('what counts as a result', () => {
 });
 
 describe('catalog-wide counts', () => {
-  function location(lat: number): number {
-    return Number(db().prepare('INSERT INTO locations (latitude, longitude) VALUES (?, 0)').run(lat).lastInsertRowid);
-  }
-
   it('count finished runs only, so an analysis in progress is not counted twice', () => {
     const here = location(60);
     runWithResults('/rec', 'birdnet', 'completed', 'Turdus merula', here);
     // The same source re-analysed while running, finding a second species.
     const running = runWithResults('/rec', 'birdnet', 'running', 'Parus major', here);
     runWithResults('/other', 'birdnet', 'pending', 'Parus major', here);
+    // A location only the running run uses.
+    runWithResults('/third', 'birdnet', 'running', 'Parus major', location(61));
 
-    expect(getCatalogStats()).toMatchObject({ total_detections: 1, total_species: 1 });
+    expect(getCatalogStats()).toMatchObject({ total_detections: 1, total_species: 1, total_locations: 1 });
     expect(getSpeciesSummary()).toMatchObject([{ scientific_name: 'Turdus merula', detection_count: 1 }]);
     expect(getLocationsWithCounts()).toMatchObject([{ id: here, detection_count: 1, species_count: 1 }]);
     expect(getSpeciesLocations('Parus major')).toEqual([]);
@@ -332,5 +334,46 @@ describe('catalog-wide counts', () => {
     expect(getDetections({ run_id: running }).total).toBe(1);
     const file = db().prepare('SELECT id FROM audio_files WHERE run_id = ?').get(running) as { id: number };
     expect(getDetections({ audio_file_id: file.id }).total).toBe(1);
+  });
+});
+
+describe('locations', () => {
+  function mapped(): number[] {
+    return getLocationsWithCounts().map((l) => l.id);
+  }
+
+  it.each(['completed', 'completed_with_errors', 'failed', 'cancelled'] satisfies FinishedRunStatus[])(
+    'hides a location whose runs ended %s without detections, and keeps it for the picker and the Runs list',
+    (finalStatus) => {
+      const here = location(60);
+      const run = createRun('/rec', 'birdnet', 0.1, here).id;
+      finishRun(run, finalStatus, false);
+
+      expect(mapped()).toEqual([]);
+      expect(getCatalogStats()).toMatchObject({ total_locations: 0, saved_locations: 1 });
+      expect(getLocations().map((l) => l.id)).toEqual([here]);
+      expect(getRunsWithStats()).toMatchObject([{ id: run, location_id: here, latitude: 60, longitude: 0 }]);
+    },
+  );
+
+  it('shows and counts a location with finished detections once', () => {
+    const shared = location(60);
+    const empty = location(61);
+    runWithResults('/a', 'birdnet', 'completed', 'Turdus merula', shared);
+    runWithResults('/b', 'birdnet', 'completed', 'Parus major', shared);
+    const failed = createRun('/c', 'birdnet', 0.1, empty).id;
+    finishRun(failed, 'failed');
+
+    expect(getLocationsWithCounts()).toMatchObject([{ id: shared, detection_count: 2, species_count: 2 }]);
+    expect(getCatalogStats()).toMatchObject({ total_locations: 1, saved_locations: 2 });
+  });
+
+  it('keeps a location of deleted runs for the picker without showing or counting it', () => {
+    const here = location(60);
+    deleteRun(runWithResults('/rec', 'birdnet', 'completed', 'Turdus merula', here));
+
+    expect(mapped()).toEqual([]);
+    expect(getCatalogStats()).toMatchObject({ total_locations: 0, saved_locations: 1 });
+    expect(getLocations().map((l) => l.id)).toEqual([here]);
   });
 });
