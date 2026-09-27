@@ -54,9 +54,9 @@ tasks:
       - npm run lint:fix
 
   typecheck:main:
-    desc: Type check main process (no emit)
+    desc: Type check main, preload, shared, scripts and build configs (tsconfig.node.json)
     cmds:
-      - npx tsc -p tsconfig.node.json --noEmit
+      - npm run typecheck
 
   # === Formatting ===
 
@@ -74,38 +74,28 @@ tasks:
 
   pack:
     desc: Build and package (unpacked, for testing)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --dir
+      - npm run pack
 
   dist:
     desc: Build and create distributable for current platform
-    deps:
-      - build
     cmds:
-      - npx electron-builder
+      - npm run dist
 
   dist:linux:
     desc: Build and package for Linux (AppImage + deb)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --linux
+      - npm run dist:linux
 
   dist:win:
-    desc: Build and package for Windows (NSIS)
-    deps:
-      - build
+    desc: Build and package for Windows (NSIS + portable)
     cmds:
-      - npx electron-builder --win
+      - npm run dist:win
 
   dist:mac:
     desc: Build and package for macOS (dmg)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --mac
+      - npm run dist:mac
 
   # === Utilities ===
 

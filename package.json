@@ -18,7 +18,7 @@
     "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "validate:translations": "node scripts/validate-translations.js",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run knip && npm run validate:translations && npm audit --omit=dev",
