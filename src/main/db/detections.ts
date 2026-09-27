@@ -401,6 +401,7 @@ export async function importDetectionsFromJson(
   locationId: number | null,
   audioFileId: number,
   jsonPath: string,
+  shouldSkipInsert?: () => boolean,
 ): Promise<{ detections: number; sourceFile: string }> {
   // Read with retry logic for Windows file locking
   const content = await readJsonWithRetry(jsonPath);
@@ -421,8 +422,9 @@ export async function importDetectionsFromJson(
     common_name: d.common_name, // Preserve common_name from JSON output
   }));
 
-  // Import detections using existing transaction-based function
-  if (birdaDetections.length > 0) {
+  // Import detections using existing transaction-based function. The caller can
+  // skip the insert when the run was finished while the file was being read.
+  if (birdaDetections.length > 0 && !shouldSkipInsert?.()) {
     insertDetections(runId, locationId, audioFileId, birdaDetections);
   }
 

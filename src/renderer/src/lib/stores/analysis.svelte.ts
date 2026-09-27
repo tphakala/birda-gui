@@ -91,7 +91,8 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
       const p = envelope.payload as FileCompletedPayload;
       analysisState.filesProcessed++;
       if (p.status === 'failed') analysisState.filesFailed++;
-      analysisState.totalDetections += p.detections;
+      // birda omits detections for a file that failed or was skipped.
+      analysisState.totalDetections += p.detections ?? 0;
       analysisState.currentFile = null;
       break;
     }

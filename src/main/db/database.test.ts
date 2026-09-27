@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { closeDb, getDb, getDbPath, initializeCatalog } from './database';
+import { closeDb, closeDbForShutdown, getDb, getDbPath, initializeCatalog } from './database';
 
 // A default no catalog can be created in: better-sqlite3 refuses a path whose
 // directory does not exist, so a stray getDb() outside the getDb tests throws.
@@ -429,5 +429,12 @@ describe('getDb', () => {
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'detections'").get()).toEqual({
       name: 'detections',
     });
+  });
+  // Last in the file: closing for shutdown cannot be undone within the module.
+  it('refuses to reopen the catalog once it was closed for shutdown', () => {
+    dirs.userData = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-catalog-'));
+    getDb();
+    closeDbForShutdown();
+    expect(() => getDb()).toThrow('closed because the app is quitting');
   });
 });

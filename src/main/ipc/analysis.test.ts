@@ -80,6 +80,8 @@ vi.mock('../settings/store', () => ({ settingsStore: h.settings }));
 const { registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
 const { runAnalysis } = await import('../birda/runner');
 const { createRun, finishRun } = await import('../db/runs');
+const { createLocation, findLocationByCoords } = await import('../db/locations');
+const { createAudioFile } = await import('../db/audio-files');
 registerAnalysisHandlers();
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-analysis-test-'));
@@ -97,8 +99,25 @@ function invoke(channel: string, ...args: unknown[]): unknown {
   return fn({}, ...args);
 }
 
-const analyze = (source = sourceFile) =>
-  invoke('birda:analyze', { source_path: source, model: 'birdnet', min_confidence: 0.1 }) as Promise<AnalysisResult>;
+const analyze = (source = sourceFile, extra: Record<string, unknown> = {}) =>
+  invoke('birda:analyze', {
+    source_path: source,
+    model: 'birdnet',
+    min_confidence: 0.1,
+    ...extra,
+  }) as Promise<AnalysisResult>;
+
+const envelope = (event: string, payload: unknown) => ({ spec_version: '1.1', timestamp: '', event, payload });
+
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- only checks temp dirs the handler created
+const exists = (dir: string) => fs.existsSync(dir);
+
+/** The temporary output directory analyze passed to birda. */
+function outputDirOf(callIndex = 0): string {
+  const options = vi.mocked(runAnalysis).mock.calls.at(callIndex)?.[1] as { outputDir?: string } | undefined;
+  if (!options?.outputDir) throw new Error('no output dir');
+  return options.outputDir;
+}
 const cancel = () => invoke('birda:cancel-analysis') as boolean;
 const status = () => invoke('birda:analysis-status') as AnalysisStatus;
 
@@ -236,7 +255,121 @@ describe('birda:analyze', () => {
   });
 });
 
+describe('birda:analyze outcomes', () => {
+  it('records a single file birda could not analyse as failed without replacing earlier results', async () => {
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: sourceFile, status: 'failed' }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'failed' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'failed', false);
+  });
+
+  it('does not replace earlier results when the single file was skipped', async () => {
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: sourceFile, status: 'skipped' }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'completed' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed', false);
+  });
+
+  it('counts a failed file without detections as zero, not NaN', async () => {
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 2 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'failed' }));
+    handle.emit(envelope('file_completed', { file: 'b.wav', status: 'processed', detections: 3 }));
+    expect(status()).toMatchObject({ progress: { totalDetections: 3 } });
+    handle.resolve();
+    await run;
+  });
+
+  it('creates no location when stopped during setup', async () => {
+    let releaseSettings!: (v: unknown) => void;
+    h.settings.get.mockReturnValueOnce(new Promise((r) => (releaseSettings = r)));
+    const run = analyze(sourceFile, { latitude: 60.1, longitude: 24.9 });
+    await vi.waitFor(() => {
+      expect(h.settings.get).toHaveBeenCalled();
+    });
+    cancel();
+    releaseSettings({ default_execution_provider: 'cpu' });
+
+    await expect(run).resolves.toMatchObject({ runId: null });
+    expect(findLocationByCoords).not.toHaveBeenCalled();
+    expect(createLocation).not.toHaveBeenCalled();
+  });
+
+  it('reports a Stop as cancelled even when the analysis then throws', async () => {
+    const run = analyze();
+    const handle = await started();
+    cancel();
+    handle.reject(new Error('birda exited with code 1'));
+    await expect(run).rejects.toThrow();
+    expect(lastStatusEvent()).toMatchObject({ state: 'idle', finished: { status: 'cancelled' } });
+  });
+
+  it('removes the temporary output of a cancelled directory run', async () => {
+    const run = analyze(tmp);
+    const handle = await started();
+    const dir = outputDirOf();
+    handle.reject(new AnalysisCancelledError());
+    await run;
+    expect(exists(dir)).toBe(false);
+  });
+
+  it('keeps birda output for debugging when birda failed, but not an empty directory', async () => {
+    const first = analyze(tmp);
+    const firstHandle = await started();
+    const kept = outputDirOf(0);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- temp dir created by the handler
+    fs.writeFileSync(path.join(kept, 'rec.BirdNET.json'), '{}');
+    firstHandle.reject(new Error('birda exited with code 2'));
+    await expect(first).rejects.toThrow();
+    expect(exists(kept)).toBe(true);
+    fs.rmSync(kept, { recursive: true, force: true });
+
+    const second = analyze(tmp);
+    const secondHandle = await started(2);
+    const empty = outputDirOf(1);
+    secondHandle.reject(new Error('Failed to start birda: spawn ENOENT'));
+    await expect(second).rejects.toThrow();
+    expect(exists(empty)).toBe(false);
+  });
+});
+
 describe('stopAnalysisForQuit', () => {
+  it('does not record a run again once it was recorded', async () => {
+    let releaseRm!: () => void;
+    const rm = vi.spyOn(fs.promises, 'rm').mockImplementationOnce(() => new Promise<void>((r) => (releaseRm = r)));
+    const run = analyze(tmp);
+    (await started()).resolve();
+    await vi.waitFor(() => {
+      expect(rm).toHaveBeenCalled();
+    });
+    // The run is recorded and its output is being removed; the lock is still held.
+    stopAnalysisForQuit();
+    releaseRm();
+    await run;
+    expect(finishRun).toHaveBeenCalledTimes(1);
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed', false);
+    rm.mockRestore();
+  });
+
+  it('writes nothing for events that arrive after the quit', async () => {
+    const run = analyze();
+    const handle = await started();
+    stopAnalysisForQuit();
+    handle.emit(envelope('detections', { file: sourceFile, detections: [{ scientific_name: 'Turdus merula' }] }));
+    handle.reject(new AnalysisCancelledError());
+    await run;
+    expect(createAudioFile).not.toHaveBeenCalled();
+  });
+
   it('records the run as cancelled once and leaves it to the quit', async () => {
     const run = analyze();
     const handle = await started();
