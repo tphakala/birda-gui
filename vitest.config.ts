@@ -1,14 +1,14 @@
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 // Unit tests cover the framework-free logic only (no Svelte/DOM), so a plain
 // node environment is enough. Aliases mirror the app's tsconfig paths.
 export default defineConfig({
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/renderer/src/lib'),
-      $shared: resolve(__dirname, 'shared'),
-      $paraglide: resolve(__dirname, 'src/renderer/src/paraglide'),
+      $lib: resolve(import.meta.dirname, 'src/renderer/src/lib'),
+      $shared: resolve(import.meta.dirname, 'shared'),
+      $paraglide: resolve(import.meta.dirname, 'src/renderer/src/paraglide'),
     },
   },
   test: {

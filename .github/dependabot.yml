@@ -10,6 +10,24 @@ updates:
     labels:
       - dependencies
       - npm
+    groups:
+      # @tailwindcss/vite depends on an exact tailwindcss version, and the vite
+      # peer ranges of @sveltejs/vite-plugin-svelte, vitest and
+      # @tailwindcss/vite all stop at vite 8, so a vite 9 cannot install on
+      # its own. Upgrade the Vite toolchain in one PR.
+      vite-toolchain:
+        patterns:
+          - vite
+          - vitest
+          - '@sveltejs/vite-plugin-svelte'
+          - '@tailwindcss/vite'
+          - tailwindcss
+    ignore:
+      # Tracks the Node.js version bundled with Electron, so majors move by hand
+      # with Electron upgrades.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /
