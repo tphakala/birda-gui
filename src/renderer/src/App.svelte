@@ -108,6 +108,8 @@
       // The panel stays, showing what was analysed before the Stop.
       const nothingKept = outcome.runId === null || analysisState.totalDetections === 0;
       analysisState.status = 'stopped';
+      // The file that was being analysed was not finished.
+      analysisState.currentFile = null;
       showToast(
         outcome.discardedPartial
           ? m.analysis_stoppedDiscarded()
