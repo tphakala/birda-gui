@@ -24,12 +24,18 @@ interface ModelInstallState {
 export const modelInstall = $state<ModelInstallState>({ current: null, lastFinished: null, reportedSeq: 0 });
 
 let finishedCount = 0;
+let syncing = false;
+
+function sameRequest(a: ModelInstallRequest, b: ModelInstallRequest): boolean {
+  return a.id === b.id && a.region === b.region && a.variant === b.variant;
+}
 
 async function syncFromMain(): Promise<void> {
   const seenAt = finishedCount;
+  const before = modelInstall.current;
   const request = await getModelInstallStatus();
-  // A finished event since the query was sent is newer than this reply.
-  if (finishedCount !== seenAt) return;
+  // A finished event, or an install this window started, since the query was sent is newer than this reply.
+  if (finishedCount !== seenAt || modelInstall.current !== before) return;
   if (request) modelInstall.current ??= { request, progress: null };
   else modelInstall.current = null;
 }
@@ -38,11 +44,24 @@ async function syncFromMain(): Promise<void> {
 export function followModelInstalls(): () => void {
   const unsubscribes = [
     onModelInstallProgress((progress) => {
-      if (modelInstall.current) modelInstall.current.progress = progress;
+      if (modelInstall.current) {
+        modelInstall.current.progress = progress;
+      } else if (!syncing) {
+        // An install another window started: ask main which one it is.
+        syncing = true;
+        syncFromMain()
+          .catch(() => undefined)
+          .finally(() => {
+            syncing = false;
+          });
+      }
     }),
     onModelInstallFinished((finished) => {
       finishedCount++;
-      modelInstall.current = null;
+      // A late event for an install that already settled must not clear the next one.
+      if (modelInstall.current && sameRequest(modelInstall.current.request, finished.request)) {
+        modelInstall.current = null;
+      }
       modelInstall.lastFinished = { ...finished, seq: finishedCount };
     }),
   ];
@@ -61,8 +80,9 @@ export function followModelInstalls(): () => void {
  */
 export async function startModelInstall(request: ModelInstallRequest): Promise<boolean> {
   if (modelInstall.current) return false;
-  const mine = { request, progress: null };
-  modelInstall.current = mine;
+  modelInstall.current = { request, progress: null };
+  // The state proxy, not the plain object, so the identity checks below match.
+  const mine = modelInstall.current;
   const seenAt = finishedCount;
   try {
     await installModel(request);

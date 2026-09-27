@@ -37,7 +37,8 @@ export function registerModelHandlers(): void {
   });
 
   ipcMain.handle('birda:models-install', async (_event, opts: ModelInstallRequest) => {
-    if (typeof opts.id !== 'string' || !SAFE_ID.test(opts.id)) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- renderer input is untrusted
+    if (typeof opts !== 'object' || opts === null || typeof opts.id !== 'string' || !SAFE_ID.test(opts.id)) {
       throw new Error('Invalid model install options');
     }
     for (const value of [opts.region, opts.variant]) {

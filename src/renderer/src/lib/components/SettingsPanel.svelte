@@ -159,7 +159,9 @@
   let cudaFinishedCount = 0;
   const offCudaListeners = [
     onCudaDownloadProgress((progress) => {
-      if (cudaDownloading) cudaProgress = progress;
+      // Progress goes to every window, so this also follows a download another window started.
+      cudaDownloading = true;
+      cudaProgress = progress;
     }),
     onCudaDownloadFinished((finished) => {
       cudaFinishedCount++;

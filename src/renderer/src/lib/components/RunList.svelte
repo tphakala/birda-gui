@@ -25,7 +25,7 @@
     return sourcePath.split(/[\\/]/).pop() ?? sourcePath;
   }
 
-  // A run with detections is deleted only after a confirmation; its annotations go with it.
+  // A run is deleted only after a confirmation; its audio files and annotations go with it.
   let confirmOpen = $state(false);
   let pendingDelete = $state<RunWithStats | null>(null);
   let listHeading = $state<HTMLHeadingElement | undefined>();
@@ -38,12 +38,9 @@
   }
 
   function requestDelete(run: RunWithStats) {
-    if (run.detection_count > 0) {
-      pendingDelete = run;
-      confirmOpen = true;
-    } else {
-      void deleteRun(run);
-    }
+    // Even a run with no detections can hold audio files and their annotations.
+    pendingDelete = run;
+    confirmOpen = true;
   }
 
   function confirmDelete() {

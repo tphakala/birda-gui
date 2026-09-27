@@ -34,6 +34,12 @@ beforeEach(() => {
 });
 
 describe('birda:models-install', () => {
+  it('rejects a payload that is not an object with the validation error', async () => {
+    await expect(Promise.resolve().then(() => invoke('birda:models-install', null))).rejects.toThrow(
+      'Invalid model install options',
+    );
+  });
+
   it('sends progress and the installed outcome', async () => {
     const run = install();
     h.settle?.resolve({ id: 'birdnet' });

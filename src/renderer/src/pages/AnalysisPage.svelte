@@ -206,10 +206,10 @@
     latitude = joined.latitude ?? 0;
     longitude = joined.longitude ?? 0;
     locationName = joined.location_name ?? '';
-    // Only month and day reach birda; the year is a placeholder.
+    // Only month and day reach birda; the year is a placeholder, a leap year so February 29 stays valid.
     recordingDate =
       joined.month !== undefined && joined.day !== undefined
-        ? `${new Date().getFullYear()}-${String(joined.month).padStart(2, '0')}-${String(joined.day).padStart(2, '0')}`
+        ? `2024-${String(joined.month).padStart(2, '0')}-${String(joined.day).padStart(2, '0')}`
         : '';
     appState.joinedSettings = null;
   });
