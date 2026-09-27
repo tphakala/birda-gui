@@ -75,6 +75,7 @@ const ALLOWED_RECEIVE_CHANNELS = new Set([
   'birda:models-install-progress',
   'birda:models-install-finished',
   'cuda:download-progress',
+  'cuda:download-finished',
   'app:log',
   'menu:open-file',
   'menu:open-folder',

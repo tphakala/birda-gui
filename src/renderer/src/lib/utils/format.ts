@@ -1,3 +1,4 @@
+import { parseRecordingName } from '$shared/recording-name';
 export function formatDuration(seconds: number | null): string {
   if (seconds === null || isNaN(seconds)) return '--:--';
   const h = Math.floor(seconds / 3600);
@@ -47,19 +48,13 @@ export function formatNumber(n: number): string {
 }
 
 /**
- * Parse recording start time from AudioMoth-style filenames: YYYYMMDD_HHMMSS
- * Returns null if the filename doesn't match the pattern.
+ * Local recording start from an AudioMoth-style name, YYYYMMDD_HHMMSS, or null.
+ * Uses the same rule as the main process, so the date shown is the one birda gets.
  */
 export function parseRecordingStart(filename: string): Date | null {
-  // Strip path and extension, match YYYYMMDD_HHMMSS
-  const base = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
-  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
-  if (!match) return null;
-  const [, y, mo, d, h, mi, s] = match;
-  const date = new Date(+y, +mo - 1, +d, +h, +mi, +s);
-  // Validate the parsed date components match (catches invalid months/days)
-  if (date.getFullYear() !== +y || date.getMonth() !== +mo - 1 || date.getDate() !== +d) return null;
-  return date;
+  const parsed = parseRecordingName(filename);
+  if (!parsed) return null;
+  return new Date(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute, parsed.second);
 }
 
 /**

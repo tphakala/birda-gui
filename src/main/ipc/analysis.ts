@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
 import { z } from 'zod';
-import { runAnalysis, findBirda, type LogLevel } from '../birda/runner';
+import { runAnalysis, findBirda, registerProcess, unregisterProcess, type LogLevel } from '../birda/runner';
 import { AnalysisCancelledError, AnalysisLock, type AnalysisSession } from '../birda/analysis-session';
 import { createRun, finishRun } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
@@ -13,14 +13,18 @@ import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './fil
 import { createAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
 import { sendToWindows } from './broadcast';
-import type { AnalysisResult, AudioFileMetadata, FinishedRunStatus, PipelineCompletedPayload } from '$shared/types';
 import type {
+  AnalysisResult,
+  AudioFileMetadata,
   BirdaEventEnvelope,
-  PipelineStartedPayload,
-  FileStartedPayload,
-  FileCompletedPayload,
   DetectionsPayload,
-} from '../birda/types';
+  FileCompletedPayload,
+  FileStartedPayload,
+  FinishedRunStatus,
+  PipelineStartedPayload,
+} from '$shared/types';
+import { applyProgressEvent } from '$shared/analysis-progress';
+import { parseRecordingName } from '$shared/recording-name';
 
 const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
 const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
@@ -178,10 +182,11 @@ function resolveDate(request: AnalysisRequestInput): {
   let month = request.month;
   let day = request.day;
   if (month === undefined || day === undefined) {
-    const parsed = parseRecordingStart(request.source_path);
+    // The same rule the analysis page uses to show the date.
+    const parsed = parseRecordingName(request.source_path);
     if (parsed) {
-      month ??= parsed.getUTCMonth() + 1;
-      day ??= parsed.getUTCDate();
+      month ??= parsed.month;
+      day ??= parsed.day;
       sendLog('info', 'analysis', `Parsed recording date from filename: month=${month}, day=${day}`);
     }
   }
@@ -193,20 +198,12 @@ function resolveDate(request: AnalysisRequestInput): {
   return { month, day, dayOfYear };
 }
 
-/** Counts progress from the events the same way the renderer does, for a window that joins mid-run. */
+/** Keeps the session's progress snapshot, for a window that joins mid-run. */
 function trackProgress(session: AnalysisSession, envelope: BirdaEventEnvelope): void {
-  const p = session.progress;
-  if (envelope.event === 'pipeline_started') {
-    p.totalFiles = (envelope.payload as PipelineStartedPayload).total_files;
-  } else if (envelope.event === 'file_completed') {
+  applyProgressEvent(session.progress, envelope);
+  if (envelope.event === 'file_completed') {
     const payload = envelope.payload as FileCompletedPayload;
-    p.filesProcessed++;
-    if (payload.status === 'failed') p.filesFailed++;
-    p.completedFiles.push({ file: payload.file, status: payload.status });
-    // birda omits detections for a file that failed or was skipped.
-    p.totalDetections += payload.detections ?? 0;
-  } else if (envelope.event === 'pipeline_completed') {
-    p.totalDetections = (envelope.payload as PipelineCompletedPayload).total_detections;
+    session.progress.completedFiles.push({ file: payload.file, status: payload.status });
   }
 }
 
@@ -227,7 +224,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
   const isDirectory = sourceStat.isDirectory();
 
   let outputDir: string | undefined;
-  // birda's output is kept for debugging only when birda itself failed.
+  // birda's output is kept for debugging when the run failed and birda wrote something.
   let keepOutput = false;
 
   try {
@@ -247,7 +244,8 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
     const settings = await settingsStore.get();
 
     // Stopped during setup: leave nothing in the catalog. Nothing below awaits
-    // before birda is started, so a later Stop reaches the runner.
+    // until the session is attached to the runner, which honours a Stop from
+    // then on, including one while birda is being located.
     if (session.cancelRequested) {
       sendLog('info', 'analysis', 'Analysis cancelled before it started');
       return { runId: null, status: 'cancelled', discardedPartial: false };
@@ -265,8 +263,18 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
     session.runId = run.id;
     sendLog('info', 'analysis', `Created analysis run: id=${run.id}`);
 
-    // Set once finishRun has recorded the run's final status.
-    let recorded = false;
+    // Records the run's final status. session.runId goes back to null once the
+    // status is recorded, so a quit after this does not record it again.
+    const record = (status: FinishedRunStatus, replaceEarlier = true) => {
+      const effect = finishRun(run.id, status, replaceEarlier);
+      session.runId = null;
+      return effect;
+    };
+    const recordFailedRun = () => {
+      recordFailure(run.id);
+      session.runId = null;
+    };
+
     try {
       const { month, day, dayOfYear } = resolveDate(request);
       const handle = runAnalysis(request.source_path, {
@@ -285,7 +293,6 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       let totalDetections = 0;
       let failedFileCount = 0;
       let skippedFileCount = 0;
-      let totalFiles = 0;
       // A property, not a let: TypeScript would treat a let set only in the event callback as always false.
       const pipeline = { started: false };
       const pendingImports = new Set<Promise<void>>();
@@ -316,8 +323,11 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
         // processed file's JSON; a single file sends its detections inline.
         if (envelope.event === 'pipeline_started') {
           pipeline.started = true;
-          totalFiles = (envelope.payload as PipelineStartedPayload).total_files;
-          sendLog('info', 'analysis', `Starting analysis of ${totalFiles} file(s)`);
+          sendLog(
+            'info',
+            'analysis',
+            `Starting analysis of ${(envelope.payload as PipelineStartedPayload).total_files} file(s)`,
+          );
         } else if (envelope.event === 'file_started') {
           sendLog('info', 'analysis', `Processing file: ${(envelope.payload as FileStartedPayload).file}`);
         } else if (envelope.event === 'file_completed') {
@@ -374,6 +384,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
                 sendLog('info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
               } catch (err) {
                 sendLog('error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
+                failedFileCount++;
               }
             });
           }
@@ -391,40 +402,41 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       // On a quit the status was set earlier; imports check session.quitting before writing.
       await Promise.allSettled(Array.from(pendingImports));
 
+      // stopAnalysisForQuit has recorded the run and the catalog is closing.
       if (session.quitting) {
-        recorded = true;
         return { runId: run.id, status: 'cancelled', discardedPartial: false };
       }
 
       if (runError instanceof AnalysisCancelledError) {
-        const { discardedPartial } = finishRun(run.id, 'cancelled');
-        recorded = true;
-        session.runId = null;
+        const { discardedPartial } = record('cancelled');
         sendLog(
           'info',
           'analysis',
           discardedPartial
-            ? `Analysis cancelled: run ${run.id} kept without results, earlier complete results for this source and model are kept`
+            ? `Analysis cancelled: its partial results were discarded; the earlier complete results for this source and model are kept`
             : `Analysis cancelled: ${totalDetections} detection(s) kept in run ${run.id}`,
         );
         return { runId: run.id, status: 'cancelled', discardedPartial };
       }
 
       if (runError !== null) {
-        // Keep what birda wrote for debugging; an empty directory (birda never started) is removed.
+        // Keep birda's output for debugging unless it wrote nothing.
         keepOutput = outputDir !== undefined && (await hasEntries(outputDir));
         // The runner's error already carries birda's stderr.
         const errorMsg = `Analysis failed: ${(runError as Error).message}`;
         sendLog('error', 'analysis', errorMsg);
-        recordFailure(run.id);
-        recorded = true;
-        session.runId = null;
+        // A quit during the await above has already recorded the run.
+        if (session.runPending) recordFailedRun();
         throw new Error(errorMsg, { cause: runError });
       }
 
       // Determine final status. Without a pipeline_started event (an older
       // birda) a single-file run is assumed to have processed its one file.
-      const processedCount = pipeline.started ? totalFiles - skippedFileCount - failedFileCount : isDirectory ? 0 : 1;
+      const processedCount = pipeline.started
+        ? session.progress.totalFiles - skippedFileCount - failedFileCount
+        : isDirectory
+          ? 0
+          : 1;
       let finalStatus: FinishedRunStatus = 'completed';
       if (failedFileCount > 0) {
         finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
@@ -437,21 +449,15 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       if (finalStatus === 'failed') keepOutput = true;
 
       sendLog('info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
-      // A run that analysed no files (all skipped or locked) does not replace earlier results.
-      const { replaced, discardedPartial } = finishRun(run.id, finalStatus, processedCount > 0);
-      recorded = true;
-      // Recorded: a quit from here on must not record the run again.
-      session.runId = null;
+      // A run that analysed no files (all skipped, locked or failed) does not replace earlier results.
+      const { replaced, discardedPartial } = record(finalStatus, processedCount > 0);
       if (replaced > 0) {
         sendLog('info', 'analysis', `Replaced ${replaced} previous run(s) (same source + model)`);
       }
       return { runId: run.id, status: finalStatus, discardedPartial };
     } catch (err) {
       // Anything that failed after the run was created, before its status was recorded.
-      if (!recorded && !session.quitting) {
-        recordFailure(run.id);
-        session.runId = null;
-      }
+      if (session.runPending && !session.quitting) recordFailedRun();
       throw err;
     }
   } finally {
@@ -474,6 +480,11 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
  * was already recorded, records it as cancelled now, since the catalog closes
  * before birda's exit is handled. Later calls do nothing.
  */
+/** Whether an analysis holds the lock, running or stopping. */
+export function isAnalysisActive(): boolean {
+  return analysisLock.active !== null;
+}
+
 export function stopAnalysisForQuit(): void {
   const session = analysisLock.active;
   if (!session || session.quitting) return;
@@ -485,6 +496,7 @@ export function stopAnalysisForQuit(): void {
     } catch (err) {
       console.error(`Could not record run ${session.runId} as cancelled:`, err);
     }
+    session.runId = null;
   }
   if (session.outputDir) {
     try {
@@ -507,9 +519,11 @@ export function registerAnalysisHandlers(): void {
       finished = result;
       return result;
     } catch (err) {
-      // A throw records the run as failed, even after a Stop.
+      // A throw is reported as failed, even after a Stop; analyze has recorded
+      // the run as failed unless the app is quitting. runId is null: the
+      // renderer uses it only to show a completed or cancelled run.
       finished = {
-        runId: session.runId,
+        runId: null,
         status: 'failed',
         discardedPartial: false,
         error: (err as Error).message,
@@ -526,8 +540,10 @@ export function registerAnalysisHandlers(): void {
   ipcMain.handle('birda:cancel-analysis', () => {
     const session = analysisLock.active;
     if (!session) return false;
-    session.cancel();
-    sendAnalysisStatus();
+    if (!session.cancelRequested) {
+      session.cancel();
+      sendAnalysisStatus();
+    }
     return true;
   });
 
@@ -557,11 +573,13 @@ export function registerAnalysisHandlers(): void {
       console.log(`[extract-clip] Running: ${birdaPath} ${args.join(' ')}`);
 
       return new Promise<string>((resolve, reject) => {
-        const _child = execFile(
+        // Registered so killAll stops it at quit, like any birda process.
+        const child = execFile(
           birdaPath,
           args,
           { maxBuffer: 10 * 1024 * 1024, timeout: 30000 },
           (err, stdout, stderr) => {
+            unregisterProcess(child);
             if (err) {
               console.error(`[extract-clip] Failed:`, err.message, stderr);
               reject(new Error(`Clip extraction failed: ${stderr || err.message}`));
@@ -573,10 +591,17 @@ export function registerAnalysisHandlers(): void {
               reject(new Error(`Clip extraction returned empty path. stderr: ${stderr}`));
               return;
             }
-            updateDetectionClipPath(detectionId, clipPath);
+            try {
+              updateDetectionClipPath(detectionId, clipPath);
+            } catch (dbErr) {
+              // The catalog can be closed if this finishes while the app quits.
+              reject(dbErr instanceof Error ? dbErr : new Error(String(dbErr)));
+              return;
+            }
             resolve(clipPath);
           },
         );
+        registerProcess(child);
       });
     },
   );

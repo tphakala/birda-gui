@@ -224,6 +224,19 @@ function registerBirdaMapProtocol() {
   });
 }
 
+// One instance per user: a second one would share the catalog and finish the
+// first instance's running analysis as stale at its startup.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 void app.whenReady().then(async () => {
   // Security: allow permissions the app needs, deny everything else
   const ALLOWED_PERMISSIONS = new Set([

@@ -8,33 +8,23 @@ export class AnalysisCancelledError extends Error {
   }
 }
 
-type ExitOutcome = 'success' | 'cancelled' | 'failed';
-
-/**
- * Classifies how a birda process ended. Only exit code 0 is a success: a
- * process killed by a signal exits with code null, so null is a failure unless
- * the kill was a requested cancel. After a cancel any non-zero exit counts as
- * the cancel, whatever code or signal the killed process reports.
- */
-export function classifyExit(code: number | null, cancelRequested: boolean): ExitOutcome {
-  if (code === 0) return 'success';
-  return cancelRequested ? 'cancelled' : 'failed';
-}
-
 interface Cancellable {
   cancel: () => void;
-  stderrLog: () => string;
 }
 
 /** One analysis, from taking the lock until releasing it. */
 export class AnalysisSession {
   private handle: Cancellable | null = null;
   private cancelled = false;
-  /** The catalog run, once created. */
+  /**
+   * The catalog run while its final status is still to be recorded: set when
+   * the run is created, back to null once the status is recorded (by the
+   * analysis or by a quit), so it is never recorded twice.
+   */
   runId: number | null = null;
   /** birda's temporary output directory, for a directory analysis. */
   outputDir: string | null = null;
-  /** The app is quitting: the run was already recorded and the catalog is closing. */
+  /** The app is quitting: the run was recorded, if one was created, and the catalog is closing. */
   quitting = false;
   readonly progress: AnalysisProgressSnapshot = {
     totalFiles: 0,
@@ -45,6 +35,11 @@ export class AnalysisSession {
   };
 
   constructor(readonly sourcePath: string) {}
+
+  /** A run was created and its final status is not recorded yet. */
+  get runPending(): boolean {
+    return this.runId !== null;
+  }
 
   get cancelRequested(): boolean {
     return this.cancelled;
@@ -59,10 +54,6 @@ export class AnalysisSession {
   cancel(): void {
     this.cancelled = true;
     this.handle?.cancel();
-  }
-
-  stderrLog(): string {
-    return this.handle?.stderrLog() ?? '';
   }
 }
 
@@ -79,7 +70,7 @@ export class AnalysisLock {
       throw new Error(
         this.current.cancelRequested
           ? 'The previous analysis is still stopping. Try again when it has stopped.'
-          : 'An analysis is already running. Cancel it first.',
+          : 'An analysis is already running. Stop it first.',
       );
     }
     this.current = new AnalysisSession(sourcePath);

@@ -22,7 +22,6 @@ const h = vi.hoisted(() => {
       resolve,
       reject,
       cancel: vi.fn(),
-      stderrLog: () => '',
       on(event: string, cb: (...args: never[]) => void) {
         if (event === 'data') callbacks.data = cb as (e: unknown) => void;
       },
@@ -152,7 +151,7 @@ describe('birda:analyze', () => {
 
     handle.reject(new AnalysisCancelledError());
     await expect(run).resolves.toMatchObject({ status: 'cancelled', discardedPartial: false });
-    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'cancelled');
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'cancelled', true);
     expect(status()).toEqual({ state: 'idle' });
     expect(lastStatusEvent()).toMatchObject({ state: 'idle', finished: { status: 'cancelled' } });
 

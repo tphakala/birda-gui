@@ -1,11 +1,5 @@
-import type {
-  AnalysisProgressSnapshot,
-  BirdaEventEnvelope,
-  ProgressPayload,
-  PipelineStartedPayload,
-  FileCompletedPayload,
-  PipelineCompletedPayload,
-} from '$shared/types';
+import type { AnalysisProgressSnapshot, BirdaEventEnvelope, ProgressPayload } from '$shared/types';
+import { applyProgressEvent } from '$shared/analysis-progress';
 
 // Re-export event types for renderer use
 export type { BirdaEventEnvelope };
@@ -91,10 +85,9 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
     analysisState.events = [...criticalEvents, ...trimmedProgress];
   }
 
+  applyProgressEvent(analysisState, envelope);
   switch (envelope.event) {
     case 'pipeline_started': {
-      const p = envelope.payload as PipelineStartedPayload;
-      analysisState.totalFiles = p.total_files;
       analysisState.status = 'running';
       break;
     }
@@ -109,18 +102,11 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
       break;
     }
     case 'file_completed': {
-      const p = envelope.payload as FileCompletedPayload;
-      analysisState.filesProcessed++;
-      if (p.status === 'failed') analysisState.filesFailed++;
-      // birda omits detections for a file that failed or was skipped.
-      analysisState.totalDetections += p.detections ?? 0;
       analysisState.currentFile = null;
       break;
     }
     case 'pipeline_completed': {
-      const p = envelope.payload as PipelineCompletedPayload;
       analysisState.status = 'completed';
-      analysisState.totalDetections = p.total_detections;
       break;
     }
   }

@@ -25,6 +25,12 @@ export interface CudaDownloadProgress {
   phase: 'downloading' | 'extracting' | 'verifying';
 }
 
+/** Sent to every window on cuda:download-finished when a CUDA download settles. */
+export interface CudaDownloadFinished {
+  outcome: 'installed' | 'cancelled' | 'failed';
+  error?: string | undefined;
+}
+
 export interface CudaDownloadResult {
   /** Whether the download and extraction succeeded */
   success: boolean;
@@ -279,7 +285,11 @@ export interface AnalysisRequest {
   timezone_offset_min?: number | undefined;
 }
 
-/** What birda:analyze resolves with. runId is null when the analysis was cancelled before its run was created. */
+/**
+ * What birda:analyze resolves with, and the finished outcome of the idle status
+ * event. runId is null when no run was created (cancelled during setup) and in
+ * a failure reported by the status event.
+ */
 export interface AnalysisResult {
   runId: number | null;
   status: FinishedRunStatus;
@@ -299,8 +309,10 @@ export interface AnalysisProgressSnapshot {
 
 /**
  * Whether an analysis holds the lock. birda:analysis-status returns it, and
- * birda:analysis-status-changed sends it whenever it changes; only that event's
- * idle status carries finished, the outcome of the analysis that just ended.
+ * birda:analysis-status-changed sends it when the state changes (start, Stop,
+ * end); progress between those is sent as analysis events, not as status.
+ * Only the event's idle status carries finished, the outcome of the analysis
+ * that just ended.
  */
 export type AnalysisStatus =
   | { state: 'idle'; finished?: AnalysisResult & { error?: string } }

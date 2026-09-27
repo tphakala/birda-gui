@@ -23,6 +23,7 @@ import type {
   HourlyDetectionCell,
   AudioFile,
 } from '$shared/types';
+import { isAnalysisActive } from './analysis';
 
 function enrichDetections(detections: (Detection & { audio_file: AudioFile | null })[]): EnrichedDetection[] {
   const scientificNames = [...new Set(detections.map((d) => d.scientific_name))];
@@ -164,6 +165,10 @@ export function registerCatalogHandlers(): void {
   });
 
   ipcMain.handle('catalog:clear-database', () => {
+    // Clearing would delete the running analysis's run under it.
+    if (isAnalysisActive()) {
+      throw new Error('Stop the analysis before clearing the database.');
+    }
     return clearDatabase();
   });
 

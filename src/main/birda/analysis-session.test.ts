@@ -1,29 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AnalysisLock, AnalysisSession, classifyExit } from './analysis-session';
+import { AnalysisLock, AnalysisSession } from './analysis-session';
 
 function fakeHandle() {
-  return { cancel: vi.fn(), stderrLog: () => 'stderr text' };
+  return { cancel: vi.fn() };
 }
-
-describe('classifyExit', () => {
-  it('treats only exit code 0 as success', () => {
-    expect(classifyExit(0, false)).toBe('success');
-    expect(classifyExit(0, true)).toBe('success');
-  });
-
-  it('treats a signal exit without a cancel as a failure', () => {
-    expect(classifyExit(null, false)).toBe('failed');
-  });
-
-  it('treats any non-zero exit after a cancel as the cancel', () => {
-    expect(classifyExit(null, true)).toBe('cancelled');
-    expect(classifyExit(1, true)).toBe('cancelled');
-  });
-
-  it('treats a non-zero exit without a cancel as a failure', () => {
-    expect(classifyExit(2, false)).toBe('failed');
-  });
-});
 
 describe('AnalysisSession', () => {
   it('passes a cancel requested before attach on to the handle', () => {
@@ -42,13 +22,6 @@ describe('AnalysisSession', () => {
     expect(handle.cancel).not.toHaveBeenCalled();
     session.cancel();
     expect(handle.cancel).toHaveBeenCalledOnce();
-  });
-
-  it('reads stderr from the attached handle', () => {
-    const session = new AnalysisSession('/rec');
-    expect(session.stderrLog()).toBe('');
-    session.attach(fakeHandle());
-    expect(session.stderrLog()).toBe('stderr text');
   });
 });
 

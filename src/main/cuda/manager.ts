@@ -18,6 +18,22 @@ import {
 
 const execFileAsync = promisify(execFileCallback);
 
+/** Rejects a download that was cancelled. */
+export class CudaDownloadCancelledError extends Error {
+  constructor() {
+    super('Download cancelled by user');
+    this.name = 'CudaDownloadCancelledError';
+  }
+}
+
+/** Rejects a download requested while another one is running. */
+export class CudaDownloadBusyError extends Error {
+  constructor() {
+    super('A CUDA download is already in progress');
+    this.name = 'CudaDownloadBusyError';
+  }
+}
+
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
 const SAFE_FILENAME_RE = /^[a-zA-Z0-9._-]+$/;
 
@@ -197,7 +213,7 @@ export async function downloadCudaLibs(
   validateVersion(version);
 
   if (downloadInProgress) {
-    throw new Error('A CUDA download is already in progress');
+    throw new CudaDownloadBusyError();
   }
 
   downloadInProgress = true;
@@ -209,7 +225,7 @@ export async function downloadCudaLibs(
     const manifest = await fetchManifest(version);
     // downloadCancelled may be set by cancelDownload() during the await above
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (downloadCancelled) throw new Error('Download cancelled by user');
+    if (downloadCancelled) throw new CudaDownloadCancelledError();
 
     const platformKey = getPlatformKey();
     // eslint-disable-next-line security/detect-object-injection
@@ -239,7 +255,7 @@ export async function downloadCudaLibs(
     if (downloadCancelled) {
       res.resume();
       req.destroy();
-      throw new Error('Download cancelled by user');
+      throw new CudaDownloadCancelledError();
     }
     activeRequest = req;
 
@@ -317,7 +333,7 @@ export async function downloadCudaLibs(
 export function cancelDownload(): boolean {
   downloadCancelled = true;
   if (activeRequest) {
-    activeRequest.destroy(new Error('Download cancelled by user'));
+    activeRequest.destroy(new CudaDownloadCancelledError());
     activeRequest = null;
     return true;
   }

@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'child_process';
-import { createStopper, findBirda, registerProcess, unregisterProcess } from './runner';
-import { classifyExit } from './analysis-session';
+import { findBirda, superviseChild, type SupervisedChild } from './runner';
+import { classifyExit } from './process-exit';
 import { parseProgressLine } from './progress';
 import type {
   InstalledModel,
@@ -48,31 +48,28 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-// The single in-flight install process, tracked so the renderer can cancel it.
-// Only one install runs at a time, so one ref suffices for the spawned process.
-let currentInstall: ReturnType<typeof spawn> | null = null;
-// Reserves the single-install slot from the very start of installModel, before
-// currentInstall exists, so a concurrent call during findBirda() is rejected.
-let installInProgress = false;
 // Held in an object (not a bare `let`) so TS does not narrow it to a literal
 // across the `await findBirda()` in installModel, where cancelInstall may mutate
 // it. Set when a cancel arrives before any process exists to kill.
 const cancelState = { requested: false };
 
-let installStopper: ReturnType<typeof createStopper> | null = null;
+// The install holding the single install slot, from the start of installModel
+// until it settles; the slot is taken before the first await, so a concurrent
+// call during findBirda() is refused.
+let currentRequest: ModelInstallRequest | null = null;
+// Its process, once spawned.
+let installProcess: SupervisedChild | null = null;
 
 /**
- * Stops the in-flight install, if any: SIGTERM, then SIGKILL if it does not
- * exit. The install keeps its slot until the process closes. Returns true if
- * one was running.
+ * Stops the install holding the slot, if any, including one still locating
+ * birda: SIGTERM, then SIGKILL if it does not exit. The install keeps its slot
+ * until it settles. Returns true if an install holds the slot.
  */
 export function cancelInstall(): boolean {
+  if (!currentRequest) return false;
   cancelState.requested = true;
-  if (currentInstall && installStopper) {
-    installStopper.stop();
-    return true;
-  }
-  return false;
+  installProcess?.stop();
+  return true;
 }
 
 // Read through a function so TS does not narrow the post-await check to a literal.
@@ -94,8 +91,6 @@ export class ModelInstallCancelledError extends Error {
   }
 }
 
-let currentRequest: ModelInstallRequest | null = null;
-
 /** The install in flight, for a window that did not start it. */
 export function getInstallStatus(): ModelInstallRequest | null {
   return currentRequest;
@@ -105,19 +100,22 @@ export async function installModel(
   opts: ModelInstallRequest,
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
-  // Reserve the single-install slot BEFORE the first await. currentInstall is not
-  // set until after spawn, so a concurrent call arriving during findBirda() would
-  // slip past a currentInstall check; installInProgress closes that window. The
-  // reservation and cancel state are released in the finally when this operation
+  // The slot and cancel state are released in the finally when this operation
   // settles, so cancellation before close stays cancellation.
-  if (installInProgress) {
+  if (currentRequest) {
     throw new ModelInstallBusyError();
   }
-  installInProgress = true;
   currentRequest = { id: opts.id, region: opts.region, variant: opts.variant };
   cancelState.requested = false;
   try {
-    const birdaPath = await findBirda();
+    let birdaPath: string;
+    try {
+      birdaPath = await findBirda();
+    } catch (err) {
+      // A Stop while birda was being located is a cancel, even if locating it failed.
+      if (cancelRequested()) throw new ModelInstallCancelledError();
+      throw err;
+    }
     // A cancel that arrived while findBirda() was resolving must still stop the spawn.
     if (cancelRequested()) {
       throw new ModelInstallCancelledError();
@@ -132,9 +130,8 @@ export async function installModel(
       const proc = spawn(birdaPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      registerProcess(proc);
-      currentInstall = proc;
-      installStopper = createStopper(proc);
+      const tracked = superviseChild(proc);
+      installProcess = tracked;
 
       let stdout = '';
       let stderrRemainder = '';
@@ -163,9 +160,7 @@ export async function installModel(
       proc.stdin.end();
 
       proc.on('close', (code) => {
-        installStopper?.clear();
-        unregisterProcess(proc);
-        if (currentInstall === proc) currentInstall = null;
+        tracked.release();
         if (stderrRemainder.trim()) {
           emit(stderrRemainder.trim());
         }
@@ -191,18 +186,17 @@ export async function installModel(
 
       proc.on('error', (err) => {
         // A process that did start still emits close, which settles the install.
-        if (proc.pid !== undefined) return;
-        installStopper?.clear();
-        unregisterProcess(proc);
-        if (currentInstall === proc) currentInstall = null;
+        if (proc.pid !== undefined) {
+          console.warn(`Model install process error: ${err.message}`);
+          return;
+        }
+        tracked.release();
         reject(new Error(`Model install failed: ${err.message}`));
       });
     });
   } finally {
-    currentInstall = null;
-    installStopper = null;
+    installProcess = null;
     currentRequest = null;
-    installInProgress = false;
     cancelState.requested = false;
   }
 }
