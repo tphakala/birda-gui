@@ -42,11 +42,12 @@ tasks:
       - npx eslint .
 
   lint:
-    desc: Run all lint and type checks (ESLint + svelte-check + tsc)
-    deps:
-      - eslint
-      - check
-      - typecheck:main
+    desc: Run all lint and type checks (ESLint + svelte-check, then tsc)
+    # Sequential: npm run lint regenerates the Paraglide output first, and a
+    # compile empties that directory while it runs.
+    cmds:
+      - npm run lint
+      - task: typecheck:main
 
   lint:fix:
     desc: Run ESLint with auto-fix
