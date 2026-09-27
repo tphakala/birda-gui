@@ -1,12 +1,16 @@
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { initializeCatalog } from './database';
+import { closeDb, getDb, getDbPath, initializeCatalog } from './database';
+import { SCHEMA_SQL } from './schema';
 
-// database.ts reads app.getPath only in getDbPath, which these tests never call.
-vi.mock('electron', () => ({ app: {} }));
+const dirs = vi.hoisted(() => ({ userData: '' }));
+vi.mock('electron', () => ({ app: { getPath: () => dirs.userData } }));
 
-// A catalog as v1.0.0 left it: its SCHEMA_SQL plus migrations 1 and 2.
-const V1_0_0_CATALOG = `
+// v1.0.0's SCHEMA_SQL.
+const V1_0_0_SCHEMA = `
 CREATE TABLE locations (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT,
@@ -47,7 +51,11 @@ CREATE VIEW species_summary AS
 SELECT scientific_name, COUNT(DISTINCT location_id) AS location_count, COUNT(*) AS detection_count,
        MAX(detected_at) AS last_detected, AVG(confidence) AS avg_confidence
 FROM detections GROUP BY scientific_name;
+`;
 
+// The tables migration 2 creates (every released version ran it), plus
+// schema_migrations itself. Neither is in SCHEMA_SQL.
+const MIGRATION_TABLES = `
 CREATE TABLE schema_migrations (
     version INTEGER PRIMARY KEY,
     applied_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -74,15 +82,36 @@ CREATE TABLE species_list_entries (
 );
 CREATE INDEX idx_sle_list ON species_list_entries(list_id);
 CREATE INDEX idx_sle_species ON species_list_entries(scientific_name);
+`;
+
+// A catalog as v1.0.0 left it: migrations 1 and 2 applied, with detections in
+// two runs that both analysed /rec/other.wav.
+const V1_0_0_CATALOG = `${V1_0_0_SCHEMA}${MIGRATION_TABLES}
 INSERT INTO schema_migrations (version) VALUES (1), (2);
 
 INSERT INTO locations (id, name, latitude, longitude) VALUES (1, 'Pond', 60.1, 24.9);
-INSERT INTO analysis_runs (id, location_id, source_path, model, status) VALUES (1, 1, '/rec', 'birdnet', 'completed');
+INSERT INTO analysis_runs (id, location_id, source_path, model, status) VALUES
+    (1, 1, '/rec', 'birdnet', 'completed'),
+    (2, 1, '/rec/other.wav', 'birdnet', 'completed');
 INSERT INTO detections (run_id, location_id, source_file, start_time, end_time, scientific_name, confidence) VALUES
     (1, 1, '/rec/20240501_053000.wav', 0, 3, 'Turdus merula', 0.9),
     (1, 1, '/rec/20240501_053000.wav', 3, 6, 'Erithacus rubecula', 0.8),
-    (1, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.7);
+    (1, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.7),
+    (2, 1, '/rec/other.wav', 0, 3, 'Turdus merula', 0.6);
 `;
+
+// A catalog as v1.1.0 through v1.2.1 left it, up to the formatting schemaShape
+// ignores. Their SCHEMA_SQL is the current one without the annotations table, and
+// a new catalog recorded migrations 1 to 5 on its first launch and 6 on its second.
+function v121Catalog(versions: number[]): Database.Database {
+  const db = memoryDb();
+  db.exec(SCHEMA_SQL);
+  db.exec('DROP TABLE annotations');
+  db.exec(MIGRATION_TABLES);
+  const insert = db.prepare('INSERT INTO schema_migrations (version) VALUES (?)');
+  for (const v of versions) insert.run(v);
+  return db;
+}
 
 const open: Database.Database[] = [];
 
@@ -96,19 +125,26 @@ afterEach(() => {
   for (const db of open.splice(0)) db.close();
 });
 
-// Everything that defines the schema's shape, without the CREATE statements'
-// formatting (migrations and SCHEMA_SQL write the same tables differently).
+// Every schema object with its CREATE statement, ignoring formatting that differs
+// between SCHEMA_SQL and the migrations: whitespace, IF NOT EXISTS, and the quotes
+// SQLite adds when a table is renamed into place.
 function schemaShape(db: Database.Database) {
-  const objects = db
-    .prepare("SELECT type, name, tbl_name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
-    .all() as { type: string; name: string; tbl_name: string }[];
-  const tables = objects.filter((o) => o.type === 'table').map((o) => o.name);
-  const columns = Object.fromEntries(tables.map((t) => [t, db.pragma(`table_info(${t})`)]));
-  const foreignKeys = Object.fromEntries(tables.map((t) => [t, db.pragma(`foreign_key_list(${t})`)]));
-  const indexColumns = Object.fromEntries(
-    objects.filter((o) => o.type === 'index').map((o) => [o.name, db.pragma(`index_info(${o.name})`)]),
-  );
-  return { objects, columns, foreignKeys, indexColumns };
+  const rows = db.prepare('SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name').all() as {
+    type: string;
+    name: string;
+    tbl_name: string;
+    sql: string | null;
+  }[];
+  return rows.map((r) => ({
+    ...r,
+    sql:
+      r.sql
+        ?.replace(/IF NOT EXISTS/g, '')
+        .replace(/"/g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([(),])\s*/g, '$1')
+        .trim() ?? null,
+  }));
 }
 
 function appliedVersions(db: Database.Database): number[] {
@@ -128,46 +164,109 @@ describe('initializeCatalog', () => {
 
     expect(schemaShape(upgraded)).toEqual(schemaShape(fresh));
     expect(appliedVersions(upgraded)).toEqual(appliedVersions(fresh));
+    // Migration 4 widened the status CHECK; the upgraded table must accept the new value.
+    upgraded
+      .prepare("INSERT INTO analysis_runs (source_path, model, status) VALUES ('/x', 'm', 'completed_with_errors')")
+      .run();
   });
 
-  it('keeps v1.0.0 detections, linked to one audio_files row per source file', () => {
+  it.each([
+    ['one launch', [1, 2, 3, 4, 5]],
+    ['two launches', [1, 2, 3, 4, 5, 6]],
+  ])('upgrades a v1.2.1 catalog after %s to the same schema as a new catalog', (_, versions) => {
+    const fresh = memoryDb();
+    initializeCatalog(fresh);
+
+    const upgraded = v121Catalog(versions);
+    initializeCatalog(upgraded);
+
+    expect(schemaShape(upgraded)).toEqual(schemaShape(fresh));
+    expect(appliedVersions(upgraded)).toEqual(appliedVersions(fresh));
+  });
+
+  it('keeps v1.0.0 detections, linked to one audio_files row per run and source file', () => {
     const db = memoryDb();
     db.exec(V1_0_0_CATALOG);
     initializeCatalog(db);
 
     const rows = db
       .prepare(
-        `SELECT d.scientific_name, a.file_path, a.file_name, a.recording_start
+        `SELECT d.id, d.audio_file_id, a.run_id, a.file_path, a.file_name, a.recording_start
          FROM detections d JOIN audio_files a ON a.id = d.audio_file_id
          ORDER BY d.id`,
       )
-      .all();
-    expect(rows).toEqual([
+      .all() as {
+      id: number;
+      audio_file_id: number;
+      run_id: number;
+      file_path: string;
+      file_name: string;
+      recording_start: string | null;
+    }[];
+    expect(rows.map(({ audio_file_id: _, ...r }) => r)).toEqual([
       {
-        scientific_name: 'Turdus merula',
+        id: 1,
+        run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
         recording_start: '2024-05-01 05:30:00',
       },
       {
-        scientific_name: 'Erithacus rubecula',
+        id: 2,
+        run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
         recording_start: '2024-05-01 05:30:00',
       },
-      { scientific_name: 'Turdus merula', file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
+      { id: 3, run_id: 1, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
+      { id: 4, run_id: 2, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
     ]);
+    const [a, b, c, d] = rows.map((r) => r.audio_file_id);
+    expect(a).toBe(b);
+    expect(new Set([a, c, d]).size).toBe(3);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM audio_files').get()).toEqual({ n: 3 });
     expect(db.pragma('foreign_key_check')).toEqual([]);
   });
 
   it('changes nothing when a current catalog is opened again', () => {
     const db = memoryDb();
     initializeCatalog(db);
+    db.exec(`
+      INSERT INTO analysis_runs (id, source_path, model, status) VALUES (1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (id, run_id, file_path, file_name) VALUES (1, 1, '/rec/a.wav', 'a.wav');
+      INSERT INTO detections (run_id, audio_file_id, start_time, end_time, scientific_name, confidence)
+        VALUES (1, 1, 0, 3, 'Turdus merula', 0.9);
+    `);
     const shape = schemaShape(db);
     const versions = appliedVersions(db);
 
     initializeCatalog(db);
     expect(schemaShape(db)).toEqual(shape);
     expect(appliedVersions(db)).toEqual(versions);
+    expect(db.prepare('SELECT scientific_name, audio_file_id FROM detections').all()).toEqual([
+      { scientific_name: 'Turdus merula', audio_file_id: 1 },
+    ]);
+  });
+});
+
+describe('getDb', () => {
+  afterEach(() => {
+    closeDb();
+    fs.rmSync(dirs.userData, { recursive: true, force: true });
+  });
+
+  it('does not keep a connection whose initialization failed', () => {
+    dirs.userData = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-catalog-'));
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    fs.writeFileSync(getDbPath(), 'not a database');
+    expect(() => getDb()).toThrow();
+
+    // With the bad file gone, getDb opens a new catalog instead of returning the
+    // failed connection. Closing that connection is not observable here.
+    fs.rmSync(getDbPath());
+    const db = getDb();
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'detections'").get()).toEqual({
+      name: 'detections',
+    });
   });
 });
