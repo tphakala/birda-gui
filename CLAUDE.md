@@ -133,7 +133,6 @@ task dist:linux             # Linux (AppImage + deb)
 task dist:mac               # macOS (dmg)
 
 # Utilities
-task rebuild                # Rebuild native modules (better-sqlite3) for Electron
 task clean                  # Remove out/ and release/
 ```
 

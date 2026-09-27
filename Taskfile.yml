@@ -109,11 +109,6 @@ tasks:
 
   # === Utilities ===
 
-  rebuild:
-    desc: Rebuild native modules (better-sqlite3) for Electron
-    cmds:
-      - npx electron-rebuild -f -w better-sqlite3
-
   clean:
     desc: Remove build artifacts
     cmds:
@@ -125,6 +120,6 @@ tasks:
       - rm -rf {{.OUT_DIR}} {{.RELEASE_DIR}} node_modules
 
   install:
-    desc: Install dependencies and rebuild native modules
+    desc: Install dependencies
     cmds:
       - npm install
