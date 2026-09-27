@@ -41,6 +41,7 @@ export class AnalysisSession {
     filesProcessed: 0,
     filesFailed: 0,
     totalDetections: 0,
+    completedFiles: [],
   };
 
   constructor(readonly sourcePath: string) {}
@@ -94,7 +95,7 @@ export class AnalysisLock {
     return {
       state: this.current.cancelRequested ? 'stopping' : 'running',
       sourcePath: this.current.sourcePath,
-      progress: { ...this.current.progress },
+      progress: { ...this.current.progress, completedFiles: [...this.current.progress.completedFiles] },
     };
   }
 }

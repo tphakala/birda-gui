@@ -293,6 +293,8 @@ export interface AnalysisProgressSnapshot {
   filesProcessed: number;
   filesFailed: number;
   totalDetections: number;
+  /** Each file finished so far, in order, for the per-file status list. */
+  completedFiles: { file: string; status: FileCompletedPayload['status'] }[];
 }
 
 /**

@@ -57,9 +57,13 @@ describe('AnalysisLock', () => {
     const lock = new AnalysisLock();
     const session = lock.acquire('/a');
     session.progress.totalFiles = 2;
+    session.progress.completedFiles.push({ file: 'a.wav', status: 'processed' });
     const status = lock.status();
     session.progress.totalFiles = 3;
-    expect(status).toMatchObject({ progress: { totalFiles: 2 } });
+    session.progress.completedFiles.push({ file: 'b.wav', status: 'failed' });
+    expect(status).toMatchObject({
+      progress: { totalFiles: 2, completedFiles: [{ file: 'a.wav', status: 'processed' }] },
+    });
   });
 
   it('refuses a second analysis while one holds the lock', () => {
@@ -75,7 +79,7 @@ describe('AnalysisLock', () => {
     expect(lock.status()).toEqual({
       state: 'stopping',
       sourcePath: '/a',
-      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0 },
+      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0, completedFiles: [] },
     });
     expect(() => lock.acquire('/b')).toThrow('still stopping');
 
@@ -95,7 +99,7 @@ describe('AnalysisLock', () => {
     expect(lock.status()).toEqual({
       state: 'running',
       sourcePath: '/b',
-      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0 },
+      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0, completedFiles: [] },
     });
   });
 });

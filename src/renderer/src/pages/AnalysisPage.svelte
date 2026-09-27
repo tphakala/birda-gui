@@ -144,14 +144,19 @@
     doStart();
   }
 
-  function handleStartStopClick(event: MouseEvent) {
+  // A double click, or Enter held down, on Start would otherwise land on Stop
+  // and stop the analysis it just started.
+  const STOP_GRACE_MS = 600;
+  let startClickedAt = 0;
+
+  function handleStartStopClick() {
     if (appState.isAnalysisStopping) return;
     if (appState.isAnalysisRunning) {
-      // The second click of a double click on Start would otherwise stop the analysis it just started.
-      if (event.detail > 1) return;
+      if (performance.now() - startClickedAt < STOP_GRACE_MS) return;
       onstop();
       return;
     }
+    startClickedAt = performance.now();
     handleStartClick();
   }
 

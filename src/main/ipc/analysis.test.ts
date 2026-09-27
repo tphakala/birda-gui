@@ -232,7 +232,16 @@ describe('birda:analyze', () => {
     expect(status()).toEqual({
       state: 'running',
       sourcePath: sourceFile,
-      progress: { totalFiles: 3, filesProcessed: 2, filesFailed: 1, totalDetections: 4 },
+      progress: {
+        totalFiles: 3,
+        filesProcessed: 2,
+        filesFailed: 1,
+        totalDetections: 4,
+        completedFiles: [
+          { file: 'a.wav', status: 'processed' },
+          { file: 'b.wav', status: 'failed' },
+        ],
+      },
     });
     handle.resolve();
     await run;

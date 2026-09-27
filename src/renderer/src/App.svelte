@@ -19,6 +19,7 @@
   import {
     analysisState,
     handleAnalysisEvent,
+    joinRunningAnalysis,
     resetAnalysis,
     type BirdaEventEnvelope,
   } from '$lib/stores/analysis.svelte';
@@ -90,6 +91,10 @@
   // running flags until it settles; status events only drive a window that did
   // not start the analysis, for example one reloaded mid-run.
   let startPending = false;
+  // Set once this window has shown the outcome of its own analysis, so the idle
+  // status event for it (which may arrive after the start call settles) is not
+  // shown a second time. Cleared when the next analysis starts.
+  let shownOwnOutcome = false;
 
   type Outcome = AnalysisResult & { error?: string | undefined };
 
@@ -102,7 +107,7 @@
       else showToast(m.analysis_stoppedKept());
     } else if (outcome.status === 'failed') {
       analysisState.status = 'failed';
-      // A returned failure is a directory run in which no file could be analysed.
+      // A returned failure is a run in which no file was analysed or imported.
       analysisState.error = outcome.error ?? m.analysis_allFilesFailed();
     } else {
       analysisState.status = 'completed';
@@ -113,19 +118,14 @@
 
   function applyAnalysisStatus(status: AnalysisStatus) {
     if (startPending) return;
+    if (status.state !== 'idle') shownOwnOutcome = false;
+    else if (shownOwnOutcome) return;
     appState.isAnalysisRunning = status.state !== 'idle';
     appState.isAnalysisStopping = status.state === 'stopping';
     if (status.state !== 'idle') {
       // Joining a running analysis: show its source, so Stop is on screen, and its counts so far.
       appState.sourcePath ??= status.sourcePath;
-      if (analysisState.status === 'idle') {
-        resetAnalysis();
-        analysisState.status = 'running';
-        analysisState.totalFiles = status.progress.totalFiles;
-        analysisState.filesProcessed = status.progress.filesProcessed;
-        analysisState.filesFailed = status.progress.filesFailed;
-        analysisState.totalDetections = status.progress.totalDetections;
-      }
+      if (analysisState.status === 'idle') joinRunningAnalysis(status.progress);
     } else if (status.finished && analysisState.status !== 'idle') {
       // The panel may already say complete from birda's pipeline_completed event.
       showOutcome(status.finished);
@@ -165,6 +165,10 @@
     resetAnalysis();
     appState.isAnalysisRunning = true;
     startPending = true;
+    shownOwnOutcome = false;
+    // Set when the start was refused because another analysis holds the lock,
+    // and this window joined that one instead.
+    let joined = false;
 
     try {
       const result = await startAnalysis({
@@ -179,6 +183,7 @@
         timezone_offset_min: opts.timezoneOffsetMin,
       });
       showOutcome(result);
+      shownOwnOutcome = true;
       if (result.runId !== null && (result.status === 'completed' || result.status === 'completed_with_errors')) {
         appState.lastRunId = result.runId;
         appState.lastSourceFile = sourcePath;
@@ -186,11 +191,23 @@
         appState.activeTab = 'detections';
       }
     } catch (err) {
-      showOutcome({ runId: null, status: 'failed', discardedPartial: false, error: (err as Error).message });
+      // A window that did not know about a running analysis (its status reply
+      // had not arrived yet) is refused by the lock: join that analysis instead.
+      const current = await getAnalysisStatus().catch(() => null);
+      if (current && current.state !== 'idle') {
+        joined = true;
+        startPending = false;
+        applyAnalysisStatus(current);
+      } else {
+        showOutcome({ runId: null, status: 'failed', discardedPartial: false, error: (err as Error).message });
+        shownOwnOutcome = true;
+      }
     } finally {
       startPending = false;
-      appState.isAnalysisRunning = false;
-      appState.isAnalysisStopping = false;
+      if (!joined) {
+        appState.isAnalysisRunning = false;
+        appState.isAnalysisStopping = false;
+      }
     }
   }
 

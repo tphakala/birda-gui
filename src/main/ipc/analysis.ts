@@ -202,6 +202,7 @@ function trackProgress(session: AnalysisSession, envelope: BirdaEventEnvelope): 
     const payload = envelope.payload as FileCompletedPayload;
     p.filesProcessed++;
     if (payload.status === 'failed') p.filesFailed++;
+    p.completedFiles.push({ file: payload.file, status: payload.status });
     // birda omits detections for a file that failed or was skipped.
     p.totalDetections += payload.detections ?? 0;
   } else if (envelope.event === 'pipeline_completed') {

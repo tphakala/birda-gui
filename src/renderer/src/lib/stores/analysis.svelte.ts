@@ -1,4 +1,5 @@
 import type {
+  AnalysisProgressSnapshot,
   BirdaEventEnvelope,
   ProgressPayload,
   PipelineStartedPayload,
@@ -53,6 +54,26 @@ export function resetAnalysis(): void {
   analysisState.status = 'idle';
   analysisState.error = null;
   analysisState.events = [];
+}
+
+/**
+ * Starts showing an analysis this window joined mid-run, from the counts the
+ * main process kept. Finished files become file_completed events, which the
+ * per-file status list reads.
+ */
+export function joinRunningAnalysis(progress: AnalysisProgressSnapshot): void {
+  resetAnalysis();
+  analysisState.status = 'running';
+  analysisState.totalFiles = progress.totalFiles;
+  analysisState.filesProcessed = progress.filesProcessed;
+  analysisState.filesFailed = progress.filesFailed;
+  analysisState.totalDetections = progress.totalDetections;
+  analysisState.events = progress.completedFiles.map((f) => ({
+    spec_version: '',
+    timestamp: '',
+    event: 'file_completed',
+    payload: { file: f.file, status: f.status },
+  }));
 }
 
 const MAX_EVENTS = 500;

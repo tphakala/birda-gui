@@ -38,12 +38,18 @@
 
   function confirmDelete() {
     if (pendingDelete) ondelete?.(pendingDelete.id);
+    pendingDelete = null;
+    confirmOpen = false;
+    // The deleted row held focus; keep it in the list.
+    listHeading?.focus();
+  }
+
+  function cancelDelete() {
+    pendingDelete = null;
     confirmOpen = false;
   }
 
-  $effect(() => {
-    if (!confirmOpen) pendingDelete = null;
-  });
+  let listHeading = $state<HTMLHeadingElement | undefined>();
 
   function detectionLabel(count: number): string {
     return count === 1
@@ -54,7 +60,7 @@
 
 <div class="border-base-300 bg-base-200 flex w-64 shrink-0 flex-col overflow-hidden border-r">
   <div class="border-base-300 flex items-center gap-1.5 border-b px-3 py-2">
-    <h3 class="text-sm font-medium">{m.runs_title()}</h3>
+    <h3 bind:this={listHeading} tabindex="-1" class="text-sm font-medium focus:outline-none">{m.runs_title()}</h3>
   </div>
 
   <div class="flex-1 overflow-y-auto">
@@ -141,7 +147,7 @@
     {m.runs_confirmDelete_body({ source: pendingDelete ? sourceName(pendingDelete.source_path) : '' })}
   </p>
   {#snippet actions()}
-    <button type="button" class="btn btn-sm" onclick={() => (confirmOpen = false)}>{m.common_button_cancel()}</button>
+    <button type="button" class="btn btn-sm" onclick={cancelDelete}>{m.common_button_cancel()}</button>
     <button type="button" class="btn btn-error btn-sm" onclick={confirmDelete}>{m.runs_deleteRun()}</button>
   {/snippet}
 </Modal>
