@@ -1,5 +1,6 @@
 import type {
   AnalysisRequest,
+  CudaDownloadFinished,
   ModelInstallFinished,
   ModelInstallRequest,
   AnalysisResult,
@@ -54,7 +55,7 @@ export function getAnalysisStatus(): Promise<AnalysisStatus> {
 }
 
 /** Returns a function that removes this listener. */
-export function onAnalysisState(callback: (status: AnalysisStatus) => void): () => void {
+export function onAnalysisStatusChanged(callback: (status: AnalysisStatus) => void): () => void {
   return window.birda.on('birda:analysis-status-changed', (status) => {
     callback(status as AnalysisStatus);
   });
@@ -151,11 +152,7 @@ export function getModelManifest(id: string): Promise<ModelManifest> {
   return window.birda.invoke('birda:models-manifest', id) as Promise<ModelManifest>;
 }
 
-export function installModel(opts: {
-  id: string;
-  region?: string | undefined;
-  variant?: string | undefined;
-}): Promise<ModelInstalledResult> {
+export function installModel(opts: ModelInstallRequest): Promise<ModelInstalledResult> {
   return window.birda.invoke('birda:models-install', opts) as Promise<ModelInstalledResult>;
 }
 
@@ -224,6 +221,13 @@ export function cancelCudaDownload(): Promise<boolean> {
 
 export function removeCudaLibs(): Promise<void> {
   return window.birda.invoke('cuda:remove') as Promise<void>;
+}
+
+/** Returns a function that removes this listener. */
+export function onCudaDownloadFinished(callback: (finished: CudaDownloadFinished) => void): () => void {
+  return window.birda.on('cuda:download-finished', (finished) => {
+    callback(finished as CudaDownloadFinished);
+  });
 }
 
 /** Returns a function that removes this listener. */

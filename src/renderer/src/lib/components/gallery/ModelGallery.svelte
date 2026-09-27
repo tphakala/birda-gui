@@ -7,22 +7,13 @@
   import RemoveModelModal from './RemoveModelModal.svelte';
   import { RefreshCw } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
-  import {
-    listModels,
-    listAvailableModels,
-    getModelManifest,
-    installModel,
-    cancelInstall,
-    setDefaultModel,
-    removeModel,
-    onModelInstallProgress,
-    onModelInstallFinished,
-    getModelInstallStatus,
-  } from '$lib/utils/ipc';
-  import { galleryStore, installTracker, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
+  import { listModels, listAvailableModels, getModelManifest, setDefaultModel, removeModel } from '$lib/utils/ipc';
+  import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
+  import { cancelModelInstall, modelInstall, startModelInstall } from '$lib/stores/modelInstall.svelte';
+  import DownloadProgress from './DownloadProgress.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
-  import type { InstalledModel, ManifestVariant, ModelInstallFinished, ModelManifest } from '$shared/types';
+  import type { InstalledModel, ManifestVariant, ModelInstallRequest, ModelManifest } from '$shared/types';
 
   const FAMILY_IDS = ['birdnet-v30', 'perch-v2'];
   const LS_KEY = 'gallery.acceptedLicenses';
@@ -38,7 +29,13 @@
 
   const selectedManifest = $derived(manifestOf(galleryStore.family));
   const defaultId = $derived(galleryStore.installed.find((mo) => mo.is_default)?.id ?? '');
-  const installing = $derived(Object.keys(galleryStore.downloads).length > 0);
+  const installing = $derived(modelInstall.current !== null);
+  // The install in flight, keyed like the cards, whichever window or component started it.
+  const downloads = $derived.by((): Record<string, Download> => {
+    const current = modelInstall.current;
+    if (!current) return {};
+    return { [variantKey(current.request.id, current.request.region)]: current.progress ?? {} };
+  });
 
   const installedRegions = $derived(
     new Set(
@@ -53,8 +50,8 @@
   function manifestOf(family: string): ModelManifest | undefined {
     return galleryStore.manifests[family];
   }
-  function downloadOf(key: string): Download | undefined {
-    return galleryStore.downloads[key];
+  function modelName(request: ModelInstallRequest): string {
+    return manifestOf(request.id)?.variants.find((v) => v.region === request.region)?.region_name ?? request.id;
   }
 
   const updatable = (mo: InstalledModel): boolean => hasUpdate(mo, manifestOf(mo.registry_id ?? mo.model_type));
@@ -107,63 +104,27 @@
     }
   }
 
-  function finishAdopted(key: string, finished: ModelInstallFinished | null): void {
-    installTracker.adoptedKey = null;
-    if (installTracker.currentKey === key) installTracker.currentKey = null;
-    if (installTracker.cancelledKey === key) installTracker.cancelledKey = null;
-    busyId = null;
-    clearDownload(key);
-    const request = finished?.request;
-    const model = request
-      ? (manifestOf(request.id)?.variants.find((v) => v.region === request.region)?.region_name ?? request.id)
-      : '';
-    if (!finished || finished.outcome === 'installed') {
+  // Report each install that ends once, wherever it was started: this window's
+  // own installs and one followed after a reload or remount.
+  let seenFinished = modelInstall.lastFinished?.seq ?? 0;
+  $effect(() => {
+    const finished = modelInstall.lastFinished;
+    if (!finished || finished.seq === seenFinished) return;
+    seenFinished = finished.seq;
+    const model = modelName(finished.request);
+    if (finished.outcome === 'installed') {
       void refreshInstalled();
-      if (finished) announce = m.gallery_installedToast({ model });
+      announce = m.gallery_installedToast({ model });
     } else if (finished.outcome === 'cancelled') {
       announce = m.gallery_download_cancelled();
     } else {
       galleryStore.error = m.gallery_download_failed({ model, error: finished.error ?? '' });
     }
-  }
-
-  async function adoptRunningInstall(): Promise<void> {
-    const request = await getModelInstallStatus();
-    if (!request || installTracker.currentKey) return;
-    const key = variantKey(request.id, request.region);
-    installTracker.adoptedKey = key;
-    installTracker.currentKey = key;
-    busyId = key;
-    galleryStore.downloads[key] ??= {};
-    // It may have finished before the finished listener could see it.
-    if ((await getModelInstallStatus()) === null && installTracker.adoptedKey === key) finishAdopted(key, null);
-  }
+  });
 
   onMount(() => {
     loadAcceptedLicenses();
-    // A remount during this window's own install keeps it busy.
-    busyId = installTracker.currentKey;
-    const unsubscribes = [
-      onModelInstallProgress((p) => {
-        const k = installTracker.currentKey;
-        if (!k) return;
-        if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
-      }),
-      onModelInstallFinished((finished) => {
-        const key = variantKey(finished.request.id, finished.request.region);
-        if (key === installTracker.adoptedKey) finishAdopted(key, finished);
-        // An install this window neither started nor adopted (it ended before
-        // adoption) still changes the installed list.
-        else if (key !== installTracker.currentKey && finished.outcome === 'installed') void refreshInstalled();
-      }),
-    ];
     void load();
-    adoptRunningInstall().catch(() => {
-      // No install to follow
-    });
-    return () => {
-      for (const unsubscribe of unsubscribes) unsubscribe();
-    };
   });
 
   // Refresh the installed list and keep the app-wide selected model in sync with
@@ -173,41 +134,10 @@
     appState.selectedModel = galleryStore.installed.find((mo) => mo.is_default)?.id ?? '';
   }
 
-  function clearDownload(key: string): void {
-    const { [key]: _removed, ...rest } = galleryStore.downloads;
-    galleryStore.downloads = rest;
-  }
-
   // Returns true on success, false on cancel or error, so updateAll can stop.
-  async function doInstall(family: string, variant: ManifestVariant): Promise<boolean> {
-    const key = variantKey(family, variant.region);
-    installTracker.currentKey = key;
-    busyId = key;
-    galleryStore.downloads[key] = {};
-    try {
-      await installModel({ id: family, region: variant.region });
-      clearDownload(key);
-      await refreshInstalled();
-      announce = m.gallery_installedToast({ model: variant.region_name ?? family });
-      return true;
-    } catch (e) {
-      clearDownload(key);
-      if (installTracker.cancelledKey === key) {
-        announce = m.gallery_download_cancelled();
-      } else {
-        galleryStore.error = m.gallery_download_failed({
-          model: variant.region_name ?? family,
-          error: (e as Error).message,
-        });
-      }
-      return false;
-    } finally {
-      if (installTracker.currentKey === key) installTracker.currentKey = null;
-      // Always clear the cancel flag for this key, so a cancel that missed the
-      // process (install completed anyway) cannot mislabel a later failure.
-      if (installTracker.cancelledKey === key) installTracker.cancelledKey = null;
-      busyId = null;
-    }
+  // The outcome is reported by the effect above.
+  function doInstall(family: string, variant: ManifestVariant): Promise<boolean> {
+    return startModelInstall({ id: family, region: variant.region });
   }
 
   function handleInstall(variant: ManifestVariant): void {
@@ -233,12 +163,8 @@
     void doInstall(family, variant);
   }
 
-  async function handleCancel(): Promise<void> {
-    // Cancel the single in-flight install; key off the ACTUAL in-flight key
-    // (not the browsed family) so doInstall reports it as cancelled, including
-    // during updateAll where the install may span a different family.
-    installTracker.cancelledKey = installTracker.currentKey;
-    await cancelInstall();
+  function handleCancel(): Promise<void> {
+    return cancelModelInstall();
   }
 
   async function handleSetDefault(id: string): Promise<void> {
@@ -341,13 +267,21 @@
 
   <div class="sr-only" aria-live="polite">{announce}</div>
 
+  {#if modelInstall.current}
+    <!-- The install in flight, on both tabs, so it can be followed and cancelled from anywhere in the gallery. -->
+    <div class="border-base-300 bg-base-200 rounded-lg border p-3">
+      <p class="mb-2 text-sm font-medium">{modelName(modelInstall.current.request)}</p>
+      <DownloadProgress download={modelInstall.current.progress ?? {}} onCancel={() => void handleCancel()} />
+    </div>
+  {/if}
+
   {#if galleryStore.tab === 'installed'}
     <InstalledView
       installed={galleryStore.installed}
       manifests={galleryStore.manifests}
       {defaultId}
       {loading}
-      busy={busyId !== null}
+      busy={busyId !== null || installing}
       onSetDefault={handleSetDefault}
       onRemove={(mo: InstalledModel) => (removeTarget = mo)}
       onUpdate={handleUpdate}
@@ -359,7 +293,7 @@
       family={galleryStore.family}
       {families}
       {installedRegions}
-      downloads={galleryStore.downloads}
+      {downloads}
       {installing}
       onSelectFamily={(id: string) => (galleryStore.family = id)}
       onOpenRegion={(v: ManifestVariant) => (detailVariant = v)}
@@ -380,7 +314,7 @@
       family={galleryStore.family}
       license={selectedManifest.license}
       installed={detailInstalled}
-      download={galleryStore.downloads[variantKey(galleryStore.family, detailVariant.region)]}
+      download={downloads[variantKey(galleryStore.family, detailVariant.region)]}
       installDisabled={installing}
       onInstall={() => {
         if (detailVariant) handleInstall(detailVariant);

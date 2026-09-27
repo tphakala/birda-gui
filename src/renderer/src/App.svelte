@@ -16,6 +16,7 @@
   import SettingsPage from './pages/SettingsPage.svelte';
   import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
+  import { followModelInstalls } from '$lib/stores/modelInstall.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
@@ -31,7 +32,7 @@
     cancelAnalysis,
     getAnalysisStatus,
     onAnalysisProgress,
-    onAnalysisState,
+    onAnalysisStatusChanged,
     onLog,
     onSetupWizard,
     onShowLicenses,
@@ -269,7 +270,8 @@
       onAnalysisProgress((envelope) => {
         handleAnalysisEvent(envelope as BirdaEventEnvelope);
       }),
-      onAnalysisState(applyAnalysisStatus),
+      onAnalysisStatusChanged(applyAnalysisStatus),
+      followModelInstalls(),
       onLog((entry) => {
         const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
         addLog(level, source, message);

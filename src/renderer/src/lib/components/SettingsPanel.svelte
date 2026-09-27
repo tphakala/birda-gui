@@ -39,6 +39,7 @@
     removeCudaLibs,
     getCudaDownloadSize,
     onCudaDownloadProgress,
+    onCudaDownloadFinished,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
@@ -151,21 +152,19 @@
   let cudaRemoveError = $state<string | null>(null);
   let cudaDownloadSizeBytes = $state(0);
   let showCudaRemoveConfirm = $state(false);
-  let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
-  let offCudaProgress: (() => void) | null = null;
-
-  // One progress listener at a time, whichever path started the download display.
-  function listenCudaProgress(): void {
-    offCudaProgress?.();
-    offCudaProgress = onCudaDownloadProgress((progress) => {
-      cudaProgress = progress;
-    });
-  }
-
-  function stopCudaProgress(): void {
-    offCudaProgress?.();
-    offCudaProgress = null;
-  }
+  // Progress and the outcome of a CUDA download, whichever window started it,
+  // for as long as this panel is mounted.
+  const offCudaListeners = [
+    onCudaDownloadProgress((progress) => {
+      if (cudaDownloading) cudaProgress = progress;
+    }),
+    onCudaDownloadFinished((finished) => {
+      cudaDownloading = false;
+      cudaProgress = null;
+      if (finished.outcome === 'failed') cudaError = finished.error ?? '';
+      void refreshCudaStatus();
+    }),
+  ];
 
   $effect(() => {
     // Only sync theme to appState after settings are loaded to prevent flash
@@ -224,31 +223,11 @@
   async function refreshCudaStatus() {
     try {
       cudaStatus = await checkCudaStatus();
-      // Rehydrate download state if a download is running (e.g., after tab navigation)
+      // Follow a download that is already running (after a tab switch or a
+      // reload); cuda:download-finished ends it.
       if (cudaStatus.downloadInProgress && !cudaDownloading) {
         cudaDownloading = true;
         cudaProgress = null;
-        listenCudaProgress();
-        // Poll for completion since we can't await the original IPC invoke
-        if (cudaPollTimer) clearInterval(cudaPollTimer);
-        cudaPollTimer = setInterval(() => {
-          void checkCudaStatus()
-            .then((status) => {
-              if (!status.downloadInProgress) {
-                if (cudaPollTimer) {
-                  clearInterval(cudaPollTimer);
-                  cudaPollTimer = null;
-                }
-                cudaDownloading = false;
-                cudaProgress = null;
-                stopCudaProgress();
-                cudaStatus = status;
-              }
-            })
-            .catch(() => {
-              // Ignore polling errors
-            });
-        }, 2000);
       }
       if (!cudaStatus.installed && cudaStatus.platformSupported) {
         cudaDownloadSizeBytes = await getCudaDownloadSize(BIRDA_CLI_VERSION);
@@ -263,27 +242,17 @@
     cudaDownloading = true;
     cudaError = null;
     cudaProgress = null;
-
-    listenCudaProgress();
-
     try {
       await downloadCudaLibs(BIRDA_CLI_VERSION);
+    } catch {
+      // The outcome, a failure included, arrives on cuda:download-finished. A
+      // download refused because one is running sends none: follow that one.
       await refreshCudaStatus();
-    } catch (e) {
-      const msg = (e as Error).message;
-      // Don't show error when user cancelled the download
-      if (!msg.includes('cancelled')) {
-        cudaError = msg;
-      }
-    } finally {
-      cudaDownloading = false;
-      cudaProgress = null;
-      stopCudaProgress();
     }
   }
 
   async function handleCudaCancelDownload() {
-    // State cleanup is handled by handleCudaDownload's finally block
+    // The panel's state is reset by cuda:download-finished.
     await cancelCudaDownload();
   }
 
@@ -434,8 +403,7 @@
     if (clearResultTimer) clearTimeout(clearResultTimer);
     if (optimizeTimer) clearTimeout(optimizeTimer);
     if (vacuumTimer) clearTimeout(vacuumTimer);
-    if (cudaPollTimer) clearInterval(cudaPollTimer);
-    stopCudaProgress();
+    for (const off of offCudaListeners) off();
     appState.settingsHasUnsavedChanges = false;
   });
 </script>
@@ -553,7 +521,7 @@
               <button
                 class="btn btn-ghost btn-sm"
                 onclick={handleCudaCancelDownload}
-                disabled={cudaProgress?.phase !== 'downloading'}
+                disabled={cudaProgress !== null && cudaProgress.phase !== 'downloading'}
               >
                 {m.settings_cuda_cancelButton()}
               </button>

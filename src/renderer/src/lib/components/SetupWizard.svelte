@@ -22,16 +22,13 @@
     openExecutableDialog,
     listModels,
     listAvailableModels,
-    installModel,
     getAvailableLanguages,
-    onModelInstallProgress,
-    onModelInstallFinished,
-    getModelInstallStatus,
     getSystemLocale,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
+  import { modelInstall, startModelInstall } from '$lib/stores/modelInstall.svelte';
   import * as m from '$paraglide/messages';
   import { LANGUAGES, getLanguage } from '$lib/i18n/languages';
   import { detectLanguage } from '$lib/i18n/detect';
@@ -91,8 +88,10 @@
   // --- Models ---
   let installedModels = $state<InstalledModel[]>([]);
   let availableModels = $state<AvailableModel[]>([]);
-  let installing = $state<string | null>(null);
-  let installProgress = $state('');
+  // The install in flight, whichever window or component started it.
+  const installing = $derived(modelInstall.current?.request.id ?? null);
+  const installProgress = $derived(modelInstall.current?.progress?.line ?? '');
+  let installAnnouncement = $state('');
   let modelsError = $state<string | null>(null);
   let licenseModel = $state<AvailableModel | null>(null);
   const installedIds = $derived(new Set(installedModels.map((mod) => mod.id)));
@@ -125,8 +124,6 @@
     }
   }
 
-  let offInstallProgress: (() => void) | null = null;
-
   function promptLicense(model: AvailableModel) {
     licenseModel = model;
   }
@@ -135,28 +132,27 @@
     if (!licenseModel) return;
     const id = licenseModel.id;
     licenseModel = null;
-    installing = id;
-    installProgress = '';
     modelsError = null;
-
-    offInstallProgress?.();
-    const offThisInstall = onModelInstallProgress((progress) => {
-      installProgress = progress.line;
-    });
-    offInstallProgress = offThisInstall;
-
-    try {
-      await installModel({ id });
-      await refreshModels();
-    } catch (e) {
-      modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });
-    } finally {
-      installing = null;
-      installProgress = '';
-      offThisInstall();
-      offInstallProgress = null;
-    }
+    // The outcome is reported by the effect below.
+    await startModelInstall({ id });
   }
+
+  // Report each install that ends once, including one followed after a reload.
+  let seenFinished = modelInstall.lastFinished?.seq ?? 0;
+  $effect(() => {
+    const finished = modelInstall.lastFinished;
+    if (!finished || finished.seq === seenFinished) return;
+    seenFinished = finished.seq;
+    const modelId = finished.request.id;
+    if (finished.outcome === 'installed') {
+      installAnnouncement = m.gallery_installedToast({ model: modelId });
+      void refreshModels();
+    } else if (finished.outcome === 'cancelled') {
+      installAnnouncement = m.gallery_download_cancelled();
+    } else {
+      modelsError = m.settings_models_failedInstall({ modelId, error: finished.error ?? '' });
+    }
+  });
 
   // --- UI Language ---
   let selectedUiLanguage = $state('en');
@@ -167,47 +163,8 @@
   let selectedLanguage = $state('en');
   let languagesError = $state<string | null>(null);
 
-  // An install this window did not start, e.g. one still running after a reload.
-  let adoptedInstall: string | null = null;
-  let offInstallFinished: (() => void) | null = null;
-
-  async function finishAdoptedInstall(error?: string) {
-    adoptedInstall = null;
-    installing = null;
-    installProgress = '';
-    offInstallProgress?.();
-    offInstallProgress = null;
-    await refreshModels();
-    // After the refresh, which clears modelsError.
-    if (error !== undefined) modelsError = error;
-  }
-
-  async function adoptRunningInstall() {
-    const request = await getModelInstallStatus();
-    if (!request || installing) return;
-    adoptedInstall = request.id;
-    installing = request.id;
-    offInstallProgress = onModelInstallProgress((progress) => {
-      installProgress = progress.line;
-    });
-    // It may have finished before the finished listener could see it.
-    if ((await getModelInstallStatus()) === null && adoptedInstall === request.id) await finishAdoptedInstall();
-  }
-
   // --- Lifecycle ---
   onMount(async () => {
-    offInstallFinished = onModelInstallFinished((finished) => {
-      if (finished.request.id !== adoptedInstall) return;
-      void finishAdoptedInstall(
-        finished.outcome === 'failed'
-          ? m.settings_models_failedInstall({ modelId: finished.request.id, error: finished.error ?? '' })
-          : undefined,
-      );
-    });
-    adoptRunningInstall().catch(() => {
-      // No install to follow
-    });
-
     // Auto-detect system language for UI language step
     try {
       const systemLocale = await getSystemLocale();
@@ -230,11 +187,6 @@
     } catch {
       // Will retry when step is reached
     }
-  });
-
-  onDestroy(() => {
-    offInstallProgress?.();
-    offInstallFinished?.();
   });
 
   // When entering model step, refresh if we have no data yet
@@ -437,6 +389,7 @@
           <p class="text-base-content/60 mt-1 text-sm">{m.wizard_model_subtitle()}</p>
         </div>
 
+        <div class="sr-only" aria-live="polite">{installAnnouncement}</div>
         {#if modelsError}
           <div role="alert" class="alert alert-error mt-4">
             <span class="text-sm">{modelsError}</span>
