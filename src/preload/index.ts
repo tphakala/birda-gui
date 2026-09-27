@@ -98,15 +98,9 @@ contextBridge.exposeInMainWorld('birda', {
       callback(...args);
     };
     ipcRenderer.on(channel, listener);
-    // Removes only this listener, unlike removeAllListeners.
+    // Removes only this listener, so one subscriber cannot drop another's.
     return () => {
       ipcRenderer.removeListener(channel, listener);
     };
-  },
-  removeAllListeners: (channel: string) => {
-    if (!ALLOWED_RECEIVE_CHANNELS.has(channel)) {
-      throw new Error(`IPC receive channel not allowed: ${channel}`);
-    }
-    ipcRenderer.removeAllListeners(channel);
   },
 });

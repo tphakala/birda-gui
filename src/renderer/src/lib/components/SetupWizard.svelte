@@ -25,7 +25,6 @@
     installModel,
     getAvailableLanguages,
     onModelInstallProgress,
-    offModelInstallProgress,
     getSystemLocale,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
@@ -124,6 +123,8 @@
     }
   }
 
+  let offInstallProgress: (() => void) | null = null;
+
   function promptLicense(model: AvailableModel) {
     licenseModel = model;
   }
@@ -136,9 +137,11 @@
     installProgress = '';
     modelsError = null;
 
-    onModelInstallProgress((progress) => {
+    offInstallProgress?.();
+    const offThisInstall = onModelInstallProgress((progress) => {
       installProgress = progress.line;
     });
+    offInstallProgress = offThisInstall;
 
     try {
       await installModel({ id });
@@ -148,7 +151,8 @@
     } finally {
       installing = null;
       installProgress = '';
-      offModelInstallProgress();
+      offThisInstall();
+      offInstallProgress = null;
     }
   }
 
@@ -188,7 +192,7 @@
   });
 
   onDestroy(() => {
-    offModelInstallProgress();
+    offInstallProgress?.();
   });
 
   // When entering model step, refresh if we have no data yet

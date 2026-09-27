@@ -40,17 +40,15 @@ export function setupMenuListeners(callbacks: {
     appState.showLogPanel = !appState.showLogPanel;
   };
 
-  window.birda.on('menu:open-file', handleOpenFile);
-  window.birda.on('menu:open-folder', handleOpenFolder);
-  window.birda.on('menu:switch-tab', handleSwitchTab);
-  window.birda.on('menu:focus-search', handleFocusSearch);
-  window.birda.on('menu:toggle-log', handleToggleLog);
+  const unsubscribes = [
+    window.birda.on('menu:open-file', handleOpenFile),
+    window.birda.on('menu:open-folder', handleOpenFolder),
+    window.birda.on('menu:switch-tab', handleSwitchTab),
+    window.birda.on('menu:focus-search', handleFocusSearch),
+    window.birda.on('menu:toggle-log', handleToggleLog),
+  ];
 
   return () => {
-    window.birda.removeAllListeners('menu:open-file');
-    window.birda.removeAllListeners('menu:open-folder');
-    window.birda.removeAllListeners('menu:switch-tab');
-    window.birda.removeAllListeners('menu:focus-search');
-    window.birda.removeAllListeners('menu:toggle-log');
+    for (const unsubscribe of unsubscribes) unsubscribe();
   };
 }

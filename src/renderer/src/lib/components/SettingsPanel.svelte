@@ -40,7 +40,6 @@
     removeCudaLibs,
     getCudaDownloadSize,
     onCudaDownloadProgress,
-    offCudaDownloadProgress,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
@@ -154,6 +153,20 @@
   let cudaDownloadSizeBytes = $state(0);
   let showCudaRemoveConfirm = $state(false);
   let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
+  let offCudaProgress: (() => void) | null = null;
+
+  // One progress listener at a time, whichever path started the download display.
+  function listenCudaProgress(): void {
+    offCudaProgress?.();
+    offCudaProgress = onCudaDownloadProgress((progress) => {
+      cudaProgress = progress;
+    });
+  }
+
+  function stopCudaProgress(): void {
+    offCudaProgress?.();
+    offCudaProgress = null;
+  }
 
   $effect(() => {
     // Only sync theme to appState after settings are loaded to prevent flash
@@ -216,9 +229,7 @@
       if (cudaStatus.downloadInProgress && !cudaDownloading) {
         cudaDownloading = true;
         cudaProgress = null;
-        onCudaDownloadProgress((progress) => {
-          cudaProgress = progress;
-        });
+        listenCudaProgress();
         // Poll for completion since we can't await the original IPC invoke
         if (cudaPollTimer) clearInterval(cudaPollTimer);
         cudaPollTimer = setInterval(() => {
@@ -231,7 +242,7 @@
                 }
                 cudaDownloading = false;
                 cudaProgress = null;
-                offCudaDownloadProgress();
+                stopCudaProgress();
                 cudaStatus = status;
               }
             })
@@ -254,9 +265,7 @@
     cudaError = null;
     cudaProgress = null;
 
-    onCudaDownloadProgress((progress) => {
-      cudaProgress = progress;
-    });
+    listenCudaProgress();
 
     try {
       await downloadCudaLibs(BIRDA_CLI_VERSION);
@@ -270,7 +279,7 @@
     } finally {
       cudaDownloading = false;
       cudaProgress = null;
-      offCudaDownloadProgress();
+      stopCudaProgress();
     }
   }
 
@@ -427,7 +436,7 @@
     if (optimizeTimer) clearTimeout(optimizeTimer);
     if (vacuumTimer) clearTimeout(vacuumTimer);
     if (cudaPollTimer) clearInterval(cudaPollTimer);
-    offCudaDownloadProgress();
+    stopCudaProgress();
     appState.settingsHasUnsavedChanges = false;
   });
 </script>

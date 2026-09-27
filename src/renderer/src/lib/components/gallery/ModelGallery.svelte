@@ -16,7 +16,6 @@
     setDefaultModel,
     removeModel,
     onModelInstallProgress,
-    offModelInstallProgress,
   } from '$lib/utils/ipc';
   import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
@@ -112,14 +111,14 @@
 
   onMount(() => {
     loadAcceptedLicenses();
-    onModelInstallProgress((p) => {
+    const offInstallProgress = onModelInstallProgress((p) => {
       const k = currentInstallKey;
       if (!k) return;
       if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
     });
     void load();
     return () => {
-      offModelInstallProgress();
+      offInstallProgress();
     };
   });
 

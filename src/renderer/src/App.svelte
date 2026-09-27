@@ -32,17 +32,13 @@
     onAnalysisProgress,
     onAnalysisState,
     onLog,
-    offLog,
     onSetupWizard,
-    offSetupWizard,
     onShowLicenses,
-    offShowLicenses,
   } from '$lib/utils/ipc';
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import type { AnalysisStatus } from '$shared/types';
 
-  let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
 
@@ -221,31 +217,35 @@
       }
     })();
 
-    onSetupWizard(() => {
-      showWizard = true;
-    });
+    const unsubscribes = [
+      onSetupWizard(() => {
+        showWizard = true;
+      }),
+      onShowLicenses(() => {
+        showLicenses = true;
+      }),
+      setupMenuListeners({
+        onOpenFile: (path: string) => {
+          appState.sourcePath = path;
+        },
+        onFocusSearch: () => {
+          // The visible species search that is not behind the annotation editor.
+          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
+          [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
+        },
+      }),
+      // One progress listener for the window's lifetime, so a Stop then Start
+      // never leaves two listeners counting the same events.
+      onAnalysisProgress((envelope) => {
+        handleAnalysisEvent(envelope as BirdaEventEnvelope);
+      }),
+      onAnalysisState(applyAnalysisStatus),
+      onLog((entry) => {
+        const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
+        addLog(level, source, message);
+      }),
+    ];
 
-    onShowLicenses(() => {
-      showLicenses = true;
-    });
-
-    cleanupMenu = setupMenuListeners({
-      onOpenFile: (path: string) => {
-        appState.sourcePath = path;
-      },
-      onFocusSearch: () => {
-        // The visible species search that is not behind the annotation editor.
-        const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
-        [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
-      },
-    });
-
-    // One progress listener for the window's lifetime, so a Stop then Start
-    // never leaves two listeners counting the same events.
-    const offAnalysisProgress = onAnalysisProgress((envelope) => {
-      handleAnalysisEvent(envelope as BirdaEventEnvelope);
-    });
-    const offAnalysisState = onAnalysisState(applyAnalysisStatus);
     // Pick up an analysis that was already running when this window loaded.
     getAnalysisStatus()
       .then(applyAnalysisStatus)
@@ -253,15 +253,9 @@
         // Assume idle
       });
 
-    onLog((entry) => {
-      const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
-      addLog(level, source, message);
-    });
-
     return () => {
       mediaQuery.removeEventListener('change', handler);
-      offAnalysisProgress();
-      offAnalysisState();
+      for (const unsubscribe of unsubscribes) unsubscribe();
     };
   });
 
@@ -270,13 +264,6 @@
     const isDark = appState.theme === 'dark' || (appState.theme === 'system' && systemPrefersDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'birda-dark' : 'birda-light');
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-  });
-
-  onDestroy(() => {
-    offLog();
-    offSetupWizard();
-    offShowLicenses();
-    cleanupMenu?.();
   });
 </script>
 
