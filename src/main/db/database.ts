@@ -295,7 +295,6 @@ function migrateToAudioFiles(db: Database.Database): void {
   const hasSourceFile = detectionsColumns.some((c) => c.name === 'source_file');
 
   if (!hasSourceFile) {
-    // New database with current schema: audio_files table already exists via schema.ts
     console.log('Detections table already uses audio_file_id, skipping migration');
     db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(5);
     return;
