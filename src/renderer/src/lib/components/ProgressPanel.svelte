@@ -1,6 +1,7 @@
 <script lang="ts">
   import { FileHeadphone, CircleCheckBig, CircleX, X } from '@lucide/svelte';
   import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
+  import { appState } from '$lib/stores/app.svelte';
   import { formatNumber } from '$lib/utils/format';
   import * as m from '$paraglide/messages';
 
@@ -28,7 +29,7 @@
         <!-- Mounted once the analysis reports it is running, so a later change to complete or failed is announced. -->
         <span role="status" class="flex items-center gap-1">
           {#if analysisState.status === 'running'}
-            {m.status_analyzing()}
+            {appState.isAnalysisStopping ? m.analysis_stopping() : m.status_analyzing()}
           {:else if analysisState.status === 'completed'}
             <span class="text-success flex items-center gap-1">
               <CircleCheckBig size={16} />
@@ -43,6 +44,7 @@
         </span>
         {#if analysisState.status === 'completed' || analysisState.status === 'failed'}
           <button
+            type="button"
             onclick={dismissAnalysis}
             class="btn btn-ghost btn-xs btn-square"
             aria-label={m.common_button_close()}

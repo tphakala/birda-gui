@@ -14,7 +14,8 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
@@ -23,7 +24,6 @@
   } from '$lib/stores/analysis.svelte';
   import { addLog, type LogEntry } from '$lib/stores/log.svelte';
   import {
-    getCatalogStats,
     getSettings,
     listModels,
     startAnalysis,
@@ -37,7 +37,7 @@
   } from '$lib/utils/ipc';
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
   import { onMount } from 'svelte';
-  import type { AnalysisStatus } from '$shared/types';
+  import type { AnalysisResult, AnalysisStatus } from '$shared/types';
 
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
@@ -82,38 +82,61 @@
       // proceed with existing state
     }
     await syncDefaultModel();
-    try {
-      appState.catalogStats = await getCatalogStats();
-    } catch {
-      // DB may not be ready
-    }
+    await refreshCatalogStats();
     showWizard = false;
   }
 
-  // True while this window's startAnalysis call is pending. A window reloaded
-  // during an analysis has no such call, so the analysis state events end it.
+  // True while this window's startAnalysis call is pending. That call owns the
+  // running flags until it settles; status events only drive a window that did
+  // not start the analysis, for example one reloaded mid-run.
   let startPending = false;
 
+  type Outcome = AnalysisResult & { error?: string | undefined };
+
+  /** Shows how an analysis ended and reloads what it changed in the catalog. */
+  function showOutcome(outcome: Outcome) {
+    if (outcome.status === 'cancelled') {
+      analysisState.status = 'idle';
+      if (outcome.runId === null) showToast(m.analysis_stopped());
+      else if (outcome.discardedPartial) showToast(m.analysis_stoppedDiscarded());
+      else showToast(m.analysis_stoppedKept());
+    } else if (outcome.status === 'failed') {
+      analysisState.status = 'failed';
+      // A returned failure is a directory run in which no file could be analysed.
+      analysisState.error = outcome.error ?? m.analysis_allFilesFailed();
+    } else {
+      analysisState.status = 'completed';
+    }
+    appState.runsVersion++;
+    void refreshCatalogStats();
+  }
+
   function applyAnalysisStatus(status: AnalysisStatus) {
+    if (startPending) return;
     appState.isAnalysisRunning = status.state !== 'idle';
     appState.isAnalysisStopping = status.state === 'stopping';
-    if (startPending) return;
-    if (status.state !== 'idle' && analysisState.status === 'idle') {
-      analysisState.status = 'running';
-    } else if (status.state === 'idle' && analysisState.status === 'running') {
-      analysisState.status = 'idle';
-      getCatalogStats()
-        .then((stats) => {
-          appState.catalogStats = stats;
-        })
-        .catch(() => {
-          // Stats refresh on the next catalog change
-        });
+    if (status.state !== 'idle') {
+      // Joining a running analysis: show its source, so Stop is on screen, and its counts so far.
+      appState.sourcePath ??= status.sourcePath;
+      if (analysisState.status === 'idle') {
+        resetAnalysis();
+        analysisState.status = 'running';
+        analysisState.totalFiles = status.progress.totalFiles;
+        analysisState.filesProcessed = status.progress.filesProcessed;
+        analysisState.filesFailed = status.progress.filesFailed;
+        analysisState.totalDetections = status.progress.totalDetections;
+      }
+    } else if (status.finished && analysisState.status !== 'idle') {
+      // The panel may already say complete from birda's pipeline_completed event.
+      showOutcome(status.finished);
+    } else if (status.finished) {
+      appState.runsVersion++;
+      void refreshCatalogStats();
     }
   }
 
-  // Start stays disabled until the analysis has actually ended: the main
-  // process keeps its lock until the stopped birda process exits.
+  // Start stays unavailable until the analysis has finished: the main process
+  // keeps its lock until then.
   async function handleStop() {
     appState.isAnalysisStopping = true;
     try {
@@ -123,8 +146,8 @@
         appState.isAnalysisStopping = false;
       }
     } catch {
-      // Let the user try Stop again
       appState.isAnalysisStopping = false;
+      showToast(m.analysis_stopFailed(), { severity: 'error' });
     }
   }
 
@@ -136,7 +159,8 @@
     day?: number | undefined;
     timezoneOffsetMin?: number | undefined;
   }) {
-    if (!appState.sourcePath || appState.isAnalysisRunning) return;
+    const sourcePath = appState.sourcePath;
+    if (!sourcePath || appState.isAnalysisRunning) return;
 
     resetAnalysis();
     appState.isAnalysisRunning = true;
@@ -144,7 +168,7 @@
 
     try {
       const result = await startAnalysis({
-        source_path: appState.sourcePath,
+        source_path: sourcePath,
         model: appState.selectedModel,
         min_confidence: appState.analysisConfidence,
         latitude: opts.latitude || undefined,
@@ -154,21 +178,15 @@
         day: opts.day,
         timezone_offset_min: opts.timezoneOffsetMin,
       });
-      if (result.status === 'cancelled' || result.runId === null) {
-        // A stopped run keeps its partial results in the catalog, marked cancelled
-        analysisState.status = 'idle';
-        appState.catalogStats = await getCatalogStats();
-        return;
+      showOutcome(result);
+      if (result.runId !== null && (result.status === 'completed' || result.status === 'completed_with_errors')) {
+        appState.lastRunId = result.runId;
+        appState.lastSourceFile = sourcePath;
+        appState.selectedRunId = result.runId;
+        appState.activeTab = 'detections';
       }
-      analysisState.status = 'completed';
-      appState.lastRunId = result.runId;
-      appState.lastSourceFile = appState.sourcePath;
-      appState.selectedRunId = result.runId;
-      appState.activeTab = 'detections';
-      appState.catalogStats = await getCatalogStats();
     } catch (err) {
-      analysisState.status = 'failed';
-      analysisState.error = (err as Error).message;
+      showOutcome({ runId: null, status: 'failed', discardedPartial: false, error: (err as Error).message });
     } finally {
       startPending = false;
       appState.isAnalysisRunning = false;
@@ -209,12 +227,7 @@
       }
 
       await syncDefaultModel();
-
-      try {
-        appState.catalogStats = await getCatalogStats();
-      } catch {
-        // DB not ready yet
-      }
+      await refreshCatalogStats();
     })();
 
     const unsubscribes = [

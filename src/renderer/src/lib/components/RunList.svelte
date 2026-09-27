@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { AudioLines, CircleAlert, Loader, X } from '@lucide/svelte';
+  import { AudioLines, CircleAlert, CircleSlash, Loader, Trash, X } from '@lucide/svelte';
+  import Modal from '$lib/components/Modal.svelte';
   import { formatDate } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
@@ -21,6 +22,28 @@
   function sourceName(sourcePath: string): string {
     return sourcePath.split(/[\\/]/).pop() ?? sourcePath;
   }
+
+  // A run with detections is deleted only after a confirmation; its annotations go with it.
+  let confirmOpen = $state(false);
+  let pendingDelete = $state<RunWithStats | null>(null);
+
+  function requestDelete(run: RunWithStats) {
+    if (run.detection_count > 0) {
+      pendingDelete = run;
+      confirmOpen = true;
+    } else {
+      ondelete?.(run.id);
+    }
+  }
+
+  function confirmDelete() {
+    if (pendingDelete) ondelete?.(pendingDelete.id);
+    confirmOpen = false;
+  }
+
+  $effect(() => {
+    if (!confirmOpen) pendingDelete = null;
+  });
 
   function detectionLabel(count: number): string {
     return count === 1
@@ -81,7 +104,10 @@
                   {m.runs_status_failed()}
                 </span>
               {:else if run.status === 'cancelled'}
-                <span class="badge badge-warning badge-xs">{m.runs_status_cancelled()}</span>
+                <span class="badge badge-warning badge-xs gap-0.5">
+                  <CircleSlash size={10} />
+                  {m.runs_status_cancelled()}
+                </span>
               {/if}
             </span>
           </button>
@@ -89,7 +115,7 @@
             <button
               type="button"
               onclick={() => {
-                ondelete(run.id);
+                requestDelete(run);
               }}
               class="text-base-content/30 hover:text-error absolute top-1.5 right-1.5 rounded p-0.5 transition-colors"
               title={m.runs_deleteRun()}
@@ -103,3 +129,19 @@
     {/if}
   </div>
 </div>
+
+<Modal
+  bind:open={confirmOpen}
+  title={m.runs_confirmDelete_title()}
+  icon={Trash}
+  iconClass="text-error"
+  descriptionId="run-delete-body"
+>
+  <p id="run-delete-body" class="text-base-content/80 text-sm">
+    {m.runs_confirmDelete_body({ source: pendingDelete ? sourceName(pendingDelete.source_path) : '' })}
+  </p>
+  {#snippet actions()}
+    <button type="button" class="btn btn-sm" onclick={() => (confirmOpen = false)}>{m.common_button_cancel()}</button>
+    <button type="button" class="btn btn-error btn-sm" onclick={confirmDelete}>{m.runs_deleteRun()}</button>
+  {/snippet}
+</Modal>

@@ -4,14 +4,14 @@
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import SpeciesCards from '$lib/components/SpeciesCards.svelte';
   import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
   import {
     getRuns,
     getDetections,
     getRunSpecies,
     getHourlyDetections,
     deleteRun,
-    getCatalogStats,
     getSpeciesLists,
   } from '$lib/utils/ipc';
   import { formatNumber } from '$lib/utils/format';
@@ -92,12 +92,25 @@
   async function refreshRuns() {
     try {
       runs = await getRuns();
+      // A selected run can be gone, e.g. replaced by a newer analysis of the same source.
+      if (appState.selectedRunId !== null && !runs.some((r) => r.id === appState.selectedRunId)) {
+        appState.selectedRunId = null;
+      }
     } catch {
       runs = [];
     } finally {
       runsLoading = false;
     }
   }
+
+  // Reload the run list whenever an analysis ends, whether or not a run was selected.
+  let seenRunsVersion = appState.runsVersion;
+  $effect(() => {
+    if (appState.runsVersion !== seenRunsVersion) {
+      seenRunsVersion = appState.runsVersion;
+      void refreshRuns();
+    }
+  });
 
   async function loadRunDetections() {
     if (!appState.selectedRunId) return;
@@ -184,10 +197,11 @@
       if (appState.selectedRunId === runId) {
         appState.selectedRunId = null;
       }
-      appState.catalogStats = await getCatalogStats();
     } catch (error) {
       console.error('Failed to delete run', runId, error);
+      showToast(m.runs_deleteFailed(), { severity: 'error' });
     }
+    await refreshCatalogStats();
   }
 
   function handleSort(column: string) {

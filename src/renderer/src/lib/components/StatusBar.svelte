@@ -52,7 +52,7 @@
   <span>
     {#if appState.isAnalysisRunning}
       <span class="bg-primary mr-1 inline-block h-2 w-2 animate-pulse rounded-full"></span>
-      {m.status_analyzing()}
+      {appState.isAnalysisStopping ? m.analysis_stopping() : m.status_analyzing()}
     {:else}
       {m.status_ready()}
     {/if}

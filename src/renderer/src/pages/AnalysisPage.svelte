@@ -144,7 +144,19 @@
     doStart();
   }
 
+  function handleStartStopClick(event: MouseEvent) {
+    if (appState.isAnalysisStopping) return;
+    if (appState.isAnalysisRunning) {
+      // The second click of a double click on Start would otherwise stop the analysis it just started.
+      if (event.detail > 1) return;
+      onstop();
+      return;
+    }
+    handleStartClick();
+  }
+
   function doStart() {
+    showNoFilterWarning = false;
     let month: number | undefined;
     let day: number | undefined;
     if (recordingDate) {
@@ -190,6 +202,7 @@
     <h1 class="text-2xl font-semibold">{m.analysis_title()}</h1>
     <div class="grid w-full max-w-md grid-cols-2 gap-4 px-6">
       <button
+        type="button"
         onclick={handleOpenFile}
         class="card border-base-300 bg-base-100 hover:bg-base-200 border p-5 text-left transition-colors"
       >
@@ -198,6 +211,7 @@
         <span class="text-base-content/50 mt-1 text-sm">{m.analysis_selectFileDesc()}</span>
       </button>
       <button
+        type="button"
         onclick={handleOpenFolder}
         class="card border-base-300 bg-base-100 hover:bg-base-200 border p-5 text-left transition-colors"
       >
@@ -216,11 +230,11 @@
 
       <!-- Compact Open File / Open Folder buttons -->
       <div class="flex gap-2">
-        <button onclick={handleOpenFile} class="btn btn-outline btn-sm flex-1 gap-1.5">
+        <button type="button" onclick={handleOpenFile} class="btn btn-outline btn-sm flex-1 gap-1.5">
           <FileHeadphone size={14} />
           {m.analysis_openFile()}
         </button>
-        <button onclick={handleOpenFolder} class="btn btn-outline btn-sm flex-1 gap-1.5">
+        <button type="button" onclick={handleOpenFolder} class="btn btn-outline btn-sm flex-1 gap-1.5">
           <FolderOpen size={14} />
           {m.analysis_openFolder()}
         </button>
@@ -231,9 +245,12 @@
         <AudioLines size={16} class="text-primary shrink-0" />
         <span class="min-w-0 flex-1 truncate text-sm">{appState.sourcePath.split(/[\\/]/).pop()}</span>
         <button
+          type="button"
           onclick={() => (appState.sourcePath = null)}
+          disabled={appState.isAnalysisRunning}
           class="btn btn-ghost btn-xs btn-square"
           title={m.common_button_clear()}
+          aria-label={m.common_button_clear()}
         >
           <X size={14} />
         </button>
@@ -350,33 +367,36 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <button onclick={() => (showNoFilterWarning = false)} class="btn btn-sm flex-1"
+          <button type="button" onclick={() => (showNoFilterWarning = false)} class="btn btn-sm flex-1"
             >{m.common_button_back()}</button
           >
-          <button onclick={doStart} class="btn btn-warning btn-sm flex-1">{m.analysis_startAnyway()}</button>
+          <button type="button" onclick={doStart} class="btn btn-warning btn-sm flex-1"
+            >{m.analysis_startAnyway()}</button
+          >
         </div>
       {:else}
-        <!-- Start / Stop button -->
-        {#if appState.isAnalysisRunning}
-          <button onclick={onstop} disabled={appState.isAnalysisStopping} class="btn btn-error w-full gap-2">
-            {#if appState.isAnalysisStopping}
-              <span class="loading loading-spinner loading-sm"></span>
-              {m.analysis_stopping()}
-            {:else}
-              <Square size={18} />
-              {m.analysis_stopAnalysis()}
-            {/if}
-          </button>
-        {:else}
-          <button
-            onclick={handleStartClick}
-            disabled={appState.isAnalysisRunning}
-            class="btn btn-primary w-full gap-2 transition-all duration-200 hover:brightness-110"
-          >
+        <!-- One Start / Stop button, so focus stays on it as the analysis starts, stops and ends. -->
+        <button
+          type="button"
+          onclick={handleStartStopClick}
+          aria-disabled={appState.isAnalysisStopping}
+          class="btn w-full gap-2 {appState.isAnalysisRunning
+            ? 'btn-error'
+            : 'btn-primary transition-all duration-200 hover:brightness-110'} {appState.isAnalysisStopping
+            ? 'btn-disabled'
+            : ''}"
+        >
+          {#if appState.isAnalysisStopping}
+            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+            {m.analysis_stopping()}
+          {:else if appState.isAnalysisRunning}
+            <Square size={18} />
+            {m.analysis_stopAnalysis()}
+          {:else}
             <Play size={18} />
             {m.analysis_startAnalysis()}
-          </button>
-        {/if}
+          {/if}
+        </button>
       {/if}
     </div>
 

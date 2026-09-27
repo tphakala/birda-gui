@@ -31,7 +31,6 @@
     optimizeDatabase,
     vacuumDatabase,
     getAvailableLanguages,
-    getCatalogStats,
     clearDatabase,
     detectGpuCapabilities,
     checkCudaStatus,
@@ -43,7 +42,7 @@
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, refreshCatalogStats } from '$lib/stores/app.svelte';
   import type {
     AppSettings,
     BirdaCheckResponse,
@@ -366,7 +365,7 @@
       // Clear all, which opened the dialog, is disabled while clearing and once the catalog is empty.
       await tick();
       focusIfLost(dbContentHeading);
-      appState.catalogStats = await getCatalogStats();
+      await refreshCatalogStats();
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {

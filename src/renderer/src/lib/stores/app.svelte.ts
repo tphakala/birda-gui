@@ -1,3 +1,5 @@
+import { getCatalogStats } from '$lib/utils/ipc';
+
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
 interface AppState {
@@ -23,6 +25,8 @@ interface AppState {
   theme: 'system' | 'light' | 'dark';
   settingsHasUnsavedChanges: boolean;
   selectedSpeciesListId: number | null;
+  /** Bumped whenever an analysis ends, so views that list runs reload them. */
+  runsVersion: number;
 }
 
 export const appState = $state<AppState>({
@@ -47,4 +51,14 @@ export const appState = $state<AppState>({
   theme: 'system',
   settingsHasUnsavedChanges: false,
   selectedSpeciesListId: null,
+  runsVersion: 0,
 });
+
+/** Reloads the status bar counts. A failure keeps the last counts; they refresh on the next change. */
+export async function refreshCatalogStats(): Promise<void> {
+  try {
+    appState.catalogStats = await getCatalogStats();
+  } catch {
+    // Keep the last counts
+  }
+}
