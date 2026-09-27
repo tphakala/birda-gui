@@ -10,8 +10,8 @@ interface PackageJson {
 
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../package.json'), 'utf8')) as PackageJson;
 
-// Every runtime dependency (including peer and optional) must stay external,
-// matching electron-vite's externalizeDepsPlugin.
+// Every runtime dependency (including peer and optional) must stay external:
+// it is shipped in node_modules and required at runtime, not bundled.
 const runtimeDeps = [
   ...Object.keys(pkg.dependencies ?? {}),
   ...Object.keys(pkg.peerDependencies ?? {}),

@@ -48,7 +48,7 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | i18n         | Paraglide (compile-time)           | 2.x                                    |
 | Maps         | MapLibre GL + svelte-maplibre-gl   | 6.x / 2.x                              |
 | Audio        | WaveSurfer.js                      | 7.x                                    |
-| Icons        | Lucide Svelte                      | latest                                 |
+| Icons        | Lucide Svelte (`@lucide/svelte`)   | 1.x                                    |
 | Validation   | Zod                                | 4.x                                    |
 
 Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`). `.nvmrc` sets the Node version for every workflow job that runs `actions/setup-node`.
@@ -80,7 +80,7 @@ shared/
   types.ts            # TypeScript interfaces shared between main and renderer
 messages/
   en.json             # i18n message catalog (Paraglide)
-build/                # Electron-builder resources (macOS entitlements, NSIS installer script), plus vite/ with the Vite configs and their test
+build/                # Electron-builder resources (macOS entitlements, NSIS installer script), plus vite/ with the Vite configs and the externalize helper and its test
 ```
 
 ## Path Aliases
@@ -110,7 +110,7 @@ task dev                    # renderer HMR + Electron via scripts/dev.ts (restar
 task build                  # direct Vite build (main + preload + renderer) plus node --check of the bundles, via npm run build
 
 # Linting & Type Checking
-task lint                   # npm run lint (ESLint + svelte-check), then tsc on tsconfig.node.json
+task lint                   # npm run lint (ESLint + svelte-check) alongside tsc on tsconfig.node.json
 task eslint                 # ESLint only (same files as npm run lint's ESLint step)
 task check                  # svelte-check only
 task typecheck:main         # npm run typecheck: tsc on tsconfig.node.json (svelte-check covers tsconfig.json)
@@ -122,7 +122,7 @@ task format:check           # Prettier check (CI)
 
 # Testing
 npm run test                # vitest run (unit tests; no Taskfile target yet)
-npm run paraglide           # compile messages into src/renderer/src/paraglide (gitignored); lint, lint:fix, check, knip and test run it first
+npm run paraglide           # compile messages into src/renderer/src/paraglide (gitignored, dev layout) and check none is missing; lint, lint:fix, check, knip, test, task eslint and the pre-commit hook run it first
 
 # Full validation (every CI check except the build)
 npm run validate            # format:check + lint + typecheck + test + knip + validate:translations + npm audit
@@ -160,7 +160,7 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 **Prettier** (`.prettierrc`): single quotes, trailing commas, 120 char width, 2-space indent.
 
-**Pre-commit hook** (Husky + lint-staged): runs ESLint fix + Prettier on staged `.ts`/`.svelte`/`.js`/`.mjs` files, and Prettier on staged `.jsonc`/`.md`/`.css`/`.html`/`.yml`/`.yaml` files (`.prettierignore` excludes `*.json`).
+**Pre-commit hook** (Husky + lint-staged): compiles Paraglide, then runs ESLint fix + Prettier on staged `.ts`/`.svelte`/`.js`/`.mjs` files, and Prettier on staged `.jsonc`/`.md`/`.css`/`.html`/`.yml`/`.yaml` files and `.prettierrc` (`.prettierignore` excludes `*.json`).
 
 ## Svelte 5 Patterns
 
@@ -234,6 +234,8 @@ Usage in components:
 ```
 
 13 locales live in `messages/` (en is the reference; cs, da, de, es, fi, fr, hu, it, nl, pl, pt, sv). Every new key added to `en.json` MUST be added to all locales; CI enforces this via `npm run validate:translations`. Message keys follow pattern: `{section}_{element}_{descriptor}`.
+
+The inlang plugins in `project.inlang/settings.json` are pinned to exact versions on jsdelivr. Dependabot does not read that file, so bump them by hand.
 
 ## Testing
 

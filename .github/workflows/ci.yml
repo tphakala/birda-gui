@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Lets the licenses workflow run CI on the pull request it opens.
+  # Lets the licenses workflow run CI on the branch of the pull request it opens.
   workflow_dispatch:
 
 permissions:

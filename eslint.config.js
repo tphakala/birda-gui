@@ -20,11 +20,6 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   ...svelte.configs['flat/recommended'],
 
-  // Additional ignores not covered by .gitignore
-  {
-    ignores: ['shared/**/*.js'],
-  },
-
   // Enable type-aware linting with explicit tsconfig paths
   {
     languageOptions: {
@@ -46,7 +41,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Crashes on Svelte AST nodes - incompatible with svelte parser
+      // Crashes on Svelte AST nodes: incompatible with the svelte parser
       'no-unexpected-multiline': 'off',
     },
   },

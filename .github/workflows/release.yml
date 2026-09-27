@@ -33,8 +33,8 @@ jobs:
           persist-credentials: false
 
       # The packages are named from package.json, so the tag must match it.
-      # Running on a branch is refused: the release would take the tag name
-      # of an existing release and replace its assets with this build.
+      # The release is created for the ref name, so only a v* tag ref is
+      # accepted; a branch, even one named like a tag, is refused.
       - name: Determine version
         id: version
         shell: bash
@@ -111,8 +111,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      # The release job publishes; electron-builder would otherwise publish
-      # on its own because package.json names a GitHub repository.
+      # The release job publishes. On a CI tag build electron-builder publishes
+      # by default (to the repository package.json names), and without a token
+      # that would fail the job.
       - name: Package
         run: npx electron-builder ${{ matrix.dist-flag }} --publish never
         env:

@@ -2,7 +2,8 @@ name: Checks
 
 # Shared validation run by ci.yml and release.yml, so a release tag goes
 # through the same checks as a pull request. The release passes build: false
-# because its platform jobs build the app themselves.
+# because its platform jobs build the app themselves. The steps mirror
+# npm run validate, plus the build.
 on:
   workflow_call:
     inputs:
