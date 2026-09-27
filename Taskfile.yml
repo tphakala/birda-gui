@@ -39,7 +39,7 @@ tasks:
       - npx svelte-check --tsconfig ./tsconfig.json
 
   eslint:
-    desc: Run ESLint on the whole repo
+    desc: Run ESLint (same files as npm run lint)
     cmds:
       - npx eslint .
 

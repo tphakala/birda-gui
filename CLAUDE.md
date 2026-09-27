@@ -51,7 +51,7 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | Icons        | Lucide Svelte                      | latest                                 |
 | Validation   | Zod                                | 4.x                                    |
 
-Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`). `.nvmrc` sets the Node version every GitHub Actions workflow uses.
+Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`). `.nvmrc` sets the Node version for every workflow job that runs `actions/setup-node`.
 
 ## Project Structure
 
@@ -111,7 +111,7 @@ task build                  # direct Vite build (main + preload + renderer) plus
 
 # Linting & Type Checking
 task lint                   # ESLint + svelte-check + tsc (all three in parallel)
-task eslint                 # ESLint only (whole repo, same as npm run lint's ESLint step)
+task eslint                 # ESLint only (same files as npm run lint's ESLint step)
 task check                  # svelte-check only
 task typecheck:main         # tsc on tsconfig.node.json only
 task lint:fix               # ESLint with auto-fix
