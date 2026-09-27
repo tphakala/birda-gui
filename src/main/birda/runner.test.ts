@@ -51,7 +51,9 @@ const { CANCEL_KILL_TIMEOUT_MS, killAll, runAnalysis, setBirdaPath } = await imp
 
 const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-runner-test-'));
 const birdaPath = path.join(binDir, 'birda');
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
 fs.writeFileSync(birdaPath, '');
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
 fs.chmodSync(birdaPath, 0o755);
 
 const options = { model: 'birdnet', minConfidence: 0.1 };
