@@ -13,7 +13,7 @@ import { pathToFileURL } from 'url';
 import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
-import { closeDb } from './db/database';
+import { closeDb, getDb, getDbPath } from './db/database';
 import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
@@ -244,6 +244,20 @@ void app.whenReady().then(async () => {
   registerBirdaMediaProtocol();
   registerBirdaMapProtocol();
   await registerHandlers();
+
+  // Open the catalog before anything uses it: a catalog that cannot be opened or
+  // upgraded otherwise rejects this callback and the app runs with no window.
+  try {
+    getDb();
+  } catch (err) {
+    console.error('[catalog] Failed to open the catalog:', err);
+    electronDialog.showErrorBox(
+      'Cannot open the Birda catalog',
+      `The catalog database could not be opened or upgraded, so Birda GUI will close.\n\n${getDbPath()}\n\n${err instanceof Error ? err.message : String(err)}`,
+    );
+    app.quit();
+    return;
+  }
 
   // Mark any runs stuck in 'running' from a previous session as failed
   const staleCount = markStaleRunsAsFailed();
