@@ -11,18 +11,26 @@ import { AnalysisCancelledError, classifyExit } from './analysis-session';
 import { BIRDA_CLI_VERSION, BIRDA_GITHUB_URL, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
+/** How long a cancelled birda gets to exit after SIGTERM before it is sent SIGKILL. */
+export const CANCEL_KILL_TIMEOUT_MS = 10_000;
 
 // Global registry of active child processes for cleanup on shutdown
 const activeProcesses = new Set<ChildProcess>();
 
+function hasExited(proc: ChildProcess): boolean {
+  return proc.exitCode !== null || proc.signalCode !== null;
+}
+
 /**
  * Terminates all active birda child processes.
- * Called on app shutdown to prevent zombie processes.
+ * Called on app shutdown to prevent zombie processes. A process that was
+ * already sent SIGTERM and is still running gets SIGKILL, since shutdown
+ * cannot wait for it.
  */
 export function killAll(): void {
   for (const proc of activeProcesses) {
-    if (!proc.killed) {
-      proc.kill('SIGTERM');
+    if (!hasExited(proc)) {
+      proc.kill(proc.killed ? 'SIGKILL' : 'SIGTERM');
     }
   }
   activeProcesses.clear();
@@ -260,8 +268,21 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   let dataCallback: ((envelope: BirdaEventEnvelope) => void) | null = null;
   let logCallback: ((level: LogLevel, message: string) => void) | null = null;
   const stderrLines: string[] = [];
-  // An object, not a let: TypeScript would narrow a boolean let to false across the await below.
   const cancelState = { requested: false };
+  let killTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function clearKillTimer() {
+    if (killTimer) {
+      clearTimeout(killTimer);
+      killTimer = null;
+    }
+  }
+
+  function pushStderr(text: string) {
+    if (stderrLines.length < MAX_STDERR_LINES) {
+      stderrLines.push(text);
+    }
+  }
 
   function emitLog(level: LogLevel, message: string) {
     logCallback?.(level, message);
@@ -274,7 +295,8 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         birdaPath = await findBirda();
       } catch (e) {
         emitLog('error', `Failed to find birda: ${(e as Error).message}`);
-        reject(e instanceof Error ? e : new Error(String(e)));
+        // A Stop while birda was being located still counts as a cancel.
+        reject(cancelState.requested ? new AnalysisCancelledError() : e instanceof Error ? e : new Error(String(e)));
         return;
       }
 
@@ -347,39 +369,42 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
           dataCallback?.(envelope);
         } catch {
           const msg = `[non-json stdout]: ${line}`;
-          stderrLines.push(msg);
+          pushStderr(msg);
           emitLog('warn', msg);
         }
       });
 
       child.stderr.on('data', (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
-        if (stderrLines.length < MAX_STDERR_LINES) {
-          stderrLines.push(text);
-        }
+        pushStderr(text);
         emitLog('warn', `[stderr] ${text}`);
       });
 
       child.on('close', (code, signal) => {
+        clearKillTimer();
         if (child) {
           unregisterProcess(child);
         }
-        emitLog(
-          'info',
-          code === null ? `Process terminated by ${signal ?? 'a signal'}` : `Process exited with code ${code}`,
-        );
+        const how = code === null ? `was terminated by ${signal ?? 'a signal'}` : `exited with code ${code}`;
+        emitLog('info', `Process ${how}`);
         const outcome = classifyExit(code, cancelState.requested);
         if (outcome === 'success') {
           resolve();
         } else if (outcome === 'cancelled') {
           reject(new AnalysisCancelledError());
         } else {
-          const how = code === null ? `was terminated by ${signal ?? 'a signal'}` : `exited with code ${code}`;
           reject(new Error(`birda ${how}\n${stderrLines.join('\n')}`));
         }
       });
 
       child.on('error', (err) => {
+        // A process that did start (it has a pid) still emits close, which
+        // settles the promise; an error here is then a failed kill.
+        if (child?.pid !== undefined) {
+          emitLog('error', `birda process error: ${err.message}`);
+          return;
+        }
+        clearKillTimer();
         if (child) {
           unregisterProcess(child);
         }
@@ -397,12 +422,20 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         logCallback = callback as (level: LogLevel, message: string) => void;
       }
     },
+    // The child stays registered until it closes, so killAll at quit still reaches it.
     cancel: () => {
       cancelState.requested = true;
-      if (child && !child.killed) {
-        child.kill('SIGTERM');
-        unregisterProcess(child);
-      }
+      const proc = child;
+      if (!proc || hasExited(proc) || killTimer) return;
+      proc.kill('SIGTERM');
+      killTimer = setTimeout(() => {
+        killTimer = null;
+        if (!hasExited(proc)) {
+          emitLog('warn', `birda did not exit ${CANCEL_KILL_TIMEOUT_MS / 1000}s after SIGTERM, sending SIGKILL`);
+          proc.kill('SIGKILL');
+        }
+      }, CANCEL_KILL_TIMEOUT_MS);
+      killTimer.unref();
     },
     promise,
     stderrLog: () => stderrLines.join('\n'),

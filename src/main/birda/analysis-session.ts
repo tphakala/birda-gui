@@ -8,7 +8,7 @@ export class AnalysisCancelledError extends Error {
   }
 }
 
-export type ExitOutcome = 'success' | 'cancelled' | 'failed';
+type ExitOutcome = 'success' | 'cancelled' | 'failed';
 
 /**
  * Classifies how a birda process ended. Only exit code 0 is a success: a

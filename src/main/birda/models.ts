@@ -1,5 +1,6 @@
 import { execFile, spawn } from 'child_process';
 import { findBirda, registerProcess, unregisterProcess } from './runner';
+import { classifyExit } from './analysis-session';
 import { parseProgressLine } from './progress';
 import type {
   InstalledModel,
@@ -136,13 +137,14 @@ export async function installModel(
         if (stderrRemainder.trim()) {
           emit(stderrRemainder.trim());
         }
-        if (code !== 0) {
-          // A non-zero exit right after a cancel is the kill, not a real failure;
-          // report it as a cancellation so the renderer labels it correctly.
-          if (cancelRequested()) {
-            reject(new Error('Model install cancelled'));
-            return;
-          }
+        const outcome = classifyExit(code, cancelRequested());
+        // A non-zero exit right after a cancel is the kill, not a real failure;
+        // report it as a cancellation so the renderer labels it correctly.
+        if (outcome === 'cancelled') {
+          reject(new Error('Model install cancelled'));
+          return;
+        }
+        if (outcome === 'failed') {
           reject(new Error(`Model install failed: ${stdout}`));
           return;
         }
