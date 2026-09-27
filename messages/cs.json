@@ -449,5 +449,18 @@
   "gallery_error_retry": "Zkusit znovu",
   "gallery_legacyBirda": "Regionální modely vyžadují birda {minVersion} nebo novější. Zobrazuje se klasický katalog.",
   "gallery_license_required": "Vyžadováno",
-  "settings_cuda_outdated": "Knihovny CUDA pro birda {installed} jsou nainstalované, ale tato verze potřebuje knihovny pro birda {required}. Stáhněte je a zapněte akceleraci GPU."
+  "settings_cuda_outdated": "Knihovny CUDA pro birda {installed} jsou nainstalované, ale tato verze potřebuje knihovny pro birda {required}. Stáhněte je a zapněte akceleraci GPU.",
+  "calendar_previousMonth": "Předchozí měsíc",
+  "calendar_nextMonth": "Další měsíc",
+  "status_updateModal_title": "Je vyžadována aktualizace birda",
+  "status_updateModal_body": "Tato verze Birda GUI vyžaduje novější verzi birda CLI, aby správně fungovala.",
+  "status_updateModal_currentVersion": "Aktuální verze:",
+  "status_updateModal_requiredVersion": "Požadovaná verze:",
+  "status_updateModal_minVersion": "{version} nebo novější",
+  "status_updateModal_download": "Stáhnout nejnovější verzi",
+  "status_updateTooltip": "Je vyžadována aktualizace birda CLI: {current} → {required}",
+  "status_cliVersionTooltip": "Verze birda CLI",
+  "common_loading": "Načítání",
+  "common_button_dismiss": "Zavřít",
+  "calendar_dateInputLabel": "Datum"
 }

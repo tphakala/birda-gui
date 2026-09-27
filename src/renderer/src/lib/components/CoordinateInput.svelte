@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { MapPin, Map, X } from '@lucide/svelte';
   import { MapLibre, Marker } from 'svelte-maplibre-gl';
   import type { MapMouseEvent } from 'maplibre-gl';
@@ -21,16 +22,6 @@
   function handleMapClick(e: MapMouseEvent) {
     latitude = Math.round(e.lngLat.lat * 10000) / 10000;
     longitude = Math.round(e.lngLat.lng * 10000) / 10000;
-  }
-
-  // Portal action: moves element to document.body so nested dialogs escape parent stacking contexts
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      },
-    };
   }
 </script>
 
@@ -81,17 +72,21 @@
 </div>
 
 {#if showMapModal}
-  <dialog class="modal modal-open" style="z-index: 1000;" use:portal>
+  <dialog class="modal" {@attach showModal} onclose={() => (showMapModal = false)} aria-labelledby="coords-map-title">
     <div class="modal-box max-w-2xl p-0">
       <div class="flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-2">
           <MapPin size={16} class="text-primary" />
-          <span class="font-medium">{m.coords_pickTitle()}</span>
+          <span id="coords-map-title" class="font-medium">{m.coords_pickTitle()}</span>
           {#if hasCoords}
             <span class="text-base-content/50 text-sm">{latitude}, {longitude}</span>
           {/if}
         </div>
-        <button onclick={() => (showMapModal = false)} class="btn btn-ghost btn-sm btn-square">
+        <button
+          onclick={() => (showMapModal = false)}
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label={m.common_button_close()}
+        >
           <X size={18} />
         </button>
       </div>
@@ -113,7 +108,7 @@
       <p class="text-base-content/50 px-4 py-2 text-xs">{m.coords_clickToSet()}</p>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showMapModal = false)}>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

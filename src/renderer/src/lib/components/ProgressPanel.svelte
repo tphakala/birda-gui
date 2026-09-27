@@ -39,7 +39,11 @@
           </span>
         {/if}
         {#if analysisState.status === 'completed' || analysisState.status === 'failed'}
-          <button onclick={dismissAnalysis} class="btn btn-ghost btn-xs btn-square" aria-label="Dismiss">
+          <button
+            onclick={dismissAnalysis}
+            class="btn btn-ghost btn-xs btn-square"
+            aria-label={m.common_button_dismiss()}
+          >
             <X size={14} />
           </button>
         {/if}

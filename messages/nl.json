@@ -449,5 +449,18 @@
   "gallery_error_retry": "Opnieuw proberen",
   "gallery_legacyBirda": "Regionale modellen vereisen birda {minVersion} of nieuwer. De klassieke catalogus wordt weergegeven.",
   "gallery_license_required": "Vereist",
-  "settings_cuda_outdated": "CUDA-bibliotheken voor birda {installed} zijn geïnstalleerd, maar deze versie heeft de bibliotheken voor birda {required} nodig. Download ze om GPU-versnelling in te schakelen."
+  "settings_cuda_outdated": "CUDA-bibliotheken voor birda {installed} zijn geïnstalleerd, maar deze versie heeft de bibliotheken voor birda {required} nodig. Download ze om GPU-versnelling in te schakelen.",
+  "calendar_previousMonth": "Vorige maand",
+  "calendar_nextMonth": "Volgende maand",
+  "status_updateModal_title": "birda-update vereist",
+  "status_updateModal_body": "Deze versie van Birda GUI heeft een nieuwere versie van de birda CLI nodig om goed te werken.",
+  "status_updateModal_currentVersion": "Huidige versie:",
+  "status_updateModal_requiredVersion": "Vereiste versie:",
+  "status_updateModal_minVersion": "{version} of hoger",
+  "status_updateModal_download": "Nieuwste versie downloaden",
+  "status_updateTooltip": "birda CLI-update vereist: {current} → {required}",
+  "status_cliVersionTooltip": "birda CLI-versie",
+  "common_loading": "Laden",
+  "common_button_dismiss": "Sluiten",
+  "calendar_dateInputLabel": "Datum"
 }

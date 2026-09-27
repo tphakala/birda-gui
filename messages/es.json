@@ -449,5 +449,18 @@
   "gallery_error_retry": "Reintentar",
   "gallery_legacyBirda": "Los modelos regionales requieren birda {minVersion} o posterior. Mostrando el catálogo clásico.",
   "gallery_license_required": "Obligatorio",
-  "settings_cuda_outdated": "Están instaladas las bibliotecas CUDA para birda {installed}, pero esta versión necesita las de birda {required}. Descárgalas para activar la aceleración por GPU."
+  "settings_cuda_outdated": "Están instaladas las bibliotecas CUDA para birda {installed}, pero esta versión necesita las de birda {required}. Descárgalas para activar la aceleración por GPU.",
+  "calendar_previousMonth": "Mes anterior",
+  "calendar_nextMonth": "Mes siguiente",
+  "status_updateModal_title": "Se requiere actualizar birda",
+  "status_updateModal_body": "Esta versión de Birda GUI necesita una versión más reciente de la CLI de birda para funcionar correctamente.",
+  "status_updateModal_currentVersion": "Versión actual:",
+  "status_updateModal_requiredVersion": "Versión requerida:",
+  "status_updateModal_minVersion": "{version} o superior",
+  "status_updateModal_download": "Descargar la última versión",
+  "status_updateTooltip": "Se requiere actualizar la CLI de birda: {current} → {required}",
+  "status_cliVersionTooltip": "Versión de la CLI de birda",
+  "common_loading": "Cargando",
+  "common_button_dismiss": "Descartar",
+  "calendar_dateInputLabel": "Fecha"
 }

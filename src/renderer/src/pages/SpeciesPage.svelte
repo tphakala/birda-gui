@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { Bird, Download, Plus, Search, Trash, X, Funnel, MapPin } from '@lucide/svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import { appState } from '$lib/stores/app.svelte';
@@ -427,11 +428,16 @@
 
 <!-- Fetch Species Modal -->
 {#if showFetchModal}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showFetchModal = false)}
+    aria-labelledby="fetch-modal-title"
+  >
     <div class="modal-box max-w-lg">
       <div class="flex items-center gap-2">
         <Download size={18} class="text-primary" />
-        <h3 class="text-lg font-semibold">{m.species_fetch_title()}</h3>
+        <h3 id="fetch-modal-title" class="text-lg font-semibold">{m.species_fetch_title()}</h3>
       </div>
       <p class="text-base-content/60 mt-1 text-sm">{m.species_fetch_subtitle()}</p>
 
@@ -529,18 +535,23 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showFetchModal = false)}>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
 
 <!-- Custom Species List Modal -->
 {#if showCustomModal}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showCustomModal = false)}
+    aria-labelledby="custom-modal-title"
+  >
     <div class="modal-box max-w-lg">
       <div class="flex items-center gap-2">
         <Plus size={18} class="text-primary" />
-        <h3 class="text-lg font-semibold">{m.species_custom_title()}</h3>
+        <h3 id="custom-modal-title" class="text-lg font-semibold">{m.species_custom_title()}</h3>
       </div>
 
       <div class="mt-4 space-y-3">
@@ -646,7 +657,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showCustomModal = false)}>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

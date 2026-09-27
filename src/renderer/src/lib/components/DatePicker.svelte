@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import { parseLocalDate } from '$lib/utils/format';
@@ -158,23 +159,37 @@
   }
 </script>
 
-<dialog class="modal modal-open" style="z-index: 1000;">
+<dialog class="modal" {@attach showModal} {onclose} aria-labelledby="date-picker-title">
   <div class="modal-box max-w-xs p-4">
     <!-- Month/year header -->
     <div class="flex items-center justify-between">
-      <button type="button" onclick={prevMonth} class="btn btn-ghost btn-sm btn-square">
+      <button
+        type="button"
+        onclick={prevMonth}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={m.calendar_previousMonth()}
+      >
         <ChevronLeft size={18} />
       </button>
-      <span class="text-sm font-semibold">{MONTH_NAMES[calMonth]} {calYear}</span>
-      <button type="button" onclick={nextMonth} class="btn btn-ghost btn-sm btn-square">
+      <span id="date-picker-title" class="text-sm font-semibold">{MONTH_NAMES[calMonth]} {calYear}</span>
+      <button
+        type="button"
+        onclick={nextMonth}
+        class="btn btn-ghost btn-sm btn-square"
+        aria-label={m.calendar_nextMonth()}
+      >
         <ChevronRight size={18} />
       </button>
     </div>
 
     <!-- Type date -->
     <div class="mt-2">
+      <!-- Start in the typed-date field rather than on the month buttons. -->
+      <!-- svelte-ignore a11y_autofocus -->
       <input
         type="text"
+        autofocus
+        aria-label={m.calendar_dateInputLabel()}
         bind:value={dateInput}
         onkeydown={handleDateInputKeydown}
         placeholder={m.calendar_datePlaceholder()}
@@ -217,6 +232,6 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button onclick={onclose}>close</button>
+    <button aria-label={m.common_button_close()}>close</button>
   </form>
 </dialog>

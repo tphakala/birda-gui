@@ -449,5 +449,18 @@
   "gallery_error_retry": "Yritä uudelleen",
   "gallery_legacyBirda": "Alueelliset mallit vaativat birda {minVersion} tai uudemman. Näytetään klassinen katalogi.",
   "gallery_license_required": "Pakollinen",
-  "settings_cuda_outdated": "birda {installed} -version CUDA-kirjastot on asennettu, mutta tämä versio tarvitsee birda {required} -version kirjastot. Lataa ne ottaaksesi GPU-kiihdytyksen käyttöön."
+  "settings_cuda_outdated": "birda {installed} -version CUDA-kirjastot on asennettu, mutta tämä versio tarvitsee birda {required} -version kirjastot. Lataa ne ottaaksesi GPU-kiihdytyksen käyttöön.",
+  "calendar_previousMonth": "Edellinen kuukausi",
+  "calendar_nextMonth": "Seuraava kuukausi",
+  "status_updateModal_title": "birda on päivitettävä",
+  "status_updateModal_body": "Tämä Birda GUI -versio tarvitsee uudemman birda CLI -version toimiakseen oikein.",
+  "status_updateModal_currentVersion": "Nykyinen versio:",
+  "status_updateModal_requiredVersion": "Vaadittu versio:",
+  "status_updateModal_minVersion": "{version} tai uudempi",
+  "status_updateModal_download": "Lataa uusin versio",
+  "status_updateTooltip": "birda CLI on päivitettävä: {current} → {required}",
+  "status_cliVersionTooltip": "birda CLI -versio",
+  "common_loading": "Ladataan",
+  "common_button_dismiss": "Sulje ilmoitus",
+  "calendar_dateInputLabel": "Päivämäärä"
 }

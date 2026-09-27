@@ -449,5 +449,18 @@
   "gallery_error_retry": "Újra",
   "gallery_legacyBirda": "A regionális modellekhez birda {minVersion} vagy újabb szükséges. A klasszikus katalógus látható.",
   "gallery_license_required": "Kötelező",
-  "settings_cuda_outdated": "A birda {installed} CUDA-könyvtárai telepítve vannak, de ehhez a verzióhoz a birda {required} könyvtárai kellenek. Töltse le őket a GPU-gyorsítás bekapcsolásához."
+  "settings_cuda_outdated": "A birda {installed} CUDA-könyvtárai telepítve vannak, de ehhez a verzióhoz a birda {required} könyvtárai kellenek. Töltse le őket a GPU-gyorsítás bekapcsolásához.",
+  "calendar_previousMonth": "Előző hónap",
+  "calendar_nextMonth": "Következő hónap",
+  "status_updateModal_title": "A birda frissítése szükséges",
+  "status_updateModal_body": "A Birda GUI ezen verziójának megfelelő működéséhez a birda CLI újabb verziója szükséges.",
+  "status_updateModal_currentVersion": "Jelenlegi verzió:",
+  "status_updateModal_requiredVersion": "Szükséges verzió:",
+  "status_updateModal_minVersion": "{version} vagy újabb",
+  "status_updateModal_download": "Legújabb verzió letöltése",
+  "status_updateTooltip": "A birda CLI frissítése szükséges: {current} → {required}",
+  "status_cliVersionTooltip": "birda CLI verzió",
+  "common_loading": "Betöltés",
+  "common_button_dismiss": "Elvetés",
+  "calendar_dateInputLabel": "Dátum"
 }

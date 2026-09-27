@@ -449,5 +449,18 @@
   "gallery_error_retry": "Prøv igen",
   "gallery_legacyBirda": "Regionale modeller kræver birda {minVersion} eller nyere. Viser det klassiske katalog.",
   "gallery_license_required": "Påkrævet",
-  "settings_cuda_outdated": "CUDA-biblioteker til birda {installed} er installeret, men denne version skal bruge bibliotekerne til birda {required}. Download dem for at aktivere GPU-acceleration."
+  "settings_cuda_outdated": "CUDA-biblioteker til birda {installed} er installeret, men denne version skal bruge bibliotekerne til birda {required}. Download dem for at aktivere GPU-acceleration.",
+  "calendar_previousMonth": "Forrige måned",
+  "calendar_nextMonth": "Næste måned",
+  "status_updateModal_title": "birda skal opdateres",
+  "status_updateModal_body": "Denne version af Birda GUI kræver en nyere version af birda CLI for at fungere korrekt.",
+  "status_updateModal_currentVersion": "Nuværende version:",
+  "status_updateModal_requiredVersion": "Påkrævet version:",
+  "status_updateModal_minVersion": "{version} eller nyere",
+  "status_updateModal_download": "Hent den nyeste version",
+  "status_updateTooltip": "birda CLI skal opdateres: {current} → {required}",
+  "status_cliVersionTooltip": "birda CLI-version",
+  "common_loading": "Indlæser",
+  "common_button_dismiss": "Afvis",
+  "calendar_dateInputLabel": "Dato"
 }

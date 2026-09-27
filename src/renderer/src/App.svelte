@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$paraglide/messages';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
   import ProgressPanel from '$lib/components/ProgressPanel.svelte';
@@ -220,7 +221,7 @@
 
 {#if showWizard === null}
   <main class="bg-base-100 flex h-screen items-center justify-center select-none">
-    <span class="loading loading-spinner loading-lg text-primary" role="status" aria-label="Loading"></span>
+    <span class="loading loading-spinner loading-lg text-primary" role="status" aria-label={m.common_loading()}></span>
   </main>
 {:else if showWizard}
   <main class="bg-base-100 text-base-content h-screen select-none">

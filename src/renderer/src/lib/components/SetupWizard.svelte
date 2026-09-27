@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import {
     Bird,
     CircleCheckBig,
@@ -539,11 +540,20 @@
 
 <!-- License Acceptance Modal -->
 {#if licenseModel}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (licenseModel = null)}
+    aria-labelledby="wizard-license-title"
+  >
     <div class="modal-box">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">{m.settings_licenseModal_title()}</h2>
-        <button onclick={() => (licenseModel = null)} class="btn btn-ghost btn-sm btn-square">
+        <h2 id="wizard-license-title" class="text-lg font-semibold">{m.settings_licenseModal_title()}</h2>
+        <button
+          onclick={() => (licenseModel = null)}
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label={m.common_button_close()}
+        >
           <X size={20} />
         </button>
       </div>
@@ -595,7 +605,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (licenseModel = null)}>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

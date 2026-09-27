@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import {
     Save,
     FolderOpen,
@@ -951,11 +952,19 @@
 
 <!-- Clear Database Confirmation Modal -->
 {#if showClearConfirm}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showClearConfirm = false)}
+    oncancel={(e) => {
+      if (clearing) e.preventDefault();
+    }}
+    aria-labelledby="clear-modal-title"
+  >
     <div class="modal-box">
       <div class="text-error flex items-center gap-3">
         <TriangleAlert size={24} />
-        <h3 class="text-lg font-semibold">{m.settings_clearModal_title()}</h3>
+        <h3 id="clear-modal-title" class="text-lg font-semibold">{m.settings_clearModal_title()}</h3>
       </div>
       <p class="text-base-content/70 mt-3 text-sm">
         {m.settings_clearModal_warning()}
@@ -977,18 +986,23 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showClearConfirm = false)}>close</button>
+      <button aria-label={m.common_button_close()} disabled={clearing}>close</button>
     </form>
   </dialog>
 {/if}
 
 <!-- CUDA Remove Confirmation Modal -->
 {#if showCudaRemoveConfirm}
-  <dialog class="modal modal-open">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (showCudaRemoveConfirm = false)}
+    aria-labelledby="cuda-remove-modal-title"
+  >
     <div class="modal-box">
       <div class="text-error flex items-center gap-3">
         <TriangleAlert size={24} />
-        <h3 class="text-lg font-semibold">{m.settings_cuda_removeButton()}</h3>
+        <h3 id="cuda-remove-modal-title" class="text-lg font-semibold">{m.settings_cuda_removeButton()}</h3>
       </div>
       <p class="text-base-content/70 mt-3 text-sm">
         {m.settings_cuda_removeConfirm({ size: formatBytes(cudaStatus?.diskUsageBytes ?? 0) })}
@@ -1003,7 +1017,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button onclick={() => (showCudaRemoveConfirm = false)}>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

@@ -70,14 +70,14 @@
     <button
       onclick={() => (showVersionModal = true)}
       class="text-warning flex items-center gap-1.5 transition-opacity hover:opacity-70"
-      title="birda CLI update required: {birdaStatus.version} → {birdaStatus.minVersion}"
+      title={m.status_updateTooltip({ current: birdaStatus.version ?? '', required: birdaStatus.minVersion ?? '' })}
     >
       <TriangleAlert size={14} />
       <span>birda {birdaStatus.version}</span>
     </button>
     <div class="bg-base-300 h-3 w-px"></div>
   {:else if birdaStatus?.available}
-    <span title="birda CLI version">birda {birdaStatus.version}</span>
+    <span title={m.status_cliVersionTooltip()}>birda {birdaStatus.version}</span>
     <div class="bg-base-300 h-3 w-px"></div>
   {/if}
 
@@ -86,20 +86,26 @@
 
 <!-- Birda Version Update Modal -->
 {#if isOutdated && birdaStatus}
-  <Modal bind:open={showVersionModal} title="birda Update Required" icon={TriangleAlert} iconClass="text-warning">
+  <Modal
+    bind:open={showVersionModal}
+    title={m.status_updateModal_title()}
+    icon={TriangleAlert}
+    iconClass="text-warning"
+  >
     <div class="space-y-4">
       <p class="text-base-content/80 text-sm">
-        This version of Birda GUI requires a more recent version of the birda CLI to work properly.
+        {m.status_updateModal_body()}
       </p>
 
       <div class="border-base-300 bg-base-200 space-y-2 rounded-lg border p-3">
         <div class="flex items-center justify-between text-sm">
-          <span class="text-base-content/70">Current version:</span>
+          <span class="text-base-content/70">{m.status_updateModal_currentVersion()}</span>
           <span class="font-semibold">{birdaStatus.version}</span>
         </div>
         <div class="flex items-center justify-between text-sm">
-          <span class="text-base-content/70">Required version:</span>
-          <span class="font-semibold">{birdaStatus.minVersion} or higher</span>
+          <span class="text-base-content/70">{m.status_updateModal_requiredVersion()}</span>
+          <span class="font-semibold">{m.status_updateModal_minVersion({ version: birdaStatus.minVersion ?? '' })}</span
+          >
         </div>
       </div>
 
@@ -110,7 +116,7 @@
         class="btn btn-primary btn-sm w-full gap-2"
       >
         <ExternalLink size={14} />
-        Download Latest Version
+        {m.status_updateModal_download()}
       </a>
     </div>
   </Modal>

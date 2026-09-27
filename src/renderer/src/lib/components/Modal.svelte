@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import { X } from '@lucide/svelte';
   import type { Component, Snippet } from 'svelte';
+  import * as m from '$paraglide/messages';
 
   interface Props {
     open: boolean;
@@ -31,10 +33,12 @@
   function close() {
     open = false;
   }
+
+  const titleId = $props.id();
 </script>
 
 {#if open}
-  <dialog class="modal modal-open" onclose={close}>
+  <dialog class="modal" {@attach showModal} onclose={close} aria-labelledby={titleId}>
     <div class="modal-box {maxWidth}">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -43,10 +47,10 @@
             {@const Icon = icon}
             <Icon size={iconSize} class={iconClass} />
           {/if}
-          <h3 class="text-lg font-semibold">{title}</h3>
+          <h3 id={titleId} class="text-lg font-semibold">{title}</h3>
         </div>
         {#if showCloseButton}
-          <button onclick={close} class="btn btn-ghost btn-sm btn-square">
+          <button onclick={close} class="btn btn-ghost btn-sm btn-square" aria-label={m.common_button_close()}>
             <X size={18} />
           </button>
         {/if}
@@ -69,7 +73,7 @@
 
     <!-- Backdrop close handler -->
     <form method="dialog" class="modal-backdrop">
-      <button>close</button>
+      <button aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
