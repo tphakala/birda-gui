@@ -25,9 +25,7 @@ tasks:
       - npx tsx scripts/fetch-birda-cli.ts
 
   build:
-    desc: Build all targets (main + preload + renderer)
-    deps:
-      - fetch-cli
+    desc: Build all targets (main + preload + renderer) and check every message compiled; npm's prebuild hook fetches the birda CLI
     cmds:
       - npm run build
 
@@ -41,14 +39,23 @@ tasks:
   eslint:
     desc: Run ESLint (same files as the ESLint step of npm run lint)
     cmds:
+      - npm run paraglide
       - npx eslint .
 
   lint:
-    desc: Run all lint and type checks (ESLint + svelte-check + tsc)
+    desc: Run all lint and type checks (ESLint + svelte-check, and tsc)
+    # npm run lint compiles Paraglide once, then runs ESLint and svelte-check
+    # in turn; separate eslint and check tasks in parallel would start two
+    # compiles that write the same files. typecheck:main reads no Paraglide
+    # output, so it runs alongside.
     deps:
-      - eslint
-      - check
+      - lint:npm
       - typecheck:main
+
+  lint:npm:
+    internal: true
+    cmds:
+      - npm run lint
 
   lint:fix:
     desc: Run ESLint with auto-fix
@@ -56,9 +63,9 @@ tasks:
       - npm run lint:fix
 
   typecheck:main:
-    desc: Type check main process (no emit)
+    desc: Type check main, preload, shared, scripts/*.ts and build configs (tsconfig.node.json)
     cmds:
-      - npx tsc -p tsconfig.node.json --noEmit
+      - npm run typecheck
 
   # === Formatting ===
 
@@ -76,45 +83,30 @@ tasks:
 
   pack:
     desc: Build and package (unpacked, for testing)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --dir
+      - npm run pack
 
   dist:
     desc: Build and create distributable for current platform
-    deps:
-      - build
     cmds:
-      - npx electron-builder
+      - npm run dist
 
   dist:linux:
     desc: Build and package for Linux (AppImage + deb)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --linux
+      - npm run dist:linux
 
   dist:win:
-    desc: Build and package for Windows (NSIS)
-    deps:
-      - build
+    desc: Build and package for Windows (NSIS + portable)
     cmds:
-      - npx electron-builder --win
+      - npm run dist:win
 
   dist:mac:
     desc: Build and package for macOS (dmg)
-    deps:
-      - build
     cmds:
-      - npx electron-builder --mac
+      - npm run dist:mac
 
   # === Utilities ===
-
-  rebuild:
-    desc: Rebuild native modules (better-sqlite3) for Electron
-    cmds:
-      - npx electron-rebuild -f -w better-sqlite3
 
   clean:
     desc: Remove build artifacts
@@ -127,6 +119,6 @@ tasks:
       - rm -rf {{.OUT_DIR}} {{.RELEASE_DIR}} node_modules
 
   install:
-    desc: Install dependencies and rebuild native modules
+    desc: Install dependencies
     cmds:
       - npm install

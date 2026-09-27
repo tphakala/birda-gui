@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "Det gick inte att läsa in modellkatalogen.",
   "gallery_error_retry": "Försök igen",
   "gallery_legacyBirda": "Regionala modeller kräver birda {minVersion} eller senare. Visar den klassiska katalogen.",
-  "gallery_license_required": "Obligatoriskt"
+  "gallery_license_required": "Obligatoriskt",
+  "settings_cuda_outdated": "CUDA-bibliotek för birda {installed} är installerade, men den här versionen behöver biblioteken för birda {required}. Ladda ner dem för att aktivera GPU-acceleration."
 }

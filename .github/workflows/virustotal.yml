@@ -1,9 +1,26 @@
 name: VirusTotal Scan
 
+# The release workflow calls this after publishing. A `release: published`
+# trigger never fired here: GitHub starts no workflow run for events caused
+# by GITHUB_TOKEN, and every past scan was started by hand. Run it manually to
+# rescan a release (the latest one by default).
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      release_id:
+        description: 'Numeric id of the release to scan'
+        required: true
+        type: string
+    secrets:
+      VT_API_KEY:
+        required: true
   workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Numeric id of the release to scan (empty: latest release)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -14,15 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get latest release ID
-        if: github.event_name == 'workflow_dispatch'
+        if: inputs.release_id == ''
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/latest --jq '.id')
+          RELEASE_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.id')
           echo "id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
 
-      - uses: cssnr/virustotal-action@v1
+      - uses: cssnr/virustotal-action@5edfa4c982eb0caec6d568ea27cf715269f5c23b # v2.0.0
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
-          release_id: ${{ steps.release.outputs.id || '' }}
+          release_id: ${{ inputs.release_id || steps.release.outputs.id }}

@@ -1,1 +1,4 @@
+# Type-aware ESLint reads the generated Paraglide output (gitignored), which
+# can be missing or stale after a clone or a branch switch, so compile it first.
+npm run --silent paraglide
 npx lint-staged

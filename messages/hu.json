@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "A modellkatalógus betöltése sikertelen.",
   "gallery_error_retry": "Újra",
   "gallery_legacyBirda": "A regionális modellekhez birda {minVersion} vagy újabb szükséges. A klasszikus katalógus látható.",
-  "gallery_license_required": "Kötelező"
+  "gallery_license_required": "Kötelező",
+  "settings_cuda_outdated": "A birda {installed} CUDA-könyvtárai telepítve vannak, de ehhez a verzióhoz a birda {required} könyvtárai kellenek. Töltse le őket a GPU-gyorsítás bekapcsolásához."
 }

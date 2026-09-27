@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // src/main and src/preload are listed because knip 6.35.1 joins the absolute
+  // build.lib.entry paths of build/vite/{main,preload}.config.ts onto the project
+  // root (dist/plugins/vitest/index.js), so its Vite plugin does not find them.
+  "entry": ["src/main/index.ts", "src/preload/index.ts", "shared/types.ts"],
+  "project": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/renderer/**/*.{ts,svelte,css}",
+    "shared/**/*.ts",
+    "build/vite/**/*.ts",
+  ],
+}

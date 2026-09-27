@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "Kan de modelcatalogus niet laden.",
   "gallery_error_retry": "Opnieuw proberen",
   "gallery_legacyBirda": "Regionale modellen vereisen birda {minVersion} of nieuwer. De klassieke catalogus wordt weergegeven.",
-  "gallery_license_required": "Vereist"
+  "gallery_license_required": "Vereist",
+  "settings_cuda_outdated": "CUDA-bibliotheken voor birda {installed} zijn geïnstalleerd, maar deze versie heeft de bibliotheken voor birda {required} nodig. Download ze om GPU-versnelling in te schakelen."
 }

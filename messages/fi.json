@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "Mallikatalogia ei voitu ladata.",
   "gallery_error_retry": "Yritä uudelleen",
   "gallery_legacyBirda": "Alueelliset mallit vaativat birda {minVersion} tai uudemman. Näytetään klassinen katalogi.",
-  "gallery_license_required": "Pakollinen"
+  "gallery_license_required": "Pakollinen",
+  "settings_cuda_outdated": "birda {installed} -version CUDA-kirjastot on asennettu, mutta tämä versio tarvitsee birda {required} -version kirjastot. Lataa ne ottaaksesi GPU-kiihdytyksen käyttöön."
 }

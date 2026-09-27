@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-undef, @typescript-eslint/no-unsafe-return, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/prefer-nullish-coalescing */
 /**
  * Translation validation script for CI
  *

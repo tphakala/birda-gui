@@ -20,11 +20,6 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   ...svelte.configs['flat/recommended'],
 
-  // Additional ignores not covered by .gitignore
-  {
-    ignores: ['**/*.config.*', 'shared/**/*.js'],
-  },
-
   // Enable type-aware linting with explicit tsconfig paths
   {
     languageOptions: {
@@ -46,7 +41,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Crashes on Svelte AST nodes - incompatible with svelte parser
+      // Crashes on Svelte AST nodes: incompatible with the svelte parser
       'no-unexpected-multiline': 'off',
     },
   },
@@ -59,9 +54,15 @@ export default tseslint.config(
     },
   },
 
-  // Node globals for main process and preload
+  // Node globals for the main process, preload, scripts and build configs
   {
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts'],
+    files: [
+      'src/main/**/*.ts',
+      'src/preload/**/*.ts',
+      'scripts/**/*.{ts,js}',
+      'build/vite/**/*.ts',
+      'vitest.config.ts',
+    ],
     languageOptions: {
       globals: globals.node,
     },
@@ -133,6 +134,16 @@ export default tseslint.config(
     plugins: nounsanitized.configs.recommended.plugins,
     rules: {
       ...nounsanitized.configs.recommended.rules,
+    },
+  },
+
+  // Root JS config files are in no tsconfig, so lint them without type
+  // information. Kept last so no later block re-enables a typed rule.
+  {
+    files: ['eslint.config.js', 'svelte.config.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 );

@@ -5,8 +5,8 @@ import { isExternal } from './externalize.ts';
 const root = resolve(import.meta.dirname, '../..');
 
 // ESM output uses __dirname/__filename/require, which are not defined in ES
-// modules. Inject them at the top of the bundle, matching what electron-vite
-// produced; unreferenced shim declarations are dropped from the output.
+// modules. Inject them at the top of the bundle; unreferenced shim
+// declarations are dropped from the output.
 // Rolldown does not rename source bindings that collide with these names, so
 // a main-process module declaring its own __filename, __dirname or require
 // would produce a duplicate declaration. `npm run build` runs `node --check`
@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => ({
     target: 'es2022',
     minify: false,
     // Inline sourcemaps in dev (main-process stack traces map to TS source),
-    // none in the production build, matching electron-vite.
+    // none in the production build.
     sourcemap: mode === 'development' ? 'inline' : false,
     lib: {
       entry: resolve(root, 'src/main/index.ts'),

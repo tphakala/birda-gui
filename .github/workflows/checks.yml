@@ -1,0 +1,63 @@
+name: Checks
+
+# Shared validation run by ci.yml and release.yml, so a release tag goes
+# through the same checks as a pull request. The release passes build: false
+# because its platform jobs build the app themselves. The steps mirror
+# npm run validate, plus the build.
+on:
+  workflow_call:
+    inputs:
+      build:
+        description: 'Also run npm run build'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # Compile once; the steps below skip their own pre-hook compile.
+      - name: Compile messages
+        run: npm run paraglide
+
+      - name: Validate translations
+        run: npm run validate:translations
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run --ignore-scripts lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run --ignore-scripts test
+
+      - name: Unused dependencies & exports
+        run: npm run --ignore-scripts knip
+
+      - name: Audit dependencies
+        run: npm audit --omit=dev
+
+      - name: Build
+        if: inputs.build
+        run: npm run build

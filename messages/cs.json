@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "Nepodařilo se načíst katalog modelů.",
   "gallery_error_retry": "Zkusit znovu",
   "gallery_legacyBirda": "Regionální modely vyžadují birda {minVersion} nebo novější. Zobrazuje se klasický katalog.",
-  "gallery_license_required": "Vyžadováno"
+  "gallery_license_required": "Vyžadováno",
+  "settings_cuda_outdated": "Knihovny CUDA pro birda {installed} jsou nainstalované, ale tato verze potřebuje knihovny pro birda {required}. Stáhněte je a zapněte akceleraci GPU."
 }

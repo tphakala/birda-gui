@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
 
-/* Custom light theme — blue accent on slate palette */
+/* Custom light theme: blue accent on slate palette */
 @plugin 'daisyui/theme' {
   name: 'birda-light';
   default: true;
@@ -46,7 +46,7 @@
   --noise: 0;
 }
 
-/* Custom dark theme — blue accent on slate-900 palette */
+/* Custom dark theme: blue accent on slate-900 palette */
 @plugin 'daisyui/theme' {
   name: 'birda-dark';
   prefersdark: true;

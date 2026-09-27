@@ -448,5 +448,6 @@
   "gallery_error_loadFailed": "Impossible de charger le catalogue des modèles.",
   "gallery_error_retry": "Réessayer",
   "gallery_legacyBirda": "Les modèles régionaux nécessitent birda {minVersion} ou une version plus récente. Affichage du catalogue classique.",
-  "gallery_license_required": "Requis"
+  "gallery_license_required": "Requis",
+  "settings_cuda_outdated": "Les bibliothèques CUDA pour birda {installed} sont installées, mais cette version a besoin de celles pour birda {required}. Télécharge-les pour activer l’accélération GPU."
 }

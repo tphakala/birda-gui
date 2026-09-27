@@ -10,20 +10,24 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "prebuild": "tsx scripts/fetch-birda-cli.ts",
-    "build": "vite build -c build/vite/main.config.ts && vite build -c build/vite/preload.config.ts && vite build -c build/vite/renderer.config.ts && node --check out/main/index.js && node --check out/preload/index.cjs",
+    "build": "vite build -c build/vite/main.config.ts && vite build -c build/vite/preload.config.ts && vite build -c build/vite/renderer.config.ts && node --check out/main/index.js && node --check out/preload/index.cjs && node scripts/check-paraglide-output.js",
     "preview": "npm run build && electron .",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
-    "rebuild-sqlite": "electron-rebuild -f -w better-sqlite3",
+    "paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide --output-structure locale-modules && node scripts/check-paraglide-output.js",
+    "precheck": "npm run paraglide",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "prelint": "npm run paraglide",
     "lint": "eslint . && svelte-check --tsconfig ./tsconfig.json",
+    "prelint:fix": "npm run paraglide",
     "lint:fix": "eslint --fix .",
+    "preknip": "npm run paraglide",
     "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json",
+    "pretest": "npm run paraglide",
     "test": "vitest run",
     "validate:translations": "node scripts/validate-translations.js",
-    "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run validate:translations && npm audit --omit=dev",
+    "validate": "npm run paraglide && npm run format:check && npm run --ignore-scripts lint && npm run typecheck && npm run --ignore-scripts test && npm run --ignore-scripts knip && npm run validate:translations && npm audit --omit=dev",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "dist:linux": "npm run build && electron-builder --linux",
@@ -45,6 +49,7 @@
   },
   "build": {
     "compression": "normal",
+    "npmRebuild": false,
     "appId": "com.birda.gui",
     "productName": "Birda GUI",
     "directories": {
@@ -119,7 +124,6 @@
     }
   },
   "dependencies": {
-    "@electron/rebuild": "^4.0.3",
     "async-mutex": "^0.5.0",
     "better-sqlite3": "^13.0.2",
     "daisyui": "^5.6.6",
@@ -163,11 +167,11 @@
     "vitest": "^5.0.2"
   },
   "lint-staged": {
-    "*.{ts,svelte}": [
+    "*.{ts,svelte,js,mjs}": [
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md,css,html}": [
+    "{*.{jsonc,md,css,html,yml,yaml},.prettierrc}": [
       "prettier --write"
     ]
   }
