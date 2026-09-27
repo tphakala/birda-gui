@@ -9,6 +9,9 @@ import {
   cancelInstall,
 } from '../birda/models';
 import { registerCoverageUrls } from '../birda/coverageCache';
+import { getInstallStatus, ModelInstallCancelledError } from '../birda/models';
+import { sendToWindows } from './broadcast';
+import type { ModelInstallFinished, ModelInstallRequest } from '$shared/types';
 import { setDefaultModel } from '../birda/config';
 
 // Model id/region/variant become birda CLI args; reject anything that is not a
@@ -33,7 +36,7 @@ export function registerModelHandlers(): void {
 
   ipcMain.handle(
     'birda:models-install',
-    async (event, opts: { id: string; region?: string | undefined; variant?: string | undefined }) => {
+    async (_event, opts: { id: string; region?: string | undefined; variant?: string | undefined }) => {
       if (typeof opts.id !== 'string' || !SAFE_ID.test(opts.id)) {
         throw new Error('Invalid model install options');
       }
@@ -42,14 +45,25 @@ export function registerModelHandlers(): void {
           throw new Error('Invalid model install options');
         }
       }
-      const sender = event.sender;
-      return installModel(opts, (progress) => {
-        if (!sender.isDestroyed()) {
-          sender.send('birda:models-install-progress', progress);
-        }
-      });
+      const request: ModelInstallRequest = { id: opts.id, region: opts.region, variant: opts.variant };
+      // Progress and the outcome go to every window, so one reloaded mid-install can follow and finish it.
+      const finished = (outcome: ModelInstallFinished['outcome'], error?: string) => {
+        sendToWindows('birda:models-install-finished', { request, outcome, error } satisfies ModelInstallFinished);
+      };
+      try {
+        const result = await installModel(request, (progress) => {
+          sendToWindows('birda:models-install-progress', progress);
+        });
+        finished('installed');
+        return result;
+      } catch (err) {
+        finished(err instanceof ModelInstallCancelledError ? 'cancelled' : 'failed', (err as Error).message);
+        throw err;
+      }
     },
   );
+
+  ipcMain.handle('birda:models-install-status', () => getInstallStatus());
 
   ipcMain.handle('birda:models-install-cancel', () => {
     return cancelInstall();

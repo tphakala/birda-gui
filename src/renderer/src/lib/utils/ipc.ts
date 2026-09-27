@@ -1,5 +1,7 @@
 import type {
   AnalysisRequest,
+  ModelInstallFinished,
+  ModelInstallRequest,
   AnalysisResult,
   AnalysisStatus,
   Annotation,
@@ -155,6 +157,18 @@ export function installModel(opts: {
   variant?: string | undefined;
 }): Promise<ModelInstalledResult> {
   return window.birda.invoke('birda:models-install', opts) as Promise<ModelInstalledResult>;
+}
+
+/** The model install in flight, if any, whichever window started it. */
+export function getModelInstallStatus(): Promise<ModelInstallRequest | null> {
+  return window.birda.invoke('birda:models-install-status') as Promise<ModelInstallRequest | null>;
+}
+
+/** Returns a function that removes this listener. */
+export function onModelInstallFinished(callback: (finished: ModelInstallFinished) => void): () => void {
+  return window.birda.on('birda:models-install-finished', (finished) => {
+    callback(finished as ModelInstallFinished);
+  });
 }
 
 export function cancelInstall(): Promise<boolean> {

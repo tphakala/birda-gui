@@ -406,6 +406,20 @@ export interface ModelManifest {
 }
 
 /** Structured install progress parsed from birda's stderr progress bar. */
+/** What birda:models-install was asked to install. */
+export interface ModelInstallRequest {
+  id: string;
+  region?: string | undefined;
+  variant?: string | undefined;
+}
+
+/** Sent to every window on birda:models-install-finished when an install settles. */
+export interface ModelInstallFinished {
+  request: ModelInstallRequest;
+  outcome: 'installed' | 'cancelled' | 'failed';
+  error?: string | undefined;
+}
+
 export interface ModelInstallProgress {
   line: string;
   percent?: number;

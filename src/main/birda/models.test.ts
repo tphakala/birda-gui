@@ -17,7 +17,7 @@ vi.mock('child_process', async (importOriginal) => ({
 }));
 
 const { CANCEL_KILL_TIMEOUT_MS, setBirdaPath } = await import('./runner');
-const { cancelInstall, installModel } = await import('./models');
+const { cancelInstall, getInstallStatus, installModel } = await import('./models');
 
 const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-models-test-'));
 const birdaPath = path.join(binDir, 'birda');
@@ -77,6 +77,16 @@ describe('cancelInstall', () => {
     nextChild.stdout.write(JSON.stringify({ payload: { id: 'perch' } }));
     nextChild.exit(0);
     await expect(next).resolves.toEqual({ id: 'perch' });
+  });
+
+  it('reports the install in flight until it settles', async () => {
+    const install = installModel({ id: 'birdnet', region: 'fi' });
+    expect(getInstallStatus()).toEqual({ id: 'birdnet', region: 'fi', variant: undefined });
+    const child = await spawnedChild();
+    child.stdout.write(JSON.stringify({ payload: { id: 'birdnet' } }));
+    child.exit(0);
+    await install;
+    expect(getInstallStatus()).toBeNull();
   });
 
   it('returns false when no install is running', () => {

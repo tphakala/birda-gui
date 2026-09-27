@@ -16,11 +16,13 @@
     setDefaultModel,
     removeModel,
     onModelInstallProgress,
+    onModelInstallFinished,
+    getModelInstallStatus,
   } from '$lib/utils/ipc';
   import { galleryStore, variantKey, licenseKey, type Download } from '$lib/stores/gallery.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
-  import type { InstalledModel, ManifestVariant, ModelManifest } from '$shared/types';
+  import type { InstalledModel, ManifestVariant, ModelInstallFinished, ModelManifest } from '$shared/types';
 
   const FAMILY_IDS = ['birdnet-v30', 'perch-v2'];
   const LS_KEY = 'gallery.acceptedLicenses';
@@ -37,6 +39,8 @@
   // Plain (non-reactive) trackers for the single in-flight install.
   let currentInstallKey: string | null = null;
   let cancelledKey: string | null = null;
+  // An install this window did not start, e.g. one still running after a reload.
+  let adoptedKey: string | null = null;
 
   const selectedManifest = $derived(manifestOf(galleryStore.family));
   const defaultId = $derived(galleryStore.installed.find((mo) => mo.is_default)?.id ?? '');
@@ -109,16 +113,53 @@
     }
   }
 
+  function finishAdopted(key: string, finished: ModelInstallFinished | null): void {
+    adoptedKey = null;
+    if (currentInstallKey === key) currentInstallKey = null;
+    busyId = null;
+    clearDownload(key);
+    const model = finished?.request.region ?? finished?.request.id ?? '';
+    if (!finished || finished.outcome === 'installed') {
+      void refreshInstalled();
+      if (finished) announce = m.gallery_installedToast({ model });
+    } else if (finished.outcome === 'cancelled') {
+      announce = m.gallery_download_cancelled();
+    } else {
+      galleryStore.error = m.gallery_download_failed({ model, error: finished.error ?? '' });
+    }
+  }
+
+  async function adoptRunningInstall(): Promise<void> {
+    const request = await getModelInstallStatus();
+    if (!request || currentInstallKey) return;
+    const key = variantKey(request.id, request.region);
+    adoptedKey = key;
+    currentInstallKey = key;
+    busyId = key;
+    galleryStore.downloads[key] ??= {};
+    // It may have finished before the finished listener could see it.
+    if ((await getModelInstallStatus()) === null && adoptedKey === key) finishAdopted(key, null);
+  }
+
   onMount(() => {
     loadAcceptedLicenses();
-    const offInstallProgress = onModelInstallProgress((p) => {
-      const k = currentInstallKey;
-      if (!k) return;
-      if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
-    });
+    const unsubscribes = [
+      onModelInstallProgress((p) => {
+        const k = currentInstallKey;
+        if (!k) return;
+        if (downloadOf(k)) galleryStore.downloads[k] = { ...p };
+      }),
+      onModelInstallFinished((finished) => {
+        const key = variantKey(finished.request.id, finished.request.region);
+        if (key === adoptedKey) finishAdopted(key, finished);
+      }),
+    ];
     void load();
+    adoptRunningInstall().catch(() => {
+      // No install to follow
+    });
     return () => {
-      offInstallProgress();
+      for (const unsubscribe of unsubscribes) unsubscribe();
     };
   });
 

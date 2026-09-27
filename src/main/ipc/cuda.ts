@@ -1,6 +1,7 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { getCudaStatus, downloadCudaLibs, cancelDownload, removeCudaLibs, getCudaDownloadSize } from '../cuda/manager';
 import type { CudaStatus, CudaDownloadResult } from '$shared/types';
+import { sendToWindows } from './broadcast';
 
 export function registerCudaHandlers(): void {
   ipcMain.handle('cuda:check-status', async (): Promise<CudaStatus> => {
@@ -11,9 +12,10 @@ export function registerCudaHandlers(): void {
     return getCudaDownloadSize(version);
   });
 
-  ipcMain.handle('cuda:download', async (event: IpcMainInvokeEvent, version: string): Promise<CudaDownloadResult> => {
+  ipcMain.handle('cuda:download', async (_event: IpcMainInvokeEvent, version: string): Promise<CudaDownloadResult> => {
+    // Every window, so one reopened mid-download can follow it (SettingsPanel rehydrates from cuda:check-status).
     return downloadCudaLibs(version, (downloaded, total, phase) => {
-      event.sender.send('cuda:download-progress', {
+      sendToWindows('cuda:download-progress', {
         downloadedBytes: downloaded,
         totalBytes: total,
         phase,

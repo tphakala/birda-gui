@@ -25,6 +25,8 @@
     installModel,
     getAvailableLanguages,
     onModelInstallProgress,
+    onModelInstallFinished,
+    getModelInstallStatus,
     getSystemLocale,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
@@ -165,8 +167,50 @@
   let selectedLanguage = $state('en');
   let languagesError = $state<string | null>(null);
 
+  // An install this window did not start, e.g. one still running after a reload.
+  let adoptedInstall: string | null = null;
+  let offInstallFinished: (() => void) | null = null;
+
+  async function finishAdoptedInstall(error?: string) {
+    adoptedInstall = null;
+    installing = null;
+    installProgress = '';
+    offInstallProgress?.();
+    offInstallProgress = null;
+    if (error !== undefined) modelsError = error;
+    try {
+      await refreshModels();
+    } catch {
+      // birda may not be available
+    }
+  }
+
+  async function adoptRunningInstall() {
+    const request = await getModelInstallStatus();
+    if (!request || installing) return;
+    adoptedInstall = request.id;
+    installing = request.id;
+    offInstallProgress = onModelInstallProgress((progress) => {
+      installProgress = progress.line;
+    });
+    // It may have finished before the finished listener could see it.
+    if ((await getModelInstallStatus()) === null && adoptedInstall === request.id) await finishAdoptedInstall();
+  }
+
   // --- Lifecycle ---
   onMount(async () => {
+    offInstallFinished = onModelInstallFinished((finished) => {
+      if (finished.request.id !== adoptedInstall) return;
+      void finishAdoptedInstall(
+        finished.outcome === 'failed'
+          ? m.settings_models_failedInstall({ modelId: finished.request.id, error: finished.error ?? '' })
+          : undefined,
+      );
+    });
+    adoptRunningInstall().catch(() => {
+      // No install to follow
+    });
+
     // Auto-detect system language for UI language step
     try {
       const systemLocale = await getSystemLocale();
@@ -193,6 +237,7 @@
 
   onDestroy(() => {
     offInstallProgress?.();
+    offInstallFinished?.();
   });
 
   // When entering model step, refresh if we have no data yet

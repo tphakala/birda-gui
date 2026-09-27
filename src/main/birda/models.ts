@@ -9,6 +9,7 @@ import type {
   ModelInstalledResult,
   ModelManifest,
   ModelInstallProgress,
+  ModelInstallRequest,
 } from '$shared/types';
 
 interface BirdaJsonEnvelope {
@@ -77,8 +78,23 @@ export function cancelInstall(): boolean {
 // Read through a function so TS does not narrow the post-await check to a literal.
 const cancelRequested = (): boolean => cancelState.requested;
 
+/** Rejects an install that ended because it was cancelled. */
+export class ModelInstallCancelledError extends Error {
+  constructor() {
+    super('Model install cancelled');
+    this.name = 'ModelInstallCancelledError';
+  }
+}
+
+let currentRequest: ModelInstallRequest | null = null;
+
+/** The install in flight, for a window that did not start it. */
+export function getInstallStatus(): ModelInstallRequest | null {
+  return currentRequest;
+}
+
 export async function installModel(
-  opts: { id: string; region?: string | undefined; variant?: string | undefined },
+  opts: ModelInstallRequest,
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
   // Reserve the single-install slot BEFORE the first await. currentInstall is not
@@ -90,12 +106,13 @@ export async function installModel(
     throw new Error('Another model install is already running');
   }
   installInProgress = true;
+  currentRequest = { id: opts.id, region: opts.region, variant: opts.variant };
   cancelState.requested = false;
   try {
     const birdaPath = await findBirda();
     // A cancel that arrived while findBirda() was resolving must still stop the spawn.
     if (cancelRequested()) {
-      throw new Error('Model install cancelled');
+      throw new ModelInstallCancelledError();
     }
     const args = ['--output-mode', 'json', 'models', 'install', opts.id];
     if (opts.region) args.push('--region', opts.region);
@@ -148,7 +165,7 @@ export async function installModel(
         // A non-zero exit right after a cancel is the kill, not a real failure;
         // report it as a cancellation so the renderer labels it correctly.
         if (outcome === 'cancelled') {
-          reject(new Error('Model install cancelled'));
+          reject(new ModelInstallCancelledError());
           return;
         }
         if (outcome === 'failed') {
@@ -176,6 +193,7 @@ export async function installModel(
   } finally {
     currentInstall = null;
     installStopper = null;
+    currentRequest = null;
     installInProgress = false;
     cancelState.requested = false;
   }
