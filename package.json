@@ -5,12 +5,12 @@
   "type": "module",
   "main": "out/main/index.js",
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "prebuild": "tsx scripts/fetch-birda-cli.ts",
-    "build": "vite build -c build/vite/main.config.ts && vite build -c build/vite/preload.config.ts && vite build -c build/vite/renderer.config.ts",
+    "build": "vite build -c build/vite/main.config.ts && vite build -c build/vite/preload.config.ts && vite build -c build/vite/renderer.config.ts && node --check out/main/index.js && node --check out/preload/index.cjs",
     "preview": "npm run build && electron .",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild-sqlite": "electron-rebuild -f -w better-sqlite3",

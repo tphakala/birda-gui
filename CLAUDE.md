@@ -51,7 +51,7 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | Icons        | Lucide Svelte                      | latest                                 |
 | Validation   | Zod                                | 4.x                                    |
 
-Node.js 22.12 or newer is required for development and CI (`engines` in `package.json`; CI and release workflows use Node 24).
+Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`).
 
 ## Project Structure
 
@@ -96,7 +96,7 @@ build/                # Electron-builder resources (icons, NSIS installer script
 Two separate tsconfig files (never mix them):
 
 - **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
-- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/` and `build/vite/`. Node.js only, no DOM. It sets no `types` allowlist, so the global declarations of every installed `@types/*` package (Node's come from the directly declared `@types/node`) are included automatically.
+- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/` and `build/vite/`. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 

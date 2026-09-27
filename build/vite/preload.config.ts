@@ -20,6 +20,11 @@ export default defineConfig(({ mode }) => ({
     },
     rolldownOptions: {
       external: isExternal,
+      // Rolldown defaults to 'auto' (no directive for ES module input);
+      // keep the "use strict" prologue the Rollup build emitted.
+      output: {
+        strict: true,
+      },
     },
   },
 }));
