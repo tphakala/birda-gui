@@ -26,7 +26,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       # Pinned for reproducible output. The tool is not in package.json, so
       # Dependabot does not update it; bump the version here by hand.

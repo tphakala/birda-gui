@@ -29,7 +29,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Generate Paraglide output
         run: npx paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide
