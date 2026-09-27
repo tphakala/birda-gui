@@ -41,15 +41,17 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | ------------ | ---------------------------------- | -------------------------------------- |
 | Runtime      | Electron                           | 43.x                                   |
 | UI Framework | Svelte                             | 5.x (runes API, **not** legacy stores) |
-| CSS          | Tailwind CSS v4 + daisyUI v5       | 4.1.x / 5.5.x                          |
-| Language     | TypeScript                         | 5.9.x (strict mode)                    |
-| Bundler      | Vite (direct configs + dev script) | 7.x                                    |
-| Database     | better-sqlite3                     | 12.x                                   |
+| CSS          | Tailwind CSS v4 + daisyUI v5       | 4.3.x / 5.7.x                          |
+| Language     | TypeScript                         | 6.0.x (strict mode)                    |
+| Bundler      | Vite (direct configs + dev script) | 8.x (Rolldown)                         |
+| Database     | better-sqlite3                     | 13.x                                   |
 | i18n         | Paraglide (compile-time)           | 2.x                                    |
-| Maps         | MapLibre GL + svelte-maplibre-gl   | 5.x / 1.x                              |
+| Maps         | MapLibre GL + svelte-maplibre-gl   | 6.x / 2.x                              |
 | Audio        | WaveSurfer.js                      | 7.x                                    |
 | Icons        | Lucide Svelte                      | latest                                 |
-| Validation   | Zod                                | 3.x                                    |
+| Validation   | Zod                                | 4.x                                    |
+
+Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`).
 
 ## Project Structure
 
@@ -94,7 +96,7 @@ build/                # Electron-builder resources (icons, NSIS installer script
 Two separate tsconfig files (never mix them):
 
 - **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
-- **`tsconfig.node.json`**: Main + Preload + Shared. Node.js only, no DOM. Has `types: ["node"]`.
+- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/` and `build/vite/`. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 
@@ -105,7 +107,7 @@ Task runner: **Taskfile.yml** (Go Task) or npm scripts.
 ```bash
 # Development
 task dev                    # renderer HMR + Electron via scripts/dev.ts (restarts on main/preload change)
-task build                  # direct Vite build (main + preload + renderer) via npm run build
+task build                  # direct Vite build (main + preload + renderer) plus node --check of the bundles, via npm run build
 
 # Linting & Type Checking
 task lint                   # ESLint + svelte-check + tsc (all three in parallel)

@@ -6,7 +6,12 @@ const root = resolve(import.meta.dirname, '../..');
 
 // ESM output uses __dirname/__filename/require, which are not defined in ES
 // modules. Inject them at the top of the bundle, matching what electron-vite
-// produced. Electron 43 bundles Node 22, so import.meta.dirname is available.
+// produced; unreferenced shim declarations are dropped from the output.
+// Rolldown does not rename source bindings that collide with these names, so
+// a main-process module declaring its own __filename, __dirname or require
+// would produce a duplicate declaration. `npm run build` runs `node --check`
+// on the output so that fails the build instead of the app launch (the dev
+// watcher in scripts/dev.ts does not run the check).
 const esmShim = [
   `import { createRequire as __birdaCreateRequire } from 'node:module';`,
   `const require = __birdaCreateRequire(import.meta.url);`,
@@ -34,7 +39,7 @@ export default defineConfig(({ mode }) => ({
       formats: ['es'],
       fileName: () => 'index.js',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
       output: {
         banner: esmShim,

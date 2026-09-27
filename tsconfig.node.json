@@ -10,6 +10,7 @@
     "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
     "noEmit": true,
+    "types": ["node"],
     "paths": {
       "$shared/*": ["./shared/*"]
     }

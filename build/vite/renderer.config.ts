@@ -16,11 +16,16 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     target: 'esnext',
     chunkSizeWarningLimit: 1100,
-    rollupOptions: {
+    rolldownOptions: {
       input: resolve(root, 'src/renderer/index.html'),
       output: {
-        manualChunks: {
-          maplibre: ['maplibre-gl'],
+        // Rolldown has no object-form manualChunks. A group matching the
+        // maplibre-gl package pulls its dependencies in with it
+        // (includeDependenciesRecursively defaults to true). The stylesheet is
+        // excluded so maplibre-gl.css stays in the main CSS bundle, after the
+        // app styles, instead of becoming a separate file linked before them.
+        codeSplitting: {
+          groups: [{ name: 'maplibre', test: /[\\/]node_modules[\\/]maplibre-gl[\\/](?!.*\.css$)/ }],
         },
       },
     },
