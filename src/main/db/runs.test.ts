@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
-import { createRun, finishRun } from './runs';
+import { createRun, finishRun, markStaleRunsAsFailed } from './runs';
 
 // A userData directory that does not exist, so a real getDb() reached by a
 // broken mock fails instead of creating a catalog in the working directory.
@@ -138,16 +138,49 @@ describe('finishRun', () => {
   );
 
   it.each(['cancelled', 'failed'] as const)(
-    'keeps a %s run’s partial results when no earlier complete result exists',
+    'keeps a %s run’s partial results and replaces earlier partial runs when no complete result exists',
     (finalStatus) => {
       const earlierFailed = runWithResults('/rec', 'birdnet', 'failed');
+      const earlierCancelled = runWithResults('/rec', 'birdnet', 'cancelled');
       const current = runWithResults('/rec', 'birdnet', 'running');
 
-      expect(finishRun(current, finalStatus)).toEqual({ replaced: 0, discardedPartial: false });
-      expect(runIds()).toEqual([earlierFailed, current]);
+      expect(finishRun(current, finalStatus)).toEqual({ replaced: 2, discardedPartial: false });
+      expect(runIds()).toEqual([current]);
       expect(resultRows(current)).toEqual([1, 1, 1]);
+      expect(resultRows(earlierFailed)).toEqual([0, 0, 0]);
+      expect(resultRows(earlierCancelled)).toEqual([0, 0, 0]);
     },
   );
+
+  it('drops a partial run’s results when the earlier result completed with errors', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'completed_with_errors');
+    const current = runWithResults('/rec', 'birdnet', 'running');
+
+    expect(finishRun(current, 'cancelled')).toEqual({ replaced: 0, discardedPartial: true });
+    expect(resultRows(earlier)).toEqual([1, 1, 1]);
+  });
+
+  it('keeps a partial run’s results when the only complete result is later or for another source or model', () => {
+    runWithResults('/other', 'birdnet', 'completed');
+    runWithResults('/rec', 'perch', 'completed');
+    const current = runWithResults('/rec', 'birdnet', 'running');
+    const later = runWithResults('/rec', 'birdnet', 'completed');
+
+    expect(finishRun(current, 'cancelled')).toEqual({ replaced: 0, discardedPartial: false });
+    expect(resultRows(current)).toEqual([1, 1, 1]);
+    expect(resultRows(later)).toEqual([1, 1, 1]);
+  });
+
+  it('never replaces runs that have not finished', () => {
+    const pending = runWithResults('/rec', 'birdnet', 'pending');
+    const running = runWithResults('/rec', 'birdnet', 'running');
+    const completed = createRun('/rec', 'birdnet', 0.1).id;
+    const cancelled = createRun('/rec', 'birdnet', 0.1).id;
+
+    finishRun(completed, 'completed');
+    finishRun(cancelled, 'cancelled');
+    expect(runIds()).toEqual([pending, running, completed, cancelled]);
+  });
 
   it.each(['completed', 'completed_with_errors', 'failed', 'cancelled'] satisfies FinishedRunStatus[])(
     'sets completed_at when the run is %s',
@@ -177,5 +210,34 @@ describe('finishRun', () => {
     expect(() => finishRun(current, 'completed')).toThrow('blocked');
     expect(status(current)).toBe('running');
     expect(runIds()).toEqual([earlier, current]);
+  });
+
+  it('changes nothing when discarding partial results fails part way', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'completed');
+    const current = runWithResults('/rec', 'birdnet', 'running');
+    db().exec(`
+      CREATE TRIGGER block_file_delete BEFORE DELETE ON audio_files
+      BEGIN SELECT RAISE(ABORT, 'blocked'); END;
+    `);
+
+    expect(() => finishRun(current, 'cancelled')).toThrow('blocked');
+    expect(status(current)).toBe('running');
+    expect(resultRows(current)).toEqual([1, 1, 1]);
+    expect(resultRows(earlier)).toEqual([1, 1, 1]);
+  });
+});
+
+describe('markStaleRunsAsFailed', () => {
+  it('fails runs left running and applies the one-result-set rule to them', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'completed');
+    const stale = runWithResults('/rec', 'birdnet', 'running');
+    const other = runWithResults('/other', 'birdnet', 'running');
+
+    expect(markStaleRunsAsFailed()).toBe(2);
+    expect(status(stale)).toBe('failed');
+    expect(status(other)).toBe('failed');
+    expect(resultRows(stale)).toEqual([0, 0, 0]);
+    expect(resultRows(earlier)).toEqual([1, 1, 1]);
+    expect(resultRows(other)).toEqual([1, 1, 1]);
   });
 });

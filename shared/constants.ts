@@ -6,7 +6,11 @@ export const BIRDA_GITHUB_URL = 'https://github.com/tphakala/birda';
 export const BIRDA_RELEASES_URL = 'https://github.com/tphakala/birda/releases/latest';
 export const BIRDA_REPO = 'tphakala/birda';
 export const CUDA_LIBS_DIR_NAME = 'cuda-libs';
-/** Every analysis run status. The catalog's status CHECK constraint is built from this list. */
+/**
+ * Every analysis run status. SCHEMA_SQL and migration 8 build the catalog's
+ * status CHECK from this list, but a catalog that already ran migration 8 keeps
+ * its CHECK: adding a status also needs a new migration that rebuilds the table.
+ */
 export const RUN_STATUSES = [
   'pending',
   'running',
