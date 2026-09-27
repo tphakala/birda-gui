@@ -147,22 +147,19 @@
     }
 
     const seq = fetchSeq;
+    // The inputs stay editable while the fetch runs; name the list after the request that was sent.
+    const request = { latitude: fetchLat, longitude: fetchLon, week: fetchWeek, threshold: fetchThreshold };
     fetchLoading = true;
     fetchError = null;
     try {
-      const result = await fetchSpeciesList({
-        latitude: fetchLat,
-        longitude: fetchLon,
-        week: fetchWeek,
-        threshold: fetchThreshold,
-      });
+      const result = await fetchSpeciesList(request);
       if (seq !== fetchSeq) return;
       fetchResult = result;
       // Auto-generate a default name
       fetchListName = m.species_fetch_defaultName({
-        lat: fetchLat.toFixed(2),
-        lon: fetchLon.toFixed(2),
-        week: String(fetchWeek),
+        lat: request.latitude.toFixed(2),
+        lon: request.longitude.toFixed(2),
+        week: String(request.week),
       });
     } catch (err) {
       if (seq === fetchSeq) fetchError = (err as Error).message;

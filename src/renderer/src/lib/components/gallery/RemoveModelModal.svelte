@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import * as m from '$paraglide/messages';
 
   const {
@@ -9,14 +10,12 @@
   }: { modelName: string; busy?: boolean; onConfirm: () => void; onCancel: () => void } = $props();
 
   let dialog = $state<HTMLDialogElement>();
-  $effect(() => {
-    dialog?.showModal();
-  });
 </script>
 
 <dialog
   class="modal"
   bind:this={dialog}
+  {@attach showModal}
   onclose={onCancel}
   closedby={busy ? 'none' : undefined}
   role="alertdialog"

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { showModal } from '$lib/utils/dialog';
   import CoverageMap from './CoverageMap.svelte';
   import DownloadProgress from './DownloadProgress.svelte';
   import { X, Download as DownloadIcon, CircleCheckBig } from '@lucide/svelte';
@@ -30,15 +31,12 @@
   } = $props();
 
   let dialog = $state<HTMLDialogElement>();
-  $effect(() => {
-    dialog?.showModal();
-  });
 
   const core = $derived(variant.countries?.core ?? []);
   const partial = $derived(variant.countries?.partial ?? []);
 </script>
 
-<dialog class="modal" bind:this={dialog} onclose={onClose} aria-labelledby="region-detail-title">
+<dialog class="modal" bind:this={dialog} {@attach showModal} onclose={onClose} aria-labelledby="region-detail-title">
   <div class="modal-box max-w-2xl">
     <div class="mb-3 flex items-center justify-between">
       <h3 id="region-detail-title" class="text-base font-semibold">{variant.region_name}</h3>
