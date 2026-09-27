@@ -34,6 +34,7 @@ Pre-built binaries for Windows, Linux, and macOS are available on the [Releases]
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (22.12 or a later 22.x, 24.x, or 26 and newer, as required by the `electron` package and Vitest 5)
+- Network access on the first build or lint: the translation compiler downloads its inlang plugins once and caches them in `project.inlang/cache`
 
 ### Setup
 

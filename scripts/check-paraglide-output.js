@@ -23,7 +23,7 @@ if (missing.length > 0) {
   console.error(
     `Paraglide output is missing ${String(missing.length)} of ${String(keys.length)} messages ` +
       `(first: ${missing.slice(0, 3).join(', ')}). The inlang plugins may have failed to load; ` +
-      'check the network or project.inlang/cache and compile again.',
+      'check the network and run npm run paraglide (a rebuild alone can reuse the cached empty output).',
   );
   process.exit(1);
 }

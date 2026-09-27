@@ -545,7 +545,14 @@
               </button>
             </div>
           {:else if !cudaStatus.installed}
-            <p class="text-base-content/70 text-sm">{m.settings_cuda_notInstalled()}</p>
+            {#if cudaStatus.version}
+              <!-- Libraries from an older birda release are on disk but not used. -->
+              <p class="text-base-content/70 text-sm">
+                {m.settings_cuda_outdated({ installed: cudaStatus.version, required: BIRDA_CLI_VERSION })}
+              </p>
+            {:else}
+              <p class="text-base-content/70 text-sm">{m.settings_cuda_notInstalled()}</p>
+            {/if}
             {#if cudaDownloadSizeBytes > 0}
               <p class="text-base-content/50 text-xs">
                 {m.settings_cuda_downloadSize({ size: formatBytes(cudaDownloadSizeBytes) })}

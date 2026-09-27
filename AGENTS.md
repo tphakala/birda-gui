@@ -94,7 +94,7 @@ task format:check           # Prettier check (CI)
 
 # Testing
 npm run test                # vitest run (unit tests; no Taskfile target yet)
-npm run paraglide           # compile messages into src/renderer/src/paraglide (gitignored, dev layout) and check none is missing; lint, lint:fix, check, knip, test, task eslint and the pre-commit hook run it first
+npm run paraglide           # compile messages into src/renderer/src/paraglide (gitignored, dev layout) and check none is missing (the first compile needs network for the inlang plugins, cached in project.inlang/cache); lint, lint:fix, check, knip, test, task eslint and the pre-commit hook run it first
 
 # Full validation (every CI check except the build)
 npm run validate            # format:check + lint + typecheck + test + knip + validate:translations + npm audit
