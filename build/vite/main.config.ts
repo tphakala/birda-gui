@@ -6,11 +6,12 @@ const root = resolve(import.meta.dirname, '../..');
 
 // ESM output uses __dirname/__filename/require, which are not defined in ES
 // modules. Inject them at the top of the bundle, matching what electron-vite
-// produced; bindings nothing references are tree-shaken from the output.
+// produced; unreferenced shim declarations are dropped from the output.
 // Rolldown does not rename source bindings that collide with these names, so
 // a main-process module declaring its own __filename, __dirname or require
 // would produce a duplicate declaration. `npm run build` runs `node --check`
-// on the output so that fails the build instead of the app launch.
+// on the output so that fails the build instead of the app launch (the dev
+// watcher in scripts/dev.ts does not run the check).
 const esmShim = [
   `import { createRequire as __birdaCreateRequire } from 'node:module';`,
   `const require = __birdaCreateRequire(import.meta.url);`,

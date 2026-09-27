@@ -107,7 +107,7 @@ Task runner: **Taskfile.yml** (Go Task) or npm scripts.
 ```bash
 # Development
 task dev                    # renderer HMR + Electron via scripts/dev.ts (restarts on main/preload change)
-task build                  # direct Vite build (main + preload + renderer) via npm run build
+task build                  # direct Vite build (main + preload + renderer) plus node --check of the bundles, via npm run build
 
 # Linting & Type Checking
 task lint                   # ESLint + svelte-check + tsc (all three in parallel)
