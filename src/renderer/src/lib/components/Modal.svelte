@@ -12,6 +12,8 @@
     iconSize?: number | undefined;
     maxWidth?: string | undefined;
     showCloseButton?: boolean | undefined;
+    /** Id of an element in the content that describes the dialog. */
+    descriptionId?: string | undefined;
     children?: Snippet | undefined;
     actions?: Snippet | undefined;
   }
@@ -25,6 +27,7 @@
     iconSize = 20,
     maxWidth = 'max-w-lg',
     showCloseButton = true,
+    descriptionId,
     children,
     actions,
   }: Props = $props();
@@ -38,7 +41,7 @@
 </script>
 
 {#if open}
-  <dialog class="modal" {@attach showModal} onclose={close} aria-labelledby={titleId}>
+  <dialog class="modal" {@attach showModal} onclose={close} aria-labelledby={titleId} aria-describedby={descriptionId}>
     <div class="modal-box {maxWidth}">
       <!-- Header -->
       <div class="flex items-center justify-between">
@@ -73,7 +76,7 @@
 
     <!-- Backdrop close handler -->
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

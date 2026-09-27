@@ -47,7 +47,7 @@
       <div class="mt-4 flex-1 overflow-auto">
         {#if loading}
           <div class="flex items-center justify-center py-12">
-            <Loader size={24} class="animate-spin" />
+            <span role="status" aria-label={m.common_loading()}><Loader size={24} class="animate-spin" /></span>
           </div>
         {:else if error}
           <p class="text-error text-sm">{error}</p>
@@ -63,7 +63,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

@@ -117,6 +117,7 @@
   let saving = $state(false);
   let saved = $state(false);
   let error = $state<string | null>(null);
+  let clearError = $state<string | null>(null);
   let savedTimer: ReturnType<typeof setTimeout> | null = null;
 
   let dataPath = $state('');
@@ -347,7 +348,7 @@
 
   async function confirmClearDatabase() {
     clearing = true;
-    error = null;
+    clearError = null;
     try {
       const result = await clearDatabase();
       clearResult = result;
@@ -356,7 +357,7 @@
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {
-      error = (e as Error).message;
+      clearError = (e as Error).message;
     } finally {
       clearing = false;
     }
@@ -461,7 +462,7 @@
                 <span>{m.settings_cli_availableAt({ path: birdaStatus.path })}</span>
               </div>
               <div class="text-base-content/70 flex items-center gap-2 pl-6 text-sm">
-                <span>Version: {birdaStatus.version}</span>
+                <span>{m.settings_cli_version({ version: birdaStatus.version })}</span>
               </div>
             </div>
           {:else}
@@ -478,9 +479,9 @@
         <div role="alert" class="alert alert-warning">
           <TriangleAlert size={20} />
           <div class="flex-1">
-            <h4 class="font-medium">birda Update Required</h4>
+            <h4 class="font-medium">{m.status_updateModal_title()}</h4>
             <p class="text-sm opacity-80">
-              Your birda CLI version ({birdaStatus.version}) is outdated. Version {birdaStatus.minVersion} or higher is required.
+              {m.settings_cli_outdated({ current: birdaStatus.version, required: birdaStatus.minVersion })}
             </p>
             <div class="mt-2">
               <a
@@ -490,7 +491,7 @@
                 class="link link-primary flex items-center gap-1 text-sm"
               >
                 <ExternalLink size={14} />
-                Download latest version
+                {m.status_updateModal_download()}
               </a>
             </div>
           </div>
@@ -591,7 +592,11 @@
           {#if cudaError}
             <div role="alert" class="alert alert-error mt-2">
               <span>{m.settings_cuda_downloadFailed({ error: cudaError })}</span>
-              <button class="btn btn-ghost btn-sm btn-square" onclick={() => (cudaError = null)}>
+              <button
+                class="btn btn-ghost btn-sm btn-square"
+                onclick={() => (cudaError = null)}
+                aria-label={m.common_button_close()}
+              >
                 <X size={16} />
               </button>
             </div>
@@ -599,7 +604,11 @@
           {#if cudaRemoveError}
             <div role="alert" class="alert alert-error mt-2">
               <span>{m.settings_cuda_removeFailed({ error: cudaRemoveError })}</span>
-              <button class="btn btn-ghost btn-sm btn-square" onclick={() => (cudaRemoveError = null)}>
+              <button
+                class="btn btn-ghost btn-sm btn-square"
+                onclick={() => (cudaRemoveError = null)}
+                aria-label={m.common_button_close()}
+              >
                 <X size={16} />
               </button>
             </div>
@@ -743,6 +752,7 @@
                 disabled={!settings.clip_output_dir}
                 class="btn btn-outline gap-1.5"
                 title={m.settings_storage_openClipDir()}
+                aria-label={m.settings_storage_openClipDir()}
               >
                 <ExternalLink size={16} />
               </button>
@@ -909,7 +919,10 @@
 
           <div class="flex items-center gap-3">
             <button
-              onclick={() => (showClearConfirm = true)}
+              onclick={() => {
+                clearError = null;
+                showClearConfirm = true;
+              }}
               disabled={clearing || appState.catalogStats.total_detections === 0}
               class="btn btn-error btn-sm gap-1.5"
             >
@@ -917,7 +930,7 @@
               {m.settings_data_clearAll()}
             </button>
             {#if clearResult}
-              <span class="text-success text-sm">
+              <span role="status" class="text-success text-sm">
                 {m.settings_data_cleared({
                   detections: clearResult.detections,
                   runs: clearResult.runs,
@@ -956,23 +969,26 @@
     class="modal"
     {@attach showModal}
     onclose={() => (showClearConfirm = false)}
-    oncancel={(e) => {
-      if (clearing) e.preventDefault();
-    }}
+    closedby={clearing ? 'none' : undefined}
+    role="alertdialog"
     aria-labelledby="clear-modal-title"
+    aria-describedby="clear-modal-warning"
   >
     <div class="modal-box">
       <div class="text-error flex items-center gap-3">
         <TriangleAlert size={24} />
         <h3 id="clear-modal-title" class="text-lg font-semibold">{m.settings_clearModal_title()}</h3>
       </div>
-      <p class="text-base-content/70 mt-3 text-sm">
+      <p id="clear-modal-warning" class="text-base-content/70 mt-3 text-sm">
         {m.settings_clearModal_warning()}
       </p>
       <div class="border-base-300 bg-base-200 mt-2 rounded-lg border p-3 text-sm">
         <p>{m.settings_clearModal_detectionsRemoved({ count: appState.catalogStats.total_detections })}</p>
         <p>{m.settings_clearModal_locationsRemoved({ count: appState.catalogStats.total_locations })}</p>
       </div>
+      {#if clearError}
+        <p role="alert" class="text-error mt-3 text-sm">{clearError}</p>
+      {/if}
       <div class="modal-action">
         <button onclick={() => (showClearConfirm = false)} disabled={clearing} class="btn">
           {m.common_button_cancel()}
@@ -986,7 +1002,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()} disabled={clearing}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()} disabled={clearing}>close</button>
     </form>
   </dialog>
 {/if}
@@ -997,14 +1013,16 @@
     class="modal"
     {@attach showModal}
     onclose={() => (showCudaRemoveConfirm = false)}
+    role="alertdialog"
     aria-labelledby="cuda-remove-modal-title"
+    aria-describedby="cuda-remove-modal-body"
   >
     <div class="modal-box">
       <div class="text-error flex items-center gap-3">
         <TriangleAlert size={24} />
         <h3 id="cuda-remove-modal-title" class="text-lg font-semibold">{m.settings_cuda_removeButton()}</h3>
       </div>
-      <p class="text-base-content/70 mt-3 text-sm">
+      <p id="cuda-remove-modal-body" class="text-base-content/70 mt-3 text-sm">
         {m.settings_cuda_removeConfirm({ size: formatBytes(cudaStatus?.diskUsageBytes ?? 0) })}
       </p>
       <div class="modal-action">
@@ -1017,7 +1035,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

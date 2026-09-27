@@ -366,6 +366,8 @@
           <input
             type="text"
             placeholder={m.analysis_filterByName()}
+            aria-label={m.analysis_filterByName()}
+            data-focus-search
             bind:value={speciesQuery}
             oninput={handleSpeciesInput}
             class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"

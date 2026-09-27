@@ -61,13 +61,20 @@
 
 <!-- Unsaved Settings Confirmation Modal -->
 {#if pendingTab}
-  <dialog class="modal" {@attach showModal} onclose={cancelDiscard} aria-labelledby="unsaved-modal-title">
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={cancelDiscard}
+    role="alertdialog"
+    aria-labelledby="unsaved-modal-title"
+    aria-describedby="unsaved-modal-warning"
+  >
     <div class="modal-box">
       <div class="text-warning flex items-center gap-3">
         <TriangleAlert size={24} />
         <h3 id="unsaved-modal-title" class="text-lg font-semibold">{m.settings_unsavedModal_title()}</h3>
       </div>
-      <p class="text-base-content/70 mt-3 text-sm">
+      <p id="unsaved-modal-warning" class="text-base-content/70 mt-3 text-sm">
         {m.settings_unsavedModal_warning()}
       </p>
       <div class="modal-action">
@@ -82,7 +89,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

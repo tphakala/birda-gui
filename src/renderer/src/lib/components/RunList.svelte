@@ -48,55 +48,54 @@
     {:else}
       {#each runs as run (run.id)}
         <div
-          onclick={() => {
-            onselect(run.id);
-          }}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              if (e.target === e.currentTarget) onselect(run.id);
-            }
-          }}
-          role="button"
-          tabindex="0"
-          class="border-base-300 relative w-full cursor-pointer border-b px-3 py-2.5 text-left transition-colors
+          class="border-base-300 relative w-full border-b transition-colors
             {selectedRunId === run.id ? 'bg-primary/10 border-l-primary border-l-2' : 'hover:bg-base-300/50'}"
         >
+          <button
+            type="button"
+            onclick={() => {
+              onselect(run.id);
+            }}
+            aria-current={selectedRunId === run.id ? 'true' : undefined}
+            class="w-full cursor-pointer px-3 py-2.5 text-left"
+          >
+            <span class="block truncate text-sm font-medium">{sourceName(run.source_path)}</span>
+            <span class="text-base-content/50 mt-0.5 flex items-center gap-1.5 text-xs">
+              <span class="truncate">{run.model}</span>
+              <span class="text-base-content/30">·</span>
+              <span>{run.detection_count > 0 ? detectionLabel(run.detection_count) : m.runs_noDetections()}</span>
+            </span>
+            <span class="text-base-content/40 mt-0.5 flex items-center gap-1.5 text-xs">
+              {#if run.location_name}
+                <span class="truncate">{run.location_name}</span>
+                <span class="text-base-content/30">·</span>
+              {/if}
+              {#if run.started_at}
+                <span>{formatDate(run.started_at)}</span>
+              {/if}
+              {#if run.status === 'running'}
+                <span class="badge badge-info badge-xs">{m.runs_status_running()}</span>
+              {:else if run.status === 'failed'}
+                <span class="badge badge-error badge-xs gap-0.5">
+                  <CircleAlert size={10} />
+                  {m.runs_status_failed()}
+                </span>
+              {/if}
+            </span>
+          </button>
           {#if run.status === 'failed' && ondelete}
             <button
-              onclick={(e) => {
-                e.stopPropagation();
+              type="button"
+              onclick={() => {
                 ondelete(run.id);
               }}
               class="text-base-content/30 hover:text-error absolute top-1.5 right-1.5 rounded p-0.5 transition-colors"
               title={m.runs_deleteRun()}
+              aria-label={m.runs_deleteRun()}
             >
               <X size={14} />
             </button>
           {/if}
-          <div class="truncate text-sm font-medium">{sourceName(run.source_path)}</div>
-          <div class="text-base-content/50 mt-0.5 flex items-center gap-1.5 text-xs">
-            <span class="truncate">{run.model}</span>
-            <span class="text-base-content/30">·</span>
-            <span>{run.detection_count > 0 ? detectionLabel(run.detection_count) : m.runs_noDetections()}</span>
-          </div>
-          <div class="text-base-content/40 mt-0.5 flex items-center gap-1.5 text-xs">
-            {#if run.location_name}
-              <span class="truncate">{run.location_name}</span>
-              <span class="text-base-content/30">·</span>
-            {/if}
-            {#if run.started_at}
-              <span>{formatDate(run.started_at)}</span>
-            {/if}
-            {#if run.status === 'running'}
-              <span class="badge badge-info badge-xs">{m.runs_status_running()}</span>
-            {:else if run.status === 'failed'}
-              <span class="badge badge-error badge-xs gap-0.5">
-                <CircleAlert size={10} />
-                {m.runs_status_failed()}
-              </span>
-            {/if}
-          </div>
         </div>
       {/each}
     {/if}

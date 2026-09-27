@@ -111,7 +111,7 @@
   "settings_data_vacuumed": "Tömörítés kész",
   "settings_data_birdaConfig": "birda konfiguráció (csak olvasható)",
   "settings_clearModal_title": "Adatbázis törlése",
-  "settings_clearModal_warning": "Ez véglegesen törli az összes észlelést, elemzési futtatást és helyszínt az adatbázisból. Ez a művelet nem vonható vissza.",
+  "settings_clearModal_warning": "Ez véglegesen törli az összes észlelést, elemzési futtatást, helyszínt és annotációt az adatbázisból. Ez a művelet nem vonható vissza.",
   "settings_clearModal_detectionsRemoved": "{count} észlelés kerül törlésre",
   "settings_clearModal_locationsRemoved": "{count} helyszín kerül törlésre",
   "settings_clearModal_deleteAll": "Összes adat törlése",
@@ -461,6 +461,15 @@
   "status_updateTooltip": "A birda CLI frissítése szükséges: {current} → {required}",
   "status_cliVersionTooltip": "birda CLI verzió",
   "common_loading": "Betöltés",
-  "common_button_dismiss": "Elvetés",
-  "calendar_dateInputLabel": "Dátum"
+  "calendar_dateInputLabel": "Dátum",
+  "species_deleteConfirm_title": "Törli a fajlistát?",
+  "species_deleteConfirm_body": "A(z) „{name}” véglegesen törlődik. Ez nem vonható vissza.",
+  "species_custom_removeSpecies": "{name} eltávolítása",
+  "species_custom_resultCount": "{count} találat",
+  "species_fetch_defaultName": "{lat}, {lon}, {week}. hét",
+  "settings_cli_version": "Verzió: {version}",
+  "settings_cli_outdated": "A birda CLI verziója ({current}) elavult. Legalább {required} verzió szükséges.",
+  "wizard_cli_outdated": "A(z) {current} verzió található, de legalább {required} szükséges.",
+  "calendar_dialogTitle": "Válasszon dátumot",
+  "calendar_dateInputError": "Adja meg a dátumot NN/HH/ÉÉÉÉ vagy ÉÉÉÉ-HH-NN formában."
 }

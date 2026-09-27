@@ -111,7 +111,7 @@
   "settings_data_vacuumed": "Komprimace dokončena",
   "settings_data_birdaConfig": "Konfigurace birda (pouze ke čtení)",
   "settings_clearModal_title": "Vymazat databázi",
-  "settings_clearModal_warning": "Tím trvale odstraníte všechny detekce, běhy analýzy a místa z databáze. Tuto akci nelze vrátit zpět.",
+  "settings_clearModal_warning": "Tím trvale odstraníte všechny detekce, běhy analýzy, místa a anotace z databáze. Tuto akci nelze vrátit zpět.",
   "settings_clearModal_detectionsRemoved": "{count} detekcí bude odstraněno",
   "settings_clearModal_locationsRemoved": "{count} míst bude odstraněno",
   "settings_clearModal_deleteAll": "Odstranit všechna data",
@@ -461,6 +461,15 @@
   "status_updateTooltip": "Je vyžadována aktualizace birda CLI: {current} → {required}",
   "status_cliVersionTooltip": "Verze birda CLI",
   "common_loading": "Načítání",
-  "common_button_dismiss": "Zavřít",
-  "calendar_dateInputLabel": "Datum"
+  "calendar_dateInputLabel": "Datum",
+  "species_deleteConfirm_title": "Smazat seznam druhů?",
+  "species_deleteConfirm_body": "„{name}“ bude trvale smazán. Tuto akci nelze vrátit zpět.",
+  "species_custom_removeSpecies": "Odebrat {name}",
+  "species_custom_resultCount": "Odpovídající druhy: {count}",
+  "species_fetch_defaultName": "{lat}, {lon}, týden {week}",
+  "settings_cli_version": "Verze: {version}",
+  "settings_cli_outdated": "Vaše verze birda CLI ({current}) je zastaralá. Je vyžadována verze {required} nebo novější.",
+  "wizard_cli_outdated": "Nalezena verze {current}, ale je vyžadována {required} nebo novější.",
+  "calendar_dialogTitle": "Vyberte datum",
+  "calendar_dateInputError": "Zadejte datum jako DD/MM/RRRR nebo RRRR-MM-DD."
 }

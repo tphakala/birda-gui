@@ -28,7 +28,7 @@
         {#if analysisState.status === 'running'}
           {m.status_analyzing()}
         {:else if analysisState.status === 'completed'}
-          <span class="text-success flex items-center gap-1">
+          <span role="status" class="text-success flex items-center gap-1">
             <CircleCheckBig size={16} />
             {m.progress_complete()}
           </span>
@@ -42,7 +42,7 @@
           <button
             onclick={dismissAnalysis}
             class="btn btn-ghost btn-xs btn-square"
-            aria-label={m.common_button_dismiss()}
+            aria-label={m.common_button_close()}
           >
             <X size={14} />
           </button>

@@ -17,6 +17,7 @@
   import { onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import * as m from '$paraglide/messages';
+  import { getLocale } from '$paraglide/runtime';
 
   // --- List panel state ---
   let lists = $state<SpeciesList[]>([]);
@@ -84,7 +85,10 @@
     void loadEntries(listId);
   }
 
+  let pendingDelete = $state<SpeciesList | null>(null);
+
   async function handleListDelete(id: number) {
+    pendingDelete = null;
     try {
       await deleteSpeciesListById(id);
       lists = lists.filter((l) => l.id !== id);
@@ -106,7 +110,12 @@
   }
 
   // --- Fetch modal ---
+  // Bumped whenever the dialog opens, so a fetch that finishes after its
+  // dialog was closed cannot write into a newer one.
+  let fetchSeq = 0;
+
   function openFetchModal() {
+    fetchSeq++;
     fetchLat = 0;
     fetchLon = 0;
     fetchWeek = undefined;
@@ -128,21 +137,28 @@
       return;
     }
 
+    const seq = fetchSeq;
     fetchLoading = true;
     fetchError = null;
     try {
-      fetchResult = await fetchSpeciesList({
+      const result = await fetchSpeciesList({
         latitude: fetchLat,
         longitude: fetchLon,
         week: fetchWeek,
         threshold: fetchThreshold,
       });
+      if (seq !== fetchSeq) return;
+      fetchResult = result;
       // Auto-generate a default name
-      fetchListName = `${fetchLat.toFixed(2)}, ${fetchLon.toFixed(2)} — Week ${fetchWeek}`;
+      fetchListName = m.species_fetch_defaultName({
+        lat: fetchLat.toFixed(2),
+        lon: fetchLon.toFixed(2),
+        week: String(fetchWeek),
+      });
     } catch (err) {
-      fetchError = (err as Error).message;
+      if (seq === fetchSeq) fetchError = (err as Error).message;
     } finally {
-      fetchLoading = false;
+      if (seq === fetchSeq) fetchLoading = false;
     }
   }
 
@@ -222,9 +238,8 @@
 
   // Week-to-month helper
   function weekToMonth(week: number): string {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const idx = Math.min(Math.floor((week - 1) / 4), 11);
-    return months[idx];
+    return new Intl.DateTimeFormat(getLocale(), { month: 'short' }).format(new Date(2000, idx, 1));
   }
 
   onMount(() => {
@@ -275,24 +290,21 @@
       {:else}
         {#each lists as list (list.id)}
           <div
-            role="button"
-            tabindex="0"
-            onclick={() => {
-              handleListSelect(list.id);
-            }}
-            onkeydown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleListSelect(list.id);
-              }
-            }}
-            class="group border-base-300 flex w-full cursor-pointer items-start gap-2 border-b px-3 py-2.5 text-left transition-colors
+            class="group border-base-300 flex w-full items-start gap-2 border-b pr-3 transition-colors
               {appState.selectedSpeciesListId === list.id
               ? 'bg-primary/10 border-l-primary border-l-2'
               : 'hover:bg-base-200/50'}"
           >
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-medium">{list.name}</div>
-              <div class="text-base-content/50 flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onclick={() => {
+                handleListSelect(list.id);
+              }}
+              aria-current={appState.selectedSpeciesListId === list.id ? 'true' : undefined}
+              class="min-w-0 flex-1 cursor-pointer py-2.5 pl-3 text-left"
+            >
+              <span class="block truncate text-sm font-medium">{list.name}</span>
+              <span class="text-base-content/50 flex items-center gap-2 text-xs">
                 <span
                   class="rounded px-1 py-0.5 text-[10px] font-medium
                   {list.source === 'fetched' ? 'bg-info/20 text-info' : 'bg-success/20 text-success'}"
@@ -300,15 +312,14 @@
                   {list.source === 'fetched' ? m.species_sourceFetched() : m.species_sourceCustom()}
                 </span>
                 <span>{m.species_speciesCount({ count: String(list.species_count) })}</span>
-              </div>
-            </div>
+              </span>
+            </button>
             <button
-              onclick={(e) => {
-                e.stopPropagation();
-                void handleListDelete(list.id);
-              }}
-              class="text-base-content/30 hover:text-error mt-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+              type="button"
+              onclick={() => (pendingDelete = list)}
+              class="text-base-content/30 hover:text-error mt-3 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100"
               title={m.species_deleteList()}
+              aria-label={m.species_deleteList()}
             >
               <Trash size={14} />
             </button>
@@ -356,12 +367,15 @@
           <input
             type="text"
             placeholder={m.species_searchInList()}
+            aria-label={m.species_searchInList()}
             bind:value={entryFilter}
             class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
           />
           {#if entryFilter}
             <button
+              type="button"
               onclick={() => (entryFilter = '')}
+              aria-label={m.common_button_clear()}
               class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
             >
               <X size={12} />
@@ -433,13 +447,14 @@
     {@attach showModal}
     onclose={() => (showFetchModal = false)}
     aria-labelledby="fetch-modal-title"
+    aria-describedby="fetch-modal-subtitle"
   >
     <div class="modal-box max-w-lg">
       <div class="flex items-center gap-2">
         <Download size={18} class="text-primary" />
         <h3 id="fetch-modal-title" class="text-lg font-semibold">{m.species_fetch_title()}</h3>
       </div>
-      <p class="text-base-content/60 mt-1 text-sm">{m.species_fetch_subtitle()}</p>
+      <p id="fetch-modal-subtitle" class="text-base-content/60 mt-1 text-sm">{m.species_fetch_subtitle()}</p>
 
       <div class="mt-4 space-y-4">
         <CoordinateInput bind:latitude={fetchLat} bind:longitude={fetchLon} />
@@ -535,7 +550,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
@@ -584,30 +599,46 @@
               type="text"
               bind:value={customSearchQuery}
               oninput={handleCustomSearch}
+              onkeydown={(e) => {
+                // Escape clears a non-empty search instead of closing the dialog.
+                if (e.key === 'Escape' && customSearchQuery) {
+                  e.preventDefault();
+                  customSearchQuery = '';
+                  customSearchResults = [];
+                }
+              }}
               class="input input-bordered input-sm w-full pl-7"
               placeholder={m.species_custom_searchAdd()}
+              aria-label={m.species_custom_searchAdd()}
             />
           </div>
 
+          <p class="sr-only" aria-live="polite">
+            {customSearchQuery ? m.species_custom_resultCount({ count: String(customSearchResults.length) }) : ''}
+          </p>
           {#if customSearchResults.length > 0}
             <div class="border-base-300 mt-1 max-h-40 overflow-y-auto rounded border">
               {#each customSearchResults as result (result.scientific_name)}
                 {@const isSelected = customSelected.has(result.scientific_name)}
-                <button
-                  onclick={() => {
-                    if (isSelected) {
-                      removeFromCustomList(result.scientific_name);
-                    } else {
-                      addToCustomList(result.scientific_name, result.common_name);
-                    }
-                  }}
-                  class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors
+                <label
+                  class="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors
                     {isSelected ? 'bg-primary/10' : 'hover:bg-base-200'}"
                 >
-                  <input type="checkbox" checked={isSelected} class="checkbox checkbox-xs checkbox-primary" />
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onchange={() => {
+                      if (isSelected) {
+                        removeFromCustomList(result.scientific_name);
+                      } else {
+                        addToCustomList(result.scientific_name, result.common_name);
+                      }
+                    }}
+                    class="checkbox checkbox-xs checkbox-primary"
+                  />
                   <span class="flex-1">{result.common_name}</span>
                   <span class="text-base-content/40 italic">{result.scientific_name}</span>
-                </button>
+                </label>
               {/each}
             </div>
           {/if}
@@ -624,9 +655,11 @@
                 <span class="badge badge-sm gap-1">
                   {common}
                   <button
+                    type="button"
                     onclick={() => {
                       removeFromCustomList(sci);
                     }}
+                    aria-label={m.species_custom_removeSpecies({ name: common })}
                     class="hover:text-error"
                   >
                     <X size={10} />
@@ -657,7 +690,36 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
+    </form>
+  </dialog>
+{/if}
+
+<!-- Delete Species List Confirmation -->
+{#if pendingDelete}
+  {@const target = pendingDelete}
+  <dialog
+    class="modal"
+    {@attach showModal}
+    onclose={() => (pendingDelete = null)}
+    role="alertdialog"
+    aria-labelledby="delete-list-title"
+    aria-describedby="delete-list-body"
+  >
+    <div class="modal-box max-w-sm">
+      <h3 id="delete-list-title" class="text-lg font-semibold">{m.species_deleteConfirm_title()}</h3>
+      <p id="delete-list-body" class="text-base-content/70 mt-2 text-sm">
+        {m.species_deleteConfirm_body({ name: target.name })}
+      </p>
+      <div class="modal-action">
+        <button type="button" onclick={() => (pendingDelete = null)} class="btn">{m.common_button_cancel()}</button>
+        <button type="button" onclick={() => void handleListDelete(target.id)} class="btn btn-error">
+          {m.species_deleteList()}
+        </button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

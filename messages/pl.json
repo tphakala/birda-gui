@@ -111,7 +111,7 @@
   "settings_data_vacuumed": "Kompaktowanie zakończone",
   "settings_data_birdaConfig": "Konfiguracja birda (tylko do odczytu)",
   "settings_clearModal_title": "Wyczyść bazę danych",
-  "settings_clearModal_warning": "Spowoduje to trwałe usunięcie wszystkich detekcji, uruchomień analizy i lokalizacji z bazy danych. Ta operacja jest nieodwracalna.",
+  "settings_clearModal_warning": "Spowoduje to trwałe usunięcie wszystkich detekcji, uruchomień analizy, lokalizacji i adnotacji z bazy danych. Ta operacja jest nieodwracalna.",
   "settings_clearModal_detectionsRemoved": "{count} detekcji zostanie usuniętych",
   "settings_clearModal_locationsRemoved": "{count} lokalizacji zostanie usuniętych",
   "settings_clearModal_deleteAll": "Usuń wszystkie dane",
@@ -461,6 +461,15 @@
   "status_updateTooltip": "Wymagana aktualizacja birda CLI: {current} → {required}",
   "status_cliVersionTooltip": "Wersja birda CLI",
   "common_loading": "Ładowanie",
-  "common_button_dismiss": "Odrzuć",
-  "calendar_dateInputLabel": "Data"
+  "calendar_dateInputLabel": "Data",
+  "species_deleteConfirm_title": "Usunąć listę gatunków?",
+  "species_deleteConfirm_body": "„{name}” zostanie trwale usunięta. Tej operacji nie można cofnąć.",
+  "species_custom_removeSpecies": "Usuń {name}",
+  "species_custom_resultCount": "Pasujące gatunki: {count}",
+  "species_fetch_defaultName": "{lat}, {lon}, tydzień {week}",
+  "settings_cli_version": "Wersja: {version}",
+  "settings_cli_outdated": "Twoja wersja birda CLI ({current}) jest nieaktualna. Wymagana jest wersja {required} lub nowsza.",
+  "wizard_cli_outdated": "Znaleziono wersję {current}, ale wymagana jest {required} lub nowsza.",
+  "calendar_dialogTitle": "Wybierz datę",
+  "calendar_dateInputError": "Wpisz datę jako DD/MM/RRRR lub RRRR-MM-DD."
 }

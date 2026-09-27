@@ -113,6 +113,6 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button aria-label={m.common_button_close()}>close</button>
+    <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
   </form>
 </dialog>

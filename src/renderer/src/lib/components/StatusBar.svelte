@@ -91,9 +91,10 @@
     title={m.status_updateModal_title()}
     icon={TriangleAlert}
     iconClass="text-warning"
+    descriptionId="update-modal-body"
   >
     <div class="space-y-4">
-      <p class="text-base-content/80 text-sm">
+      <p id="update-modal-body" class="text-base-content/80 text-sm">
         {m.status_updateModal_body()}
       </p>
 

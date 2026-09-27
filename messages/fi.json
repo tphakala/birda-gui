@@ -111,7 +111,7 @@
   "settings_data_vacuumed": "Tiivistys valmis",
   "settings_data_birdaConfig": "birda-konfiguraatio (vain luku)",
   "settings_clearModal_title": "Tyhjennä tietokanta",
-  "settings_clearModal_warning": "Tämä poistaa pysyvästi kaikki havainnot, analyysiajot ja sijainnit tietokannasta. Tätä toimintoa ei voi perua.",
+  "settings_clearModal_warning": "Tämä poistaa pysyvästi kaikki havainnot, analyysiajot, sijainnit ja annotaatiot tietokannasta. Tätä toimintoa ei voi perua.",
   "settings_clearModal_detectionsRemoved": "{count} havaintoa poistetaan",
   "settings_clearModal_locationsRemoved": "{count} sijaintia poistetaan",
   "settings_clearModal_deleteAll": "Poista kaikki data",
@@ -461,6 +461,15 @@
   "status_updateTooltip": "birda CLI on päivitettävä: {current} → {required}",
   "status_cliVersionTooltip": "birda CLI -versio",
   "common_loading": "Ladataan",
-  "common_button_dismiss": "Sulje ilmoitus",
-  "calendar_dateInputLabel": "Päivämäärä"
+  "calendar_dateInputLabel": "Päivämäärä",
+  "species_deleteConfirm_title": "Poistetaanko lajilista?",
+  "species_deleteConfirm_body": "\"{name}\" poistetaan pysyvästi. Tätä ei voi perua.",
+  "species_custom_removeSpecies": "Poista {name}",
+  "species_custom_resultCount": "{count} osumaa",
+  "species_fetch_defaultName": "{lat}, {lon}, viikko {week}",
+  "settings_cli_version": "Versio: {version}",
+  "settings_cli_outdated": "birda CLI -versiosi ({current}) on vanhentunut. Vaaditaan versio {required} tai uudempi.",
+  "wizard_cli_outdated": "Löytyi versio {current}, mutta vaaditaan {required} tai uudempi.",
+  "calendar_dialogTitle": "Valitse päivämäärä",
+  "calendar_dateInputError": "Anna päivämäärä muodossa PP/KK/VVVV tai VVVV-KK-PP."
 }

@@ -336,7 +336,7 @@
                   <span>{m.wizard_cli_found({ path: birdaStatus.path })}</span>
                 </div>
                 <div class="text-base-content/70 flex items-center gap-2 pl-7 text-xs">
-                  <span>Version: {birdaStatus.version}</span>
+                  <span>{m.settings_cli_version({ version: birdaStatus.version })}</span>
                 </div>
               </div>
             {:else}
@@ -347,7 +347,7 @@
                 </div>
                 {#if birdaStatus.version && birdaStatus.minVersion}
                   <div class="text-warning text-xs">
-                    Found version {birdaStatus.version}, but {birdaStatus.minVersion} or higher is required.
+                    {m.wizard_cli_outdated({ current: birdaStatus.version, required: birdaStatus.minVersion })}
                   </div>
                 {/if}
                 <p class="text-base-content/50 text-xs">{m.wizard_cli_notFoundHint()}</p>
@@ -545,6 +545,7 @@
     {@attach showModal}
     onclose={() => (licenseModel = null)}
     aria-labelledby="wizard-license-title"
+    aria-describedby="wizard-license-agree"
   >
     <div class="modal-box">
       <div class="flex items-center justify-between">
@@ -589,7 +590,7 @@
           </div>
         </div>
 
-        <p class="text-base-content/50 text-xs">
+        <p id="wizard-license-agree" class="text-base-content/70 text-sm">
           {m.settings_licenseModal_agree({ license: licenseModel.license })}
         </p>
       </div>
@@ -605,7 +606,7 @@
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}

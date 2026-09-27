@@ -16,6 +16,8 @@
   } = $props();
 
   let showMapModal = $state(false);
+  // Unique per instance: the Analysis page and the species fetch dialog each have one.
+  const titleId = $props.id();
 
   const hasCoords = $derived(latitude !== 0 || longitude !== 0);
 
@@ -72,15 +74,15 @@
 </div>
 
 {#if showMapModal}
-  <dialog class="modal" {@attach showModal} onclose={() => (showMapModal = false)} aria-labelledby="coords-map-title">
+  <dialog class="modal" {@attach showModal} onclose={() => (showMapModal = false)} aria-labelledby={titleId}>
     <div class="modal-box max-w-2xl p-0">
       <div class="flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-2">
           <MapPin size={16} class="text-primary" />
-          <span id="coords-map-title" class="font-medium">{m.coords_pickTitle()}</span>
-          {#if hasCoords}
-            <span class="text-base-content/50 text-sm">{latitude}, {longitude}</span>
-          {/if}
+          <span id={titleId} class="font-medium">{m.coords_pickTitle()}</span>
+          <span class="text-base-content/50 text-sm" aria-live="polite">
+            {#if hasCoords}{latitude}, {longitude}{/if}
+          </span>
         </div>
         <button
           onclick={() => (showMapModal = false)}
@@ -105,10 +107,35 @@
           {/if}
         </MapLibre>
       </div>
-      <p class="text-base-content/50 px-4 py-2 text-xs">{m.coords_clickToSet()}</p>
+      <div class="flex items-end gap-3 px-4 py-2">
+        <p class="text-base-content/50 flex-1 text-xs">{m.coords_clickToSet()}</p>
+        <!-- Typing coordinates is the keyboard route; the map needs a pointer. -->
+        <label>
+          <span class="text-base-content/70 text-xs">{m.coords_latitude()}</span>
+          <input
+            type="number"
+            step="0.0001"
+            min="-90"
+            max="90"
+            bind:value={latitude}
+            class="input input-bordered input-xs w-28"
+          />
+        </label>
+        <label>
+          <span class="text-base-content/70 text-xs">{m.coords_longitude()}</span>
+          <input
+            type="number"
+            step="0.0001"
+            min="-180"
+            max="180"
+            bind:value={longitude}
+            class="input input-bordered input-xs w-28"
+          />
+        </label>
+      </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button aria-label={m.common_button_close()}>close</button>
+      <button tabindex="-1" aria-label={m.common_button_close()}>close</button>
     </form>
   </dialog>
 {/if}
