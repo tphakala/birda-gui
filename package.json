@@ -167,11 +167,11 @@
     "vitest": "^5.0.2"
   },
   "lint-staged": {
-    "*.{ts,svelte}": [
+    "*.{ts,svelte,js,mjs}": [
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md,css,html}": [
+    "*.{jsonc,md,css,html,yml,yaml}": [
       "prettier --write"
     ]
   }
