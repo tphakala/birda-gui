@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 // Unit tests cover the framework-free logic only (no Svelte/DOM), so a plain
 // node environment is enough. Aliases mirror the app's tsconfig paths.
