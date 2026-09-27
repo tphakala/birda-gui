@@ -36,7 +36,7 @@ tasks:
   check:
     desc: Run svelte-check for type errors and warnings
     cmds:
-      - npx svelte-check --tsconfig ./tsconfig.json
+      - npm run check
 
   eslint:
     desc: Run ESLint (same files as npm run lint)
@@ -53,7 +53,7 @@ tasks:
   lint:fix:
     desc: Run ESLint with auto-fix
     cmds:
-      - npx eslint --fix .
+      - npm run lint:fix
 
   typecheck:main:
     desc: Type check main process (no emit)
@@ -65,12 +65,12 @@ tasks:
   format:
     desc: Format all files with Prettier
     cmds:
-      - npx prettier --write .
+      - npm run format
 
   format:check:
     desc: Check formatting (CI-friendly)
     cmds:
-      - npx prettier --check .
+      - npm run format:check
 
   # === Packaging ===
 
