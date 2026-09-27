@@ -48,9 +48,10 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-// Held in an object (not a bare `let`) so TS does not narrow it to a literal
-// across the `await findBirda()` in installModel, where cancelInstall may mutate
-// it. Set when a cancel arrives before any process exists to kill.
+// Set by cancelInstall for the install holding the slot, and read after the
+// await in installModel and in the close handler. It is read through
+// cancelRequested(): TypeScript narrows a checked property across an await
+// just as it does a let.
 const cancelState = { requested: false };
 
 // The install holding the single install slot, from the start of installModel

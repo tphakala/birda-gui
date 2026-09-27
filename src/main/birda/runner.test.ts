@@ -56,6 +56,15 @@ describe('runAnalysis', () => {
     await expect(handle.promise).resolves.toBeUndefined();
   });
 
+  it('carries birda’s stderr in the error of a failed run', async () => {
+    const handle = runAnalysis('/rec.wav', options);
+    const child = await spawnedChild();
+    child.stderr.write('model file not found\n');
+    await new Promise((r) => setImmediate(r));
+    child.exit(2);
+    await expect(handle.promise).rejects.toThrow('birda exited with code 2\nmodel file not found');
+  });
+
   it('rejects a signal exit without a cancel as a failure', async () => {
     const handle = runAnalysis('/rec.wav', options);
     (await spawnedChild()).exit(null, 'SIGKILL');

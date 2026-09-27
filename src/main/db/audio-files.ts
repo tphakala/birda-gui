@@ -43,3 +43,8 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
 
   return result.lastInsertRowid as number;
 }
+
+/** Removes an audio file row whose detections could not be stored, so a failed import leaves nothing behind. */
+export function deleteAudioFile(id: number): void {
+  getDb().prepare('DELETE FROM audio_files WHERE id = ?').run(id);
+}

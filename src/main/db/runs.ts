@@ -65,16 +65,13 @@ export function getRunsWithStats(): RunWithStats[] {
       `
     SELECT
       ar.*,
-      COUNT(DISTINCT d.id) as detection_count,
-      COUNT(DISTINCT af.id) as file_count,
+      (SELECT COUNT(*) FROM detections d WHERE d.run_id = ar.id) as detection_count,
+      (SELECT COUNT(*) FROM audio_files af WHERE af.run_id = ar.id) as file_count,
       l.name as location_name,
       l.latitude,
       l.longitude
     FROM analysis_runs ar
-    LEFT JOIN detections d ON ar.id = d.run_id
-    LEFT JOIN audio_files af ON ar.id = af.run_id
     LEFT JOIN locations l ON ar.location_id = l.id
-    GROUP BY ar.id
     ORDER BY ar.started_at DESC
   `,
     )
@@ -91,7 +88,7 @@ export function getRunsWithStats(): RunWithStats[] {
 export interface FinishRunEffect {
   /** Earlier runs deleted because this run replaced them. */
   replaced: number;
-  /** This run's own detections were deleted because an earlier complete result exists. */
+  /** This run had detections, and they were deleted because an earlier complete result exists. */
   discardedPartial: boolean;
 }
 
@@ -102,13 +99,14 @@ const PARTIAL = sqlList(PARTIAL_RUN_STATUSES);
  * Records the status a run ended with and keeps one result set per source and
  * model, so no detection is counted twice. Other runs are touched only when
  * they are earlier (lower id) and finished; deleting a run cascades to its
- * detections, audio files and annotations.
+ * detections, audio files and annotations. "Results" means detections, and a
+ * complete result is a completed run that analysed at least one file.
  * - A completed run replaces every earlier finished run, unless replaceEarlier
  *   is false because it analysed no files.
- * - A cancelled or failed run with results replaces earlier cancelled and
- *   failed runs; one without results replaces nothing.
  * - A cancelled or failed run deletes its own partial results when an earlier
- *   completed run exists, and stays as a record with no results.
+ *   complete result exists, and stays as a record with no results.
+ * - Otherwise a cancelled or failed run with results replaces earlier
+ *   cancelled and failed runs; one without results replaces nothing.
  */
 export function finishRun(id: number, status: FinishedRunStatus, replaceEarlier = true): FinishRunEffect {
   const db = getDb();
@@ -133,15 +131,18 @@ export function finishRun(id: number, status: FinishedRunStatus, replaceEarlier 
       return { replaced: changes, discardedPartial: false };
     }
 
+    const hasResults = db.prepare('SELECT 1 FROM detections WHERE run_id = ? LIMIT 1').get(id) !== undefined;
     const earlierComplete = db
-      .prepare(`SELECT 1 FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status IN (${COMPLETE})`)
+      .prepare(
+        `SELECT 1 FROM analysis_runs r WHERE source_path = ? AND model = ? AND id < ? AND status IN (${COMPLETE})
+           AND EXISTS (SELECT 1 FROM audio_files WHERE run_id = r.id)`,
+      )
       .get(...sameSource);
     if (earlierComplete) {
       // Detections and annotations cascade from audio_files.
       db.prepare('DELETE FROM audio_files WHERE run_id = ?').run(id);
-      return { replaced: 0, discardedPartial: true };
+      return { replaced: 0, discardedPartial: hasResults };
     }
-    const hasResults = db.prepare('SELECT 1 FROM audio_files WHERE run_id = ? LIMIT 1').get(id);
     if (!hasResults) return none;
     const { changes } = db
       .prepare(`DELETE FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status IN (${PARTIAL})`)

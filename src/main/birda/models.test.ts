@@ -51,6 +51,16 @@ describe('installModel', () => {
     await expect(install).resolves.toEqual({ id: 'birdnet' });
   });
 
+  it('reports a birda that cannot be found, and a Stop while it is looked for as a cancel', async () => {
+    setBirdaPath('/no/such/dir/birda');
+    await expect(installModel({ id: 'birdnet' })).rejects.toThrow('not found');
+
+    const stopped = installModel({ id: 'birdnet' });
+    cancelInstall();
+    await expect(stopped).rejects.toBeInstanceOf(ModelInstallCancelledError);
+    expect(spawned.children).toHaveLength(0);
+  });
+
   it('rejects an install whose process failed to start, and frees the slot', async () => {
     const install = installModel({ id: 'birdnet' });
     (await spawnedChild()).failToSpawn();

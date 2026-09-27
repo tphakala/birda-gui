@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { closeDb, closeDbForShutdown, getDb, getDbPath, initializeCatalog } from './database';
+import { NO_USER_DATA } from '../test-support/ipc-harness';
 
 // A default no catalog can be created in: better-sqlite3 refuses a path whose
 // directory does not exist, so a stray getDb() outside the getDb tests throws.
-const NO_USER_DATA = path.join(os.tmpdir(), 'birda-gui-test-no-such-dir', 'userData');
 const dirs = vi.hoisted(() => ({ userData: '' }));
 dirs.userData = NO_USER_DATA;
 vi.mock('electron', () => ({ app: { getPath: () => dirs.userData } }));

@@ -10,7 +10,7 @@ import { createRun, finishRun } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
-import { createAudioFile } from '../db/audio-files';
+import { createAudioFile, deleteAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
 import { sendToWindows } from './broadcast';
 import type {
@@ -24,9 +24,8 @@ import type {
   PipelineStartedPayload,
 } from '$shared/types';
 import { applyProgressEvent } from '$shared/analysis-progress';
-import { parseRecordingName } from '$shared/recording-name';
+import { dayOfYearOf, parseRecordingName } from '$shared/recording-name';
 
-const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
 const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
 
 const analysisLock = new AnalysisLock();
@@ -191,9 +190,7 @@ function resolveDate(request: AnalysisRequestInput): {
     }
   }
   if (month === undefined || day === undefined) return { month, day, dayOfYear: undefined };
-  const d = new Date(LEAP_YEAR_FOR_DOY, month - 1, day); // leap year to handle Feb 29
-  const start = new Date(LEAP_YEAR_FOR_DOY, 0, 0);
-  const dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const dayOfYear = dayOfYearOf(month, day);
   sendLog('info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
   return { month, day, dayOfYear };
 }
@@ -338,10 +335,11 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
               track(async () => {
                 // Limit concurrent imports to prevent resource exhaustion
                 await importSemaphore.acquire();
+                let audioFileId: number | null = null;
                 try {
                   const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
                   if (session.quitting) return;
-                  const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+                  audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
                   const result = await importDetectionsFromJson(
                     run.id,
                     locationId,
@@ -354,6 +352,8 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
                 } catch (err) {
                   sendLog('error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
                   failedFileCount++;
+                  // A file that was not imported is not a result of the run.
+                  if (audioFileId !== null && !session.quitting) deleteAudioFile(audioFileId);
                 } finally {
                   importSemaphore.release();
                 }
@@ -375,16 +375,18 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
           const payload = envelope.payload as DetectionsPayload;
           if (payload.detections.length > 0) {
             track(async () => {
+              let audioFileId: number | null = null;
               try {
                 const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
                 if (session.quitting) return;
-                const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+                audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
                 insertDetections(run.id, locationId, audioFileId, payload.detections);
                 totalDetections += payload.detections.length;
                 sendLog('info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
               } catch (err) {
                 sendLog('error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
                 failedFileCount++;
+                if (audioFileId !== null && !session.quitting) deleteAudioFile(audioFileId);
               }
             });
           }
@@ -446,7 +448,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
         'analysis',
         `Analysis complete: ${processedCount} processed, ${skippedFileCount} skipped, ${failedFileCount} failed`,
       );
-      if (finalStatus === 'failed') keepOutput = true;
+      if (finalStatus === 'failed') keepOutput = outputDir !== undefined && (await hasEntries(outputDir));
 
       sendLog('info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
       // A run that analysed no files (all skipped, locked or failed) does not replace earlier results.
@@ -475,15 +477,21 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
   }
 }
 
+/** Whether an analysis holds the lock, running or stopping. */
+export function isAnalysisActive(): boolean {
+  return analysisLock.active !== null;
+}
+
+/** The run of the analysis holding the lock, while its final status is not recorded yet. */
+export function activeRunId(): number | null {
+  return analysisLock.active?.runId ?? null;
+}
+
 /**
  * Called before the app quits: stops a running analysis and, unless its run
  * was already recorded, records it as cancelled now, since the catalog closes
  * before birda's exit is handled. Later calls do nothing.
  */
-/** Whether an analysis holds the lock, running or stopping. */
-export function isAnalysisActive(): boolean {
-  return analysisLock.active !== null;
-}
 
 export function stopAnalysisForQuit(): void {
   const session = analysisLock.active;
@@ -527,8 +535,9 @@ export function registerAnalysisHandlers(): void {
       finished = result;
       return result;
     } catch (err) {
-      // A throw is reported as failed, even after a Stop; analyze has recorded
-      // the run as failed unless the app is quitting. runId is null: the
+      // A throw is reported as failed, even after a Stop. analyze has tried to
+      // record a created run as failed (unless the app is quitting); a throw
+      // before a run existed has nothing to record. runId is null: the
       // renderer uses it only to show a completed or cancelled run.
       finished = {
         runId: null,

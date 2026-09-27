@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from '../birda/analysis-session';
-import { invoke, resetIpc, sentOn } from '../test-support/ipc-harness';
+import { invoke, ipc, resetIpc, sentOn } from '../test-support/ipc-harness';
 import type { AnalysisResult, AnalysisStatus, BirdaEventEnvelope } from '$shared/types';
 
 const h = vi.hoisted(() => {
@@ -58,18 +58,18 @@ vi.mock('../db/detections', () => ({
   updateDetectionClipPath: vi.fn(),
   importDetectionsFromJson: vi.fn(() => Promise.resolve({ detections: 0, sourceFile: 'x' })),
 }));
-vi.mock('../db/audio-files', () => ({ createAudioFile: vi.fn(() => 1) }));
+vi.mock('../db/audio-files', () => ({ createAudioFile: vi.fn(() => 1), deleteAudioFile: vi.fn() }));
 vi.mock('../settings/store', () => ({ settingsStore: h.settings }));
 vi.mock('./files', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./files')>()),
   getAudioMetadata: vi.fn(() => Promise.resolve({ durationSec: 1, sampleRate: 48000, channels: 1, audiomoth: null })),
 }));
 
-const { isAnalysisActive, registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
+const { activeRunId, isAnalysisActive, registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
 const { runAnalysis } = await import('../birda/runner');
 const { createRun, finishRun } = await import('../db/runs');
 const { createLocation, findLocationByCoords } = await import('../db/locations');
-const { createAudioFile } = await import('../db/audio-files');
+const { createAudioFile, deleteAudioFile } = await import('../db/audio-files');
 const { importDetectionsFromJson, insertDetections } = await import('../db/detections');
 const { getAudioMetadata } = await import('./files');
 registerAnalysisHandlers();
@@ -387,8 +387,10 @@ describe('stopAnalysisForQuit', () => {
     const handle = await started();
     stopAnalysisForQuit();
     handle.emit(envelope('detections', { file: sourceFile, detections: [{ scientific_name: 'Turdus merula' }] }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
     handle.reject(new AnalysisCancelledError());
     await run;
+    expect(getAudioMetadata).not.toHaveBeenCalled();
     expect(createAudioFile).not.toHaveBeenCalled();
   });
 
@@ -487,11 +489,15 @@ describe('birda:analyze, the rest of the outcome space', () => {
   });
 
   it('pushes the running and stopping states to every window as they happen', async () => {
+    ipc.windows = [{ destroyed: false }, { destroyed: false }];
     const run = analyze();
     const handle = await started();
     expect(lastStatusEvent()).toMatchObject({ state: 'running', sourcePath: sourceFile });
     cancel();
     expect(lastStatusEvent()).toMatchObject({ state: 'stopping' });
+    expect(ipc.sent.filter((m) => m.window === 1 && m.channel === 'birda:analysis-status-changed')).toHaveLength(
+      statusEvents().length,
+    );
     const count = statusEvents().length;
     cancel();
     expect(statusEvents()).toHaveLength(count);
@@ -554,5 +560,106 @@ describe('stopAnalysisForQuit, imports in flight', () => {
     expect(shouldSkipInsert?.()).toBe(true);
     handle.reject(new AnalysisCancelledError());
     await run;
+  });
+});
+
+describe('birda:analyze, what reaches birda and the catalog', () => {
+  it('passes the request settings to the status and the date to birda', async () => {
+    vi.mocked(createLocation).mockReturnValueOnce({
+      id: 7,
+      name: 'Park',
+      latitude: 60.2,
+      longitude: 24.9,
+      description: null,
+      created_at: '',
+    });
+    const run = analyze(sourceFile, {
+      latitude: 60.2,
+      longitude: 24.9,
+      location_name: 'Park',
+      month: 4,
+      day: 1,
+    });
+    const handle = await started();
+    expect(status()).toMatchObject({
+      settings: {
+        model: 'birdnet',
+        min_confidence: 0.1,
+        latitude: 60.2,
+        longitude: 24.9,
+        location_name: 'Park',
+        month: 4,
+        day: 1,
+      },
+    });
+    expect(vi.mocked(runAnalysis).mock.calls[0][1]).toMatchObject({ month: 4, day: 1, dayOfYear: 92 });
+    handle.resolve();
+    await run;
+  });
+
+  it('reads the date from a YYYYMMDD_HHMMSS source name when none is given', async () => {
+    const named = path.join(tmp, '20240501_053000.wav');
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
+    fs.writeFileSync(named, '');
+    const run = analyze(named);
+    const handle = await started();
+    expect(vi.mocked(runAnalysis).mock.calls[0][1]).toMatchObject({ month: 5, day: 1, dayOfYear: 122 });
+    handle.resolve();
+    await run;
+  });
+
+  it('removes the audio file row of a file whose import failed', async () => {
+    vi.mocked(importDetectionsFromJson).mockRejectedValueOnce(new Error('bad JSON'));
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
+    handle.resolve();
+    await run;
+    expect(deleteAudioFile).toHaveBeenCalledWith(1);
+  });
+
+  it('reports the running run as active until it is recorded', async () => {
+    const run = analyze();
+    const handle = await started();
+    expect(activeRunId()).toEqual(expect.any(Number));
+    handle.resolve();
+    await run;
+    expect(activeRunId()).toBeNull();
+  });
+
+  it('does not record a failed run again when the app quits while its output is checked', async () => {
+    const readdir = vi.spyOn(fs.promises, 'readdir');
+    const run = analyze(tmp);
+    const handle = await started();
+    let releaseReaddir!: () => void;
+    readdir.mockImplementationOnce(async () => {
+      await new Promise<void>((r) => (releaseReaddir = r));
+      return [];
+    });
+    handle.reject(new Error('birda exited with code 2'));
+    await vi.waitFor(() => {
+      expect(readdir).toHaveBeenCalled();
+    });
+    stopAnalysisForQuit();
+    releaseReaddir();
+    await expect(run).rejects.toThrow();
+    expect(vi.mocked(finishRun).mock.calls.map((c) => c[1])).toEqual(['cancelled']);
+  });
+
+  it('skips a directory import that was reading its metadata when the app quit', async () => {
+    const metadata = deferred<Awaited<ReturnType<typeof getAudioMetadata>>>();
+    vi.mocked(getAudioMetadata).mockReturnValueOnce(metadata.promise);
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
+    await vi.waitFor(() => {
+      expect(getAudioMetadata).toHaveBeenCalled();
+    });
+    stopAnalysisForQuit();
+    metadata.resolve({ durationSec: 1, sampleRate: 48000, channels: 1, audiomoth: null });
+    handle.reject(new AnalysisCancelledError());
+    await run;
+    expect(createAudioFile).not.toHaveBeenCalled();
   });
 });

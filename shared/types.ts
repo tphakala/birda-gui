@@ -307,6 +307,12 @@ export interface AnalysisProgressSnapshot {
   completedFiles: { file: string; status: FileCompletedPayload['status'] }[];
 }
 
+/** The settings of the analysis that holds the lock, for a window that joins it. */
+export type RunningAnalysisSettings = Pick<
+  AnalysisRequest,
+  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day'
+>;
+
 /**
  * Whether an analysis holds the lock. birda:analysis-status returns it, and
  * birda:analysis-status-changed sends it when the state changes (start, Stop,
@@ -314,12 +320,6 @@ export interface AnalysisProgressSnapshot {
  * Only the event's idle status carries finished, the outcome of the analysis
  * that just ended.
  */
-/** The settings of the analysis that holds the lock, for a window that joins it. */
-export type RunningAnalysisSettings = Pick<
-  AnalysisRequest,
-  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day'
->;
-
 export type AnalysisStatus =
   | { state: 'idle'; finished?: AnalysisResult & { error?: string } }
   | {

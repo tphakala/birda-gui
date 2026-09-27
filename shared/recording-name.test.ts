@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRecordingName } from './recording-name';
+import { dayOfYearOf, parseRecordingName } from './recording-name';
 
 describe('parseRecordingName', () => {
   it.each([
@@ -19,9 +19,32 @@ describe('parseRecordingName', () => {
     '20241345_053000.wav',
     '20230229_053000.wav',
     '20240501_253000.wav',
+    '20240501_056000.wav',
+    '20240501_053060.wav',
     'recording.wav',
     '',
   ])('rejects %s', (name) => {
     expect(parseRecordingName(name)).toBeNull();
+  });
+});
+
+describe('parseRecordingName with allowSuffix', () => {
+  it('accepts a suffix after the time, and still rejects impossible values', () => {
+    expect(parseRecordingName('20240501_053000_A.wav', { allowSuffix: true })).toMatchObject({ month: 5, day: 1 });
+    expect(parseRecordingName('20240501_053000_A.wav')).toBeNull();
+    expect(parseRecordingName('20241301_053000_A.wav', { allowSuffix: true })).toBeNull();
+  });
+});
+
+describe('dayOfYearOf', () => {
+  it.each([
+    [1, 1, 1],
+    [2, 29, 60],
+    [3, 1, 61],
+    [4, 1, 92],
+    [10, 31, 305],
+    [12, 31, 366],
+  ])('month %i day %i is day %i', (month, day, expected) => {
+    expect(dayOfYearOf(month, day)).toBe(expected);
   });
 });

@@ -226,18 +226,25 @@ function registerBirdaMapProtocol() {
 
 // One instance per user: a second one would share the catalog and finish the
 // first instance's running analysis as stale at its startup.
-if (!app.requestSingleInstanceLock()) {
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+    if (!app.isReady()) return;
+    if (!mainWindow) {
+      // macOS keeps the app running with no window open.
+      createWindow();
+      return;
     }
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
   });
 }
 
 void app.whenReady().then(async () => {
+  // A second instance quits without touching the catalog.
+  if (!hasInstanceLock) return;
   // Security: allow permissions the app needs, deny everything else
   const ALLOWED_PERMISSIONS = new Set([
     'clipboard-read',

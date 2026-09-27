@@ -1,17 +1,23 @@
 import Database from 'better-sqlite3';
-import os from 'node:os';
-import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
 import { createRun, finishRun, markStaleRunsAsFailed } from './runs';
-import { getCatalogStats, getSpeciesSummary } from './detections';
+import {
+  getCatalogStats,
+  getDetections,
+  getLocationSpecies,
+  getSpeciesLocations,
+  getSpeciesSummary,
+} from './detections';
+import { getLocationsWithCounts } from './locations';
 
 // A userData directory that does not exist, so a real getDb() reached by a
 // broken mock fails instead of creating a catalog in the working directory.
-vi.mock('electron', () => ({
-  app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir', 'userData') },
-}));
+vi.mock('electron', async () => {
+  const { NO_USER_DATA } = await import('../test-support/ipc-harness');
+  return { app: { getPath: () => NO_USER_DATA } };
+});
 
 const conn = vi.hoisted(() => ({ db: null as Database.Database | null }));
 vi.mock('./database', async (importOriginal) => ({
@@ -38,22 +44,28 @@ afterEach(() => {
 });
 
 // A run with one audio file, detection and annotation, so cascades are visible.
-function runWithResults(source: string, model: string, status: RunStatus): number {
-  const run = createRun(source, model, 0.1);
+function runWithResults(
+  source: string,
+  model: string,
+  status: RunStatus,
+  species = 'Turdus merula',
+  locationId: number | null = null,
+): number {
+  const run = createRun(source, model, 0.1, locationId);
   db().prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, run.id);
   const file = db()
     .prepare("INSERT INTO audio_files (run_id, file_path, file_name) VALUES (?, ?, 'a.wav')")
     .run(run.id, `${source}/a.wav`);
   const detection = db()
     .prepare(
-      "INSERT INTO detections (run_id, audio_file_id, start_time, end_time, scientific_name, confidence) VALUES (?, ?, 0, 3, 'Turdus merula', 0.9)",
+      'INSERT INTO detections (run_id, location_id, audio_file_id, start_time, end_time, scientific_name, confidence) VALUES (?, ?, ?, 0, 3, ?, 0.9)',
     )
-    .run(run.id, file.lastInsertRowid);
+    .run(run.id, locationId, file.lastInsertRowid, species);
   db()
     .prepare(
-      "INSERT INTO annotations (audio_file_id, detection_id, start_time, end_time, scientific_name, source, status) VALUES (?, ?, 0, 3, 'Turdus merula', 'birda', 'accepted')",
+      "INSERT INTO annotations (audio_file_id, detection_id, start_time, end_time, scientific_name, source, status) VALUES (?, ?, 0, 3, ?, 'birda', 'accepted')",
     )
-    .run(file.lastInsertRowid, detection.lastInsertRowid);
+    .run(file.lastInsertRowid, detection.lastInsertRowid, species);
   return run.id;
 }
 
@@ -268,15 +280,57 @@ describe('markStaleRunsAsFailed', () => {
   });
 });
 
-describe('catalog-wide counts', () => {
-  it('count finished runs only, so a re-analysis in progress is not counted twice', () => {
+describe('what counts as a result', () => {
+  it('ignores audio file rows without detections: a run whose imports all failed replaces nothing', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'cancelled');
+    const current = createRun('/rec', 'birdnet', 0.1).id;
+    db()
+      .prepare("INSERT INTO audio_files (run_id, file_path, file_name) VALUES (?, '/rec/b.wav', 'b.wav')")
+      .run(current);
+
+    expect(finishRun(current, 'failed', false)).toEqual({ replaced: 0, discardedPartial: false });
+    expect(resultRows(earlier)).toEqual([1, 1, 1]);
+  });
+
+  it('does not treat a completed run that analysed no files as a complete result', () => {
+    const empty = createRun('/rec', 'birdnet', 0.1).id;
+    finishRun(empty, 'completed', false);
+    const current = runWithResults('/rec', 'birdnet', 'running');
+
+    expect(finishRun(current, 'cancelled')).toEqual({ replaced: 0, discardedPartial: false });
+    expect(resultRows(current)).toEqual([1, 1, 1]);
+  });
+
+  it('reports nothing discarded when a stopped run had no detections', () => {
     runWithResults('/rec', 'birdnet', 'completed');
-    const running = runWithResults('/rec', 'birdnet', 'running');
+    const current = createRun('/rec', 'birdnet', 0.1).id;
+
+    expect(finishRun(current, 'cancelled')).toEqual({ replaced: 0, discardedPartial: false });
+  });
+});
+
+describe('catalog-wide counts', () => {
+  function location(lat: number): number {
+    return Number(db().prepare('INSERT INTO locations (latitude, longitude) VALUES (?, 0)').run(lat).lastInsertRowid);
+  }
+
+  it('count finished runs only, so an analysis in progress is not counted twice', () => {
+    const here = location(60);
+    runWithResults('/rec', 'birdnet', 'completed', 'Turdus merula', here);
+    // The same source re-analysed while running, finding a second species.
+    const running = runWithResults('/rec', 'birdnet', 'running', 'Parus major', here);
+    runWithResults('/other', 'birdnet', 'pending', 'Parus major', here);
 
     expect(getCatalogStats()).toMatchObject({ total_detections: 1, total_species: 1 });
     expect(getSpeciesSummary()).toMatchObject([{ scientific_name: 'Turdus merula', detection_count: 1 }]);
+    expect(getLocationsWithCounts()).toMatchObject([{ id: here, detection_count: 1, species_count: 1 }]);
+    expect(getSpeciesLocations('Parus major')).toEqual([]);
+    expect(getLocationSpecies(here).map((s) => s.scientific_name)).toEqual(['Turdus merula']);
+    expect(getDetections({ species: 'Parus' }).total).toBe(0);
 
-    finishRun(running, 'completed');
-    expect(getCatalogStats()).toMatchObject({ total_detections: 1 });
+    // Scoped to one run or one audio file, the running run is shown.
+    expect(getDetections({ run_id: running }).total).toBe(1);
+    const file = db().prepare('SELECT id FROM audio_files WHERE run_id = ?').get(running) as { id: number };
+    expect(getDetections({ audio_file_id: file.id }).total).toBe(1);
   });
 });

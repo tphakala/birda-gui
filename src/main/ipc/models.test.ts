@@ -68,7 +68,9 @@ describe('birda:models-install', () => {
 
 describe('birda:models-install-status', () => {
   it('reports the install in flight', async () => {
-    const { getInstallStatus } = await import('../birda/models');
-    expect(invoke('birda:models-install-status')).toEqual(getInstallStatus());
+    const models = await import('../birda/models');
+    const request = { id: 'birdnet', region: 'fi', variant: undefined };
+    vi.spyOn(models, 'getInstallStatus').mockReturnValueOnce(request);
+    expect(invoke('birda:models-install-status')).toEqual(request);
   });
 });

@@ -23,7 +23,7 @@ import type {
   HourlyDetectionCell,
   AudioFile,
 } from '$shared/types';
-import { isAnalysisActive } from './analysis';
+import { activeRunId, isAnalysisActive } from './analysis';
 
 function enrichDetections(detections: (Detection & { audio_file: AudioFile | null })[]): EnrichedDetection[] {
   const scientificNames = [...new Set(detections.map((d) => d.scientific_name))];
@@ -84,6 +84,10 @@ export function registerCatalogHandlers(): void {
   });
 
   ipcMain.handle('catalog:delete-run', (_event, id: number) => {
+    // The running analysis still writes to its run.
+    if (id === activeRunId()) {
+      throw new Error('Stop the analysis before deleting its run.');
+    }
     deleteRun(id);
   });
 

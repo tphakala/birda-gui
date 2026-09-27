@@ -341,9 +341,11 @@ export function getCatalogStats(): CatalogStats {
     .prepare(
       `
     SELECT
-      (SELECT COUNT(*) FROM detections WHERE run_id IN (${FINISHED_RUN_IDS})) as total_detections,
-      (SELECT COUNT(DISTINCT scientific_name) FROM detections WHERE run_id IN (${FINISHED_RUN_IDS})) as total_species,
+      COUNT(*) as total_detections,
+      COUNT(DISTINCT scientific_name) as total_species,
       (SELECT COUNT(*) FROM locations) as total_locations
+    FROM detections
+    WHERE run_id IN (${FINISHED_RUN_IDS})
   `,
     )
     .get() as CatalogStats;
