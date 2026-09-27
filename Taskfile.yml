@@ -25,7 +25,7 @@ tasks:
       - npx tsx scripts/fetch-birda-cli.ts
 
   build:
-    desc: Build all targets (main + preload + renderer); npm's prebuild hook fetches the birda CLI
+    desc: Build all targets (main + preload + renderer) and check every message compiled; npm's prebuild hook fetches the birda CLI
     cmds:
       - npm run build
 

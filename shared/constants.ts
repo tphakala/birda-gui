@@ -11,7 +11,8 @@ export const CUDA_VERSION_FILE = '.cuda-version';
  * Must match the birda CLI release whose CUDA assets we download, which is the
  * bundled CLI version in package.json birdaCli.version (fetched by
  * scripts/fetch-birda-cli.ts); src/main/birda/cli-version.test.ts checks they agree.
- * Used by: cuda/manager.ts (download), birda/runner.ts (LD_LIBRARY_PATH), gpu/detection.ts (availability).
+ * Used by: SettingsPanel.svelte (which release to download), cuda/manager.ts (installed check),
+ * birda/runner.ts (LD_LIBRARY_PATH), gpu/detection.ts (availability).
  */
 export const BIRDA_CLI_VERSION = '1.8.1';
 

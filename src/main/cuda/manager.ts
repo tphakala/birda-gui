@@ -223,6 +223,10 @@ export async function downloadCudaLibs(
 
     const downloadUrl = `https://github.com/${BIRDA_REPO}/releases/download/v${version}/${assetName}`;
     const cudaDir = getCudaLibsDir();
+    // Start from an empty directory: a download is only offered when the
+    // installed libraries do not match the bundled CLI version, and extracting
+    // over them would leave files from the old release behind.
+    fs.rmSync(cudaDir, { recursive: true, force: true });
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.mkdirSync(cudaDir, { recursive: true });
 
