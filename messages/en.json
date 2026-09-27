@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Date",
   "species_deleteConfirm_title": "Delete species list?",
   "species_deleteConfirm_body": "\"{name}\" will be permanently deleted. This cannot be undone.",
+  "species_deleteFailed": "Could not delete {name}: {error}",
   "species_custom_removeSpecies": "Remove {name}",
   "species_custom_resultCount": "{count} matching species",
   "species_fetch_defaultName": "{lat}, {lon}, week {week}",

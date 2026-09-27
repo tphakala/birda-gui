@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Dátum",
   "species_deleteConfirm_title": "Törli a fajlistát?",
   "species_deleteConfirm_body": "A(z) „{name}” véglegesen törlődik. Ez nem vonható vissza.",
+  "species_deleteFailed": "A(z) {name} nem törölhető: {error}",
   "species_custom_removeSpecies": "{name} eltávolítása",
   "species_custom_resultCount": "{count} találat",
   "species_fetch_defaultName": "{lat}, {lon}, {week}. hét",

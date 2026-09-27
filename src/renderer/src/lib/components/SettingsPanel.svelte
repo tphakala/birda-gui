@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { showModal } from '$lib/utils/dialog';
+  import { focusIfLost, showModal } from '$lib/utils/dialog';
   import {
     Save,
     FolderOpen,
@@ -54,7 +54,7 @@
     ClearDatabaseResult,
   } from '$shared/types';
   import { BIRDA_RELEASES_URL, BIRDA_CLI_VERSION } from '$shared/constants';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import * as m from '$paraglide/messages';
   import { setLocale, isLocale } from '$paraglide/runtime';
   import { LANGUAGES } from '$lib/i18n/languages';
@@ -133,6 +133,7 @@
   let showClearConfirm = $state(false);
   let clearing = $state(false);
   let clearResult = $state<ClearDatabaseResult | null>(null);
+  let dbContentHeading = $state<HTMLHeadingElement>();
   let clearResultTimer: ReturnType<typeof setTimeout> | null = null;
 
   // --- GPU state ---
@@ -353,6 +354,9 @@
       const result = await clearDatabase();
       clearResult = result;
       showClearConfirm = false;
+      // Clear all, which opened the dialog, is disabled while clearing and once the catalog is empty.
+      await tick();
+      focusIfLost(dbContentHeading);
       appState.catalogStats = await getCatalogStats();
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
@@ -908,7 +912,9 @@
         <div class="card-body gap-4 p-4">
           <div class="flex items-center gap-2">
             <Database size={16} class="text-base-content/50" />
-            <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_dbContent()}</h3>
+            <h3 bind:this={dbContentHeading} tabindex="-1" class="text-base-content/70 text-sm font-medium">
+              {m.settings_data_dbContent()}
+            </h3>
           </div>
 
           <div class="text-base-content/70 flex items-center gap-6 text-sm">
@@ -929,16 +935,16 @@
               <Trash size={14} />
               {m.settings_data_clearAll()}
             </button>
-            {#if clearResult}
-              <span role="status" class="text-success text-sm">
+            <span role="status" class="text-success text-sm">
+              {#if clearResult}
                 {m.settings_data_cleared({
                   detections: clearResult.detections,
                   runs: clearResult.runs,
                   locations: clearResult.locations,
                   annotations: clearResult.annotations,
                 })}
-              </span>
-            {/if}
+              {/if}
+            </span>
           </div>
         </div>
       </div>

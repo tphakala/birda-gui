@@ -432,6 +432,9 @@
     if (editorEl && e.target instanceof Node && !editorEl.contains(e.target) && e.target !== document.body) return;
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+    // Tab, Space and Enter on a native button, select or link keep their
+    // native meaning, so the toolbar and side panel work by keyboard.
+    if ((e.key === 'Tab' || e.key === ' ' || e.key === 'Enter') && target?.closest('button, select, a[href]')) return;
 
     const boxes = annotationEditor.boxes;
     const selected = getSelectedBox();

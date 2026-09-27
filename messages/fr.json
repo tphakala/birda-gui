@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Date",
   "species_deleteConfirm_title": "Supprimer la liste d’espèces ?",
   "species_deleteConfirm_body": "« {name} » sera supprimée définitivement. Cette action est irréversible.",
+  "species_deleteFailed": "Impossible de supprimer {name} : {error}",
   "species_custom_removeSpecies": "Retirer {name}",
   "species_custom_resultCount": "{count} espèces correspondantes",
   "species_fetch_defaultName": "{lat}, {lon}, semaine {week}",

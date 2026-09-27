@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { showModal } from '$lib/utils/dialog';
+  import { focusIfLost, showModal } from '$lib/utils/dialog';
   import { Bird, Download, Plus, Search, Trash, X, Funnel, MapPin } from '@lucide/svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import { appState } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
   import {
     fetchSpeciesList,
     saveSpeciesList,
@@ -14,7 +15,7 @@
     resolveAllLabels,
   } from '$lib/utils/ipc';
   import type { SpeciesList, EnrichedSpeciesListEntry, BirdaSpeciesResponse } from '$shared/types';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import * as m from '$paraglide/messages';
   import { getLocale } from '$paraglide/runtime';
@@ -55,6 +56,8 @@
   let customError = $state<string | null>(null);
   let customSearchQuery = $state('');
   let customSearchResults = $state<{ scientific_name: string; common_name: string }[]>([]);
+  // The query customSearchResults belong to; the count is announced only once they match.
+  let customResultsQuery = $state('');
   const customSelected = new SvelteMap<string, string>(); // scientific_name -> common_name
   let customSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -86,8 +89,10 @@
   }
 
   let pendingDelete = $state<SpeciesList | null>(null);
+  let listsHeading = $state<HTMLHeadingElement>();
 
-  async function handleListDelete(id: number) {
+  async function handleListDelete(target: SpeciesList) {
+    const id = target.id;
     pendingDelete = null;
     try {
       await deleteSpeciesListById(id);
@@ -96,8 +101,12 @@
         appState.selectedSpeciesListId = null;
         entries = [];
       }
+      // The delete button that opened the confirmation is gone with its row.
+      await tick();
+      focusIfLost(listsHeading);
     } catch (err) {
       console.error('Failed to delete species list', id, err);
+      showToast(m.species_deleteFailed({ name: target.name, error: (err as Error).message }), { severity: 'error' });
     }
   }
 
@@ -182,25 +191,33 @@
     customError = null;
     customSearchQuery = '';
     customSearchResults = [];
+    customResultsQuery = '';
     customSelected.clear();
     showCustomModal = true;
   }
 
   async function doCustomSearch() {
-    if (!customSearchQuery.trim()) {
+    const query = customSearchQuery;
+    if (!query.trim()) {
       customSearchResults = [];
+      customResultsQuery = query;
       return;
     }
+    let results: typeof customSearchResults;
     try {
-      const scientificNames = await searchByCommonName(customSearchQuery);
+      const scientificNames = await searchByCommonName(query);
       const nameMap = await resolveAllLabels(scientificNames);
-      customSearchResults = scientificNames.slice(0, 50).map((sn) => ({
+      results = scientificNames.slice(0, 50).map((sn) => ({
         scientific_name: sn,
         common_name: nameMap[sn] ?? sn,
       }));
     } catch {
-      customSearchResults = [];
+      results = [];
     }
+    // The query changed (or was cleared) while this search was running.
+    if (query !== customSearchQuery) return;
+    customSearchResults = results;
+    customResultsQuery = query;
   }
 
   function handleCustomSearch() {
@@ -262,7 +279,7 @@
   <!-- Left panel: Species list sidebar -->
   <div class="border-base-300 flex w-64 shrink-0 flex-col border-r">
     <div class="border-base-300 flex items-center justify-between border-b px-3 py-2">
-      <h2 class="text-sm font-semibold">{m.species_title()}</h2>
+      <h2 bind:this={listsHeading} tabindex="-1" class="text-sm font-semibold">{m.species_title()}</h2>
     </div>
 
     <!-- Action buttons -->
@@ -603,8 +620,10 @@
                 // Escape clears a non-empty search instead of closing the dialog.
                 if (e.key === 'Escape' && customSearchQuery) {
                   e.preventDefault();
+                  if (customSearchTimeout) clearTimeout(customSearchTimeout);
                   customSearchQuery = '';
                   customSearchResults = [];
+                  customResultsQuery = '';
                 }
               }}
               class="input input-bordered input-sm w-full pl-7"
@@ -614,7 +633,9 @@
           </div>
 
           <p class="sr-only" aria-live="polite">
-            {customSearchQuery ? m.species_custom_resultCount({ count: String(customSearchResults.length) }) : ''}
+            {customSearchQuery && customResultsQuery === customSearchQuery
+              ? m.species_custom_resultCount({ count: String(customSearchResults.length) })
+              : ''}
           </p>
           {#if customSearchResults.length > 0}
             <div class="border-base-300 mt-1 max-h-40 overflow-y-auto rounded border">
@@ -713,7 +734,7 @@
       </p>
       <div class="modal-action">
         <button type="button" onclick={() => (pendingDelete = null)} class="btn">{m.common_button_cancel()}</button>
-        <button type="button" onclick={() => void handleListDelete(target.id)} class="btn btn-error">
+        <button type="button" onclick={() => void handleListDelete(target)} class="btn btn-error">
           {m.species_deleteList()}
         </button>
       </div>

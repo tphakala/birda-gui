@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Datum",
   "species_deleteConfirm_title": "Soortenlijst verwijderen?",
   "species_deleteConfirm_body": "\"{name}\" wordt permanent verwijderd. Dit kan niet ongedaan worden gemaakt.",
+  "species_deleteFailed": "{name} kon niet worden verwijderd: {error}",
   "species_custom_removeSpecies": "{name} verwijderen",
   "species_custom_resultCount": "{count} overeenkomende soorten",
   "species_fetch_defaultName": "{lat}, {lon}, week {week}",

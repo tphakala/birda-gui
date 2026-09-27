@@ -464,12 +464,13 @@
   "calendar_dateInputLabel": "Datum",
   "species_deleteConfirm_title": "Artenliste löschen?",
   "species_deleteConfirm_body": "\"{name}\" wird dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+  "species_deleteFailed": "{name} konnte nicht gelöscht werden: {error}",
   "species_custom_removeSpecies": "{name} entfernen",
   "species_custom_resultCount": "{count} passende Arten",
   "species_fetch_defaultName": "{lat}, {lon}, Woche {week}",
   "settings_cli_version": "Version: {version}",
-  "settings_cli_outdated": "Deine birda-CLI-Version ({current}) ist veraltet. Version {required} oder höher ist erforderlich.",
+  "settings_cli_outdated": "Ihre birda-CLI-Version ({current}) ist veraltet. Version {required} oder höher ist erforderlich.",
   "wizard_cli_outdated": "Version {current} gefunden, aber {required} oder höher ist erforderlich.",
   "calendar_dialogTitle": "Datum auswählen",
-  "calendar_dateInputError": "Datum als TT/MM/JJJJ oder JJJJ-MM-TT eingeben."
+  "calendar_dateInputError": "Datum als TT.MM.JJJJ oder JJJJ-MM-TT eingeben."
 }

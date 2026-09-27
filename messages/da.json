@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Dato",
   "species_deleteConfirm_title": "Slet artslisten?",
   "species_deleteConfirm_body": "\"{name}\" slettes permanent. Det kan ikke fortrydes.",
+  "species_deleteFailed": "Kunne ikke slette {name}: {error}",
   "species_custom_removeSpecies": "Fjern {name}",
   "species_custom_resultCount": "{count} matchende arter",
   "species_fetch_defaultName": "{lat}, {lon}, uge {week}",

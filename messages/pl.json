@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Data",
   "species_deleteConfirm_title": "Usunąć listę gatunków?",
   "species_deleteConfirm_body": "„{name}” zostanie trwale usunięta. Tej operacji nie można cofnąć.",
+  "species_deleteFailed": "Nie udało się usunąć listy {name}: {error}",
   "species_custom_removeSpecies": "Usuń {name}",
   "species_custom_resultCount": "Pasujące gatunki: {count}",
   "species_fetch_defaultName": "{lat}, {lon}, tydzień {week}",

@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Datum",
   "species_deleteConfirm_title": "Smazat seznam druhů?",
   "species_deleteConfirm_body": "„{name}“ bude trvale smazán. Tuto akci nelze vrátit zpět.",
+  "species_deleteFailed": "Seznam {name} se nepodařilo smazat: {error}",
   "species_custom_removeSpecies": "Odebrat {name}",
   "species_custom_resultCount": "Odpovídající druhy: {count}",
   "species_fetch_defaultName": "{lat}, {lon}, týden {week}",

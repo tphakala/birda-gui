@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Datum",
   "species_deleteConfirm_title": "Ta bort artlistan?",
   "species_deleteConfirm_body": "\"{name}\" tas bort permanent. Det kan inte ångras.",
+  "species_deleteFailed": "Det gick inte att ta bort {name}: {error}",
   "species_custom_removeSpecies": "Ta bort {name}",
   "species_custom_resultCount": "{count} matchande arter",
   "species_fetch_defaultName": "{lat}, {lon}, vecka {week}",

@@ -20,6 +20,13 @@
   const titleId = $props.id();
 
   const hasCoords = $derived(latitude !== 0 || longitude !== 0);
+  // The inputs accept any number while typing; MapLibre throws on a latitude
+  // outside [-90, 90], so the map only gets a valid point.
+  const mapPoint = $derived<[number, number] | null>(
+    hasCoords && Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90
+      ? [longitude, latitude]
+      : null,
+  );
 
   function handleMapClick(e: MapMouseEvent) {
     latitude = Math.round(e.lngLat.lat * 10000) / 10000;
@@ -95,15 +102,15 @@
       <div class="border-base-300 h-[28rem] border-t">
         <MapLibre
           style="https://tiles.openfreemap.org/styles/bright"
-          center={hasCoords ? [longitude, latitude] : [24.9384, 60.1699]}
-          zoom={hasCoords ? 10 : 4}
+          center={mapPoint ?? [24.9384, 60.1699]}
+          zoom={mapPoint ? 10 : 4}
           class="h-full w-full"
           cursor="crosshair"
           autoloadGlobalCss={false}
           onclick={handleMapClick}
         >
-          {#if hasCoords}
-            <Marker lnglat={[longitude, latitude]} />
+          {#if mapPoint}
+            <Marker lnglat={mapPoint} />
           {/if}
         </MapLibre>
       </div>

@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Päivämäärä",
   "species_deleteConfirm_title": "Poistetaanko lajilista?",
   "species_deleteConfirm_body": "\"{name}\" poistetaan pysyvästi. Tätä ei voi perua.",
+  "species_deleteFailed": "Listan {name} poistaminen epäonnistui: {error}",
   "species_custom_removeSpecies": "Poista {name}",
   "species_custom_resultCount": "{count} osumaa",
   "species_fetch_defaultName": "{lat}, {lon}, viikko {week}",

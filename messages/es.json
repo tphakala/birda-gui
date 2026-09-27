@@ -464,6 +464,7 @@
   "calendar_dateInputLabel": "Fecha",
   "species_deleteConfirm_title": "¿Eliminar la lista de especies?",
   "species_deleteConfirm_body": "\"{name}\" se eliminará permanentemente. Esto no se puede deshacer.",
+  "species_deleteFailed": "No se pudo eliminar {name}: {error}",
   "species_custom_removeSpecies": "Quitar {name}",
   "species_custom_resultCount": "{count} especies coincidentes",
   "species_fetch_defaultName": "{lat}, {lon}, semana {week}",

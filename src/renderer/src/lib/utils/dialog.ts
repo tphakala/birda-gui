@@ -33,3 +33,12 @@ export const focusWhileMounted: Attachment<HTMLElement> = (element) => {
     if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
   };
 };
+
+/**
+ * Focuses `fallback` when focus has fallen to the body, for example after a
+ * dialog closed and the element that opened it was removed or disabled.
+ */
+export function focusIfLost(fallback: HTMLElement | undefined): void {
+  const focused = document.activeElement;
+  if (focused === null || focused === document.body) fallback?.focus();
+}

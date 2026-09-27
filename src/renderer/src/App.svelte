@@ -199,9 +199,9 @@
         appState.sourcePath = path;
       },
       onFocusSearch: () => {
-        // The species search of the visible page (Detections or Map).
+        // The visible species search that is not behind the annotation editor.
         const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
-        [...inputs].find((input) => input.checkVisibility())?.focus();
+        [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
       },
     });
 
