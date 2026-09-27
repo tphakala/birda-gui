@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     target: 'es2022',
     minify: false,
-    // Inline sourcemaps in dev, none in the production build (electron-vite parity).
+    // Inline sourcemaps in dev, none in the production build.
     sourcemap: mode === 'development' ? 'inline' : false,
     lib: {
       entry: resolve(root, 'src/preload/index.ts'),

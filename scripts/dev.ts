@@ -121,7 +121,7 @@ async function main(): Promise<void> {
   // START -> BUNDLE_START -> BUNDLE_END -> END on success and START ->
   // BUNDLE_START -> ERROR -> END on failure, so END alone is not proof of
   // success: track an error flag per run and reflect it in build health.
-  // `mode: development` matches electron-vite dev (import.meta.env.DEV etc.).
+  // `mode: development` makes import.meta.env.DEV true in the dev build.
   const attach = (watcher: Rolldown.RolldownWatcher, apply: (ok: boolean) => void, label: string): void => {
     let errored = false;
     watcher.on('event', (event) => {
