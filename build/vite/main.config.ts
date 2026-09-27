@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
       formats: ['es'],
       fileName: () => 'index.js',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
       output: {
         banner: esmShim,

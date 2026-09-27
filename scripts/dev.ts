@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { resolve } from 'node:path';
-import { createServer, build, type Rollup, type ViteDevServer } from 'vite';
+import { createServer, build, type Rolldown, type ViteDevServer } from 'vite';
 import electron from 'electron';
 
 // `import electron from 'electron'` in a Node context resolves to the path of
@@ -117,12 +117,12 @@ async function main(): Promise<void> {
     if (state.mainOk && state.preloadOk) relaunchElectron(url);
   }, 150);
 
-  // build() in watch mode resolves with a RollupWatcher. The event sequence is
+  // build() in watch mode resolves with a RolldownWatcher. The event sequence is
   // START -> BUNDLE_START -> BUNDLE_END -> END on success and START ->
   // BUNDLE_START -> ERROR -> END on failure, so END alone is not proof of
   // success: track an error flag per run and reflect it in build health.
   // `mode: development` matches electron-vite dev (import.meta.env.DEV etc.).
-  const attach = (watcher: Rollup.RollupWatcher, apply: (ok: boolean) => void, label: string): void => {
+  const attach = (watcher: Rolldown.RolldownWatcher, apply: (ok: boolean) => void, label: string): void => {
     let errored = false;
     watcher.on('event', (event) => {
       if (event.code === 'BUNDLE_START') {
@@ -146,7 +146,7 @@ async function main(): Promise<void> {
     configFile: configFor('main'),
     mode: 'development',
     build: { watch: {} },
-  })) as Rollup.RollupWatcher;
+  })) as Rolldown.RolldownWatcher;
   attach(
     mainWatcher,
     (ok) => {
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
     configFile: configFor('preload'),
     mode: 'development',
     build: { watch: {} },
-  })) as Rollup.RollupWatcher;
+  })) as Rolldown.RolldownWatcher;
   attach(
     preloadWatcher,
     (ok) => {

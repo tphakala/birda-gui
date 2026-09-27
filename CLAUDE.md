@@ -41,15 +41,17 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | ------------ | ---------------------------------- | -------------------------------------- |
 | Runtime      | Electron                           | 43.x                                   |
 | UI Framework | Svelte                             | 5.x (runes API, **not** legacy stores) |
-| CSS          | Tailwind CSS v4 + daisyUI v5       | 4.1.x / 5.5.x                          |
-| Language     | TypeScript                         | 5.9.x (strict mode)                    |
-| Bundler      | Vite (direct configs + dev script) | 7.x                                    |
-| Database     | better-sqlite3                     | 12.x                                   |
+| CSS          | Tailwind CSS v4 + daisyUI v5       | 4.3.x / 5.7.x                          |
+| Language     | TypeScript                         | 6.0.x (strict mode)                    |
+| Bundler      | Vite (direct configs + dev script) | 8.x (Rolldown)                         |
+| Database     | better-sqlite3                     | 13.x                                   |
 | i18n         | Paraglide (compile-time)           | 2.x                                    |
-| Maps         | MapLibre GL + svelte-maplibre-gl   | 5.x / 1.x                              |
+| Maps         | MapLibre GL + svelte-maplibre-gl   | 6.x / 2.x                              |
 | Audio        | WaveSurfer.js                      | 7.x                                    |
 | Icons        | Lucide Svelte                      | latest                                 |
-| Validation   | Zod                                | 3.x                                    |
+| Validation   | Zod                                | 4.x                                    |
+
+Node.js 22.12 or newer is required for development and CI (`engines` in `package.json`; CI and release workflows use Node 24).
 
 ## Project Structure
 
@@ -94,7 +96,7 @@ build/                # Electron-builder resources (icons, NSIS installer script
 Two separate tsconfig files (never mix them):
 
 - **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
-- **`tsconfig.node.json`**: Main + Preload + Shared. Node.js only, no DOM. Has `types: ["node"]`.
+- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/` and `build/vite/`. Node.js only, no DOM. It sets no `types` allowlist, so the global declarations of every installed `@types/*` package (Node's come from the directly declared `@types/node`) are included automatically.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 

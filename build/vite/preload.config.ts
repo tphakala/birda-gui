@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       formats: ['cjs'],
       fileName: () => 'index.cjs',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
     },
   },

@@ -33,7 +33,7 @@ Pre-built binaries for Windows, Linux, and macOS are available on the [Releases]
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v20.11+, for `import.meta.dirname` in the build configs)
+- [Node.js](https://nodejs.org/) (v22.12+, required by the `electron` package, Vitest 5 and better-sqlite3 13)
 
 ### Setup
 
