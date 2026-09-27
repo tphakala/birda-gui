@@ -253,7 +253,11 @@ void app.whenReady().then(async () => {
     console.error('[catalog] Failed to open the catalog:', err);
     electronDialog.showErrorBox(
       'Cannot open the Birda catalog',
-      `The catalog database could not be opened or upgraded, so Birda GUI will close.\n\n${getDbPath()}\n\n${err instanceof Error ? err.message : String(err)}`,
+      'The catalog database could not be opened or upgraded, so Birda GUI will close.\n\n' +
+        'Make sure no other copy of Birda GUI is running and that the catalog file can be written, then start Birda GUI again. ' +
+        'If the problem continues, please report it with the details below.\n\n' +
+        `Catalog file: ${getDbPath()}\n` +
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
     );
     app.quit();
     return;
