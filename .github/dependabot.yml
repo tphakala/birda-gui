@@ -11,11 +11,10 @@ updates:
       - dependencies
       - npm
     groups:
-      # The vite peer ranges of @sveltejs/vite-plugin-svelte, vitest and
+      # @tailwindcss/vite depends on an exact tailwindcss version, and the vite
+      # peer ranges of @sveltejs/vite-plugin-svelte, vitest and
       # @tailwindcss/vite all stop at vite 8, so a vite 9 cannot install on
-      # its own.
-      # @tailwindcss/vite depends on an exact tailwindcss version. Upgrade the
-      # Vite toolchain in one PR.
+      # its own. Upgrade the Vite toolchain in one PR.
       vite-toolchain:
         patterns:
           - vite
