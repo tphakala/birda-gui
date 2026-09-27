@@ -3,15 +3,12 @@
   "entry": [
     "src/main/index.ts",
     "src/preload/index.ts",
-    "src/renderer/src/main.ts",
     "shared/types.ts"
   ],
-  "project": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/renderer/**/*.{ts,svelte}", "shared/**/*.ts", "build/vite/**/*.ts"],
+  "project": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/renderer/**/*.{ts,svelte,css}", "shared/**/*.ts", "build/vite/**/*.ts"],
   "paths": {
     "$shared/*": ["./shared/*"],
     "$lib/*": ["./src/renderer/src/lib/*"],
     "$paraglide/*": ["./src/renderer/src/paraglide/*"]
-  },
-  "ignoreDependencies": ["tailwindcss", "daisyui"],
-  "ignoreBinaries": ["powershell"]
+  }
 }

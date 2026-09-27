@@ -22,7 +22,7 @@ export default tseslint.config(
 
   // Additional ignores not covered by .gitignore
   {
-    ignores: ['**/*.config.*', 'shared/**/*.js'],
+    ignores: ['shared/**/*.js'],
   },
 
   // Enable type-aware linting with explicit tsconfig paths
@@ -133,6 +133,16 @@ export default tseslint.config(
     plugins: nounsanitized.configs.recommended.plugins,
     rules: {
       ...nounsanitized.configs.recommended.rules,
+    },
+  },
+
+  // Root JS config files are in no tsconfig, so lint them without type
+  // information. Kept last so no later block re-enables a typed rule.
+  {
+    files: ['eslint.config.js', 'svelte.config.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 );
