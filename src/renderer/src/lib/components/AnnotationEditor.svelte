@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { focusWhileMounted } from '$lib/utils/dialog';
   import { Play, Pause, LoaderCircle, ZoomIn, ZoomOut, X } from '@lucide/svelte';
   import WaveSurfer from 'wavesurfer.js';
   import SpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram.esm.js';
@@ -422,8 +423,13 @@
     resetDragState();
   }
 
+  let editorEl = $state<HTMLDivElement>();
+
   function handleKeydown(e: KeyboardEvent): void {
     if (!annotationEditor.open) return;
+    // A modal dialog opened over the editor (for example the license viewer)
+    // owns the keyboard: leave its Escape, Tab and Enter alone.
+    if (editorEl && e.target instanceof Node && !editorEl.contains(e.target) && e.target !== document.body) return;
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 
@@ -457,11 +463,19 @@
 </script>
 
 {#if annotationEditor.open}
-  <div class="bg-base-300/80 fixed inset-0 z-50 flex flex-col p-4 backdrop-blur-sm">
+  <div
+    bind:this={editorEl}
+    {@attach focusWhileMounted}
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="annotation-editor-title"
+    class="bg-base-300/80 fixed inset-0 z-50 flex flex-col p-4 backdrop-blur-sm"
+  >
     <div class="bg-base-100 flex h-full flex-col overflow-hidden rounded-lg shadow-xl">
       <!-- Header -->
       <div class="border-base-300 flex items-center gap-3 border-b px-4 py-2">
-        <span class="font-medium">{m.annotation_editor_title()}</span>
+        <span id="annotation-editor-title" class="font-medium">{m.annotation_editor_title()}</span>
         <span class="text-base-content/70 truncate text-xs">{annotationEditor.filePath}</span>
         <button
           class="btn btn-ghost btn-sm btn-circle ml-auto"

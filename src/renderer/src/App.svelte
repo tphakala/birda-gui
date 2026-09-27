@@ -7,6 +7,7 @@
   import SetupWizard from '$lib/components/SetupWizard.svelte';
   import LicenseViewer from '$lib/components/LicenseViewer.svelte';
   import AnnotationEditor from '$lib/components/AnnotationEditor.svelte';
+  import { annotationEditor } from '$lib/stores/annotation.svelte';
   import ToastOutlet from '$lib/components/ToastOutlet.svelte';
   import AnalysisPage from './pages/AnalysisPage.svelte';
   import DetectionsPage from './pages/DetectionsPage.svelte';
@@ -61,6 +62,16 @@
     const tab = appState.activeTab;
     if (tab in visited) {
       visited[tab as keyof typeof visited] = true;
+    }
+  });
+
+  // Kept-alive pages are hidden, not unmounted, on a tab switch. A modal
+  // dialog left open inside one would stay modal while invisible and block
+  // the whole window, so close it; its close event resets its own state.
+  $effect(() => {
+    const _tab = appState.activeTab; // re-run on every tab switch
+    for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) {
+      if (!dialog.checkVisibility()) dialog.close();
     }
   });
 
@@ -188,8 +199,9 @@
         appState.sourcePath = path;
       },
       onFocusSearch: () => {
-        const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="species"]');
-        searchInput?.focus();
+        // The species search of the visible page (Detections or Map).
+        const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
+        [...inputs].find((input) => input.checkVisibility())?.focus();
       },
     });
 
@@ -228,7 +240,8 @@
     <SetupWizard oncomplete={handleWizardComplete} />
   </main>
 {:else}
-  <main class="bg-base-100 text-base-content flex h-screen select-none">
+  <!-- The annotation editor overlays the app; keep the page behind it out of reach. -->
+  <main class="bg-base-100 text-base-content flex h-screen select-none" inert={annotationEditor.open}>
     <Sidebar />
 
     <div class="flex flex-1 flex-col overflow-hidden">
