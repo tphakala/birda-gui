@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import type { BirdaEventEnvelope } from './types';
+import { AnalysisCancelledError, classifyExit } from './analysis-session';
 import { BIRDA_CLI_VERSION, BIRDA_GITHUB_URL, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
@@ -259,6 +260,8 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   let dataCallback: ((envelope: BirdaEventEnvelope) => void) | null = null;
   let logCallback: ((level: LogLevel, message: string) => void) | null = null;
   const stderrLines: string[] = [];
+  // An object, not a let: TypeScript would narrow a boolean let to false across the await below.
+  const cancelState = { requested: false };
 
   function emitLog(level: LogLevel, message: string) {
     logCallback?.(level, message);
@@ -272,6 +275,13 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       } catch (e) {
         emitLog('error', `Failed to find birda: ${(e as Error).message}`);
         reject(e instanceof Error ? e : new Error(String(e)));
+        return;
+      }
+
+      // Cancelled while birda was being located: never start it.
+      if (cancelState.requested) {
+        emitLog('info', 'Analysis cancelled before birda started');
+        reject(new AnalysisCancelledError());
         return;
       }
 
@@ -350,15 +360,22 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         emitLog('warn', `[stderr] ${text}`);
       });
 
-      child.on('close', (code) => {
+      child.on('close', (code, signal) => {
         if (child) {
           unregisterProcess(child);
         }
-        emitLog('info', `Process exited with code ${code}`);
-        if (code === 0 || code === null) {
+        emitLog(
+          'info',
+          code === null ? `Process terminated by ${signal ?? 'a signal'}` : `Process exited with code ${code}`,
+        );
+        const outcome = classifyExit(code, cancelState.requested);
+        if (outcome === 'success') {
           resolve();
+        } else if (outcome === 'cancelled') {
+          reject(new AnalysisCancelledError());
         } else {
-          reject(new Error(`birda exited with code ${code}\n${stderrLines.join('\n')}`));
+          const how = code === null ? `was terminated by ${signal ?? 'a signal'}` : `exited with code ${code}`;
+          reject(new Error(`birda ${how}\n${stderrLines.join('\n')}`));
         }
       });
 
@@ -381,6 +398,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       }
     },
     cancel: () => {
+      cancelState.requested = true;
       if (child && !child.killed) {
         child.kill('SIGTERM');
         unregisterProcess(child);

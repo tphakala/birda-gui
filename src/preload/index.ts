@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 const ALLOWED_INVOKE_CHANNELS = new Set([
   'annotations:list',
@@ -10,6 +10,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'app:check-birda',
   'app:get-log',
   'birda:analyze',
+  'birda:analysis-status',
   'birda:cancel-analysis',
   'birda:config-show',
   'birda:config-path',
@@ -70,6 +71,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([
   'birda:analysis-progress',
+  'birda:analysis-state',
   'birda:models-install-progress',
   'cuda:download-progress',
   'app:log',
@@ -93,9 +95,14 @@ contextBridge.exposeInMainWorld('birda', {
     if (!ALLOWED_RECEIVE_CHANNELS.has(channel)) {
       throw new Error(`IPC receive channel not allowed: ${channel}`);
     }
-    ipcRenderer.on(channel, (_event, ...args: unknown[]) => {
+    const listener = (_event: IpcRendererEvent, ...args: unknown[]) => {
       callback(...args);
-    });
+    };
+    ipcRenderer.on(channel, listener);
+    // Removes only this listener, unlike removeAllListeners.
+    return () => {
+      ipcRenderer.removeListener(channel, listener);
+    };
   },
   removeAllListeners: (channel: string) => {
     if (!ALLOWED_RECEIVE_CHANNELS.has(channel)) {

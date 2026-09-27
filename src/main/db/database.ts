@@ -284,6 +284,42 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(7);
     })();
   }
+
+  // Migration 8: Add cancelled status. It runs for new catalogs too, since
+  // migration 4 rebuilds their analysis_runs with the older CHECK.
+  if (!applied.has(8)) {
+    console.log('Migrating to version 8: Add cancelled status');
+    // Rebuilt with foreign keys off, like migration 4.
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        db.exec(`
+          CREATE TABLE analysis_runs_new (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            location_id         INTEGER REFERENCES locations(id),
+            source_path         TEXT NOT NULL,
+            model               TEXT NOT NULL,
+            min_confidence      REAL NOT NULL DEFAULT 0.1,
+            settings_json       TEXT,
+            status              TEXT NOT NULL DEFAULT 'pending'
+                                CHECK (status IN ('pending','running','completed','failed','completed_with_errors','cancelled')),
+            started_at          TEXT,
+            completed_at        TEXT,
+            timezone_offset_min INTEGER
+          );
+          INSERT INTO analysis_runs_new
+            SELECT id, location_id, source_path, model, min_confidence, settings_json,
+                   status, started_at, completed_at, timezone_offset_min
+            FROM analysis_runs;
+          DROP TABLE analysis_runs;
+          ALTER TABLE analysis_runs_new RENAME TO analysis_runs;
+        `);
+        db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(8);
+      })();
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
+  }
 }
 
 // Migration 5: Add audio_files table and migrate existing data

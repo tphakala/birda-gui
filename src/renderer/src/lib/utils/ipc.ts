@@ -1,5 +1,7 @@
 import type {
   AnalysisRequest,
+  AnalysisResult,
+  AnalysisStatus,
   Annotation,
   AnnotationInput,
   EnrichedDetection,
@@ -35,27 +37,35 @@ declare global {
   interface Window {
     birda: {
       invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-      on: (channel: string, callback: (...args: unknown[]) => void) => void;
+      on: (channel: string, callback: (...args: unknown[]) => void) => () => void;
       removeAllListeners: (channel: string) => void;
     };
   }
 }
 
 // Analysis
-export function startAnalysis(request: AnalysisRequest): Promise<{ runId: number; status: string }> {
-  return window.birda.invoke('birda:analyze', request) as Promise<{ runId: number; status: string }>;
+export function startAnalysis(request: AnalysisRequest): Promise<AnalysisResult> {
+  return window.birda.invoke('birda:analyze', request) as Promise<AnalysisResult>;
+}
+
+export function getAnalysisStatus(): Promise<AnalysisStatus> {
+  return window.birda.invoke('birda:analysis-status') as Promise<AnalysisStatus>;
+}
+
+/** Returns a function that removes this listener. */
+export function onAnalysisState(callback: (status: AnalysisStatus) => void): () => void {
+  return window.birda.on('birda:analysis-state', (status) => {
+    callback(status as AnalysisStatus);
+  });
 }
 
 export function cancelAnalysis(): Promise<boolean> {
   return window.birda.invoke('birda:cancel-analysis') as Promise<boolean>;
 }
 
-export function onAnalysisProgress(callback: (envelope: unknown) => void): void {
-  window.birda.on('birda:analysis-progress', callback);
-}
-
-export function offAnalysisProgress(): void {
-  window.birda.removeAllListeners('birda:analysis-progress');
+/** Returns a function that removes this listener. */
+export function onAnalysisProgress(callback: (envelope: unknown) => void): () => void {
+  return window.birda.on('birda:analysis-progress', callback);
 }
 
 // Catalog

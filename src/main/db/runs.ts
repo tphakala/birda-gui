@@ -1,5 +1,5 @@
 import { getDb } from './database';
-import type { AnalysisRun, RunWithStats } from '$shared/types';
+import type { AnalysisRun, FinishedRunStatus, RunWithStats } from '$shared/types';
 
 export function createRun(
   sourcePath: string,
@@ -27,9 +27,9 @@ export function createRun(
   return run;
 }
 
-export function updateRunStatus(id: number, status: AnalysisRun['status']): void {
+function updateRunStatus(id: number, status: AnalysisRun['status']): void {
   const db = getDb();
-  if (status === 'completed' || status === 'failed' || status === 'completed_with_errors') {
+  if (status !== 'pending' && status !== 'running') {
     db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
   } else {
     db.prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, id);
@@ -41,13 +41,13 @@ function getRunById(id: number): AnalysisRun | undefined {
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
 }
 
-function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
+function findEarlierCompletedRuns(run: AnalysisRun): AnalysisRun[] {
   const db = getDb();
   return db
     .prepare(
-      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status IN ('completed', 'completed_with_errors') ORDER BY completed_at DESC",
+      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND id != ? AND status IN ('completed', 'completed_with_errors')",
     )
-    .all(sourcePath, model) as AnalysisRun[];
+    .all(run.source_path, run.model, run.id) as AnalysisRun[];
 }
 
 export function deleteRun(id: number): void {
@@ -95,14 +95,24 @@ export function getRunsWithStats(): RunWithStats[] {
   }));
 }
 
-export function deleteCompletedRunsForSource(sourcePath: string, model: string): number {
+/**
+ * Records the status a run ended with. A completed run replaces the earlier
+ * completed runs for the same source and model, so re-analysing a source keeps
+ * the earlier results until the new run has completed. Returns the number of
+ * runs replaced.
+ */
+export function finishRun(id: number, status: FinishedRunStatus): number {
   const db = getDb();
 
   return db.transaction(() => {
-    const runs = findCompletedRuns(sourcePath, model);
-    for (const run of runs) {
-      deleteRun(run.id);
+    updateRunStatus(id, status);
+    if (status !== 'completed' && status !== 'completed_with_errors') return 0;
+    const run = getRunById(id);
+    if (!run) return 0;
+    const earlier = findEarlierCompletedRuns(run);
+    for (const r of earlier) {
+      deleteRun(r.id);
     }
-    return runs.length;
+    return earlier.length;
   })();
 }

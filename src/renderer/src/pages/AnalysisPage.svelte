@@ -358,9 +358,14 @@
       {:else}
         <!-- Start / Stop button -->
         {#if appState.isAnalysisRunning}
-          <button onclick={onstop} class="btn btn-error w-full gap-2">
-            <Square size={18} />
-            {m.analysis_stopAnalysis()}
+          <button onclick={onstop} disabled={appState.isAnalysisStopping} class="btn btn-error w-full gap-2">
+            {#if appState.isAnalysisStopping}
+              <span class="loading loading-spinner loading-sm"></span>
+              {m.analysis_stopping()}
+            {:else}
+              <Square size={18} />
+              {m.analysis_stopAnalysis()}
+            {/if}
           </button>
         {:else}
           <button

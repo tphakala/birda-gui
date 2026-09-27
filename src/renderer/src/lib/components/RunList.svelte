@@ -80,10 +80,12 @@
                   <CircleAlert size={10} />
                   {m.runs_status_failed()}
                 </span>
+              {:else if run.status === 'cancelled'}
+                <span class="badge badge-warning badge-xs">{m.runs_status_cancelled()}</span>
               {/if}
             </span>
           </button>
-          {#if run.status === 'failed' && ondelete}
+          {#if (run.status === 'failed' || run.status === 'cancelled') && ondelete}
             <button
               type="button"
               onclick={() => {

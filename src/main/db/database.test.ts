@@ -246,10 +246,11 @@ describe('initializeCatalog', () => {
     expect(schemaShape(upgraded)).toEqual(schemaShape(fresh));
     expect(appliedVersions(upgraded)).toEqual(appliedVersions(fresh));
     expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
-    // Migration 4 widened the status CHECK; the upgraded table must accept the new value.
+    // Migrations 4 and 8 widened the status CHECK; the upgraded table must accept the new values.
     upgraded
       .prepare("INSERT INTO analysis_runs (source_path, model, status) VALUES ('/x', 'm', 'completed_with_errors')")
       .run();
+    upgraded.prepare("INSERT INTO analysis_runs (source_path, model, status) VALUES ('/x', 'm', 'cancelled')").run();
   });
 
   it.each([

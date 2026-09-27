@@ -4,6 +4,8 @@ interface AppState {
   activeTab: Tab;
   selectedSpecies: string | null;
   isAnalysisRunning: boolean;
+  /** Stop was requested and the analysis has not ended yet. */
+  isAnalysisStopping: boolean;
   sourcePath: string | null;
   selectedModel: string;
   minConfidence: number;
@@ -27,6 +29,7 @@ export const appState = $state<AppState>({
   activeTab: 'analysis',
   selectedSpecies: null,
   isAnalysisRunning: false,
+  isAnalysisStopping: false,
   sourcePath: null,
   selectedModel: 'birdnet-v24',
   minConfidence: 0.5,

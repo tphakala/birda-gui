@@ -114,6 +114,11 @@ export interface Location {
   created_at: string;
 }
 
+export type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'completed_with_errors' | 'cancelled';
+
+/** The status a run ends with. */
+export type FinishedRunStatus = Extract<RunStatus, 'completed' | 'completed_with_errors' | 'failed' | 'cancelled'>;
+
 export interface AnalysisRun {
   id: number;
   location_id: number | null;
@@ -121,7 +126,7 @@ export interface AnalysisRun {
   model: string;
   min_confidence: number;
   settings_json: string | null;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'completed_with_errors';
+  status: RunStatus;
   started_at: string | null;
   completed_at: string | null;
   /** UTC offset in minutes of the recording's timezone (0 = UTC, null = unknown). */
@@ -272,6 +277,15 @@ export interface AnalysisRequest {
   /** UTC offset in minutes from AudioMoth metadata (0 = UTC). Omit if unknown. */
   timezone_offset_min?: number | undefined;
 }
+
+/** What birda:analyze resolves with. runId is null when the analysis was cancelled before its run was created. */
+export interface AnalysisResult {
+  runId: number | null;
+  status: FinishedRunStatus;
+}
+
+/** Whether an analysis holds the lock; sent on birda:analysis-state whenever it changes. */
+export type AnalysisStatus = { state: 'idle' } | { state: 'running' | 'stopping'; sourcePath: string };
 
 export interface DetectionFilter {
   species?: string | undefined;

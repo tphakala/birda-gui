@@ -28,8 +28,9 @@
     listModels,
     startAnalysis,
     cancelAnalysis,
+    getAnalysisStatus,
     onAnalysisProgress,
-    offAnalysisProgress,
+    onAnalysisState,
     onLog,
     offLog,
     onSetupWizard,
@@ -39,6 +40,7 @@
   } from '$lib/utils/ipc';
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
   import { onMount, onDestroy } from 'svelte';
+  import type { AnalysisStatus } from '$shared/types';
 
   let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
@@ -92,13 +94,42 @@
     showWizard = false;
   }
 
-  async function handleStop() {
-    try {
-      await cancelAnalysis();
-    } catch {
-      // Ensure UI recovers even if cancel IPC fails
+  // True while this window's startAnalysis call is pending. A window reloaded
+  // during an analysis has no such call, so the analysis state events end it.
+  let startPending = false;
+
+  function applyAnalysisStatus(status: AnalysisStatus) {
+    appState.isAnalysisRunning = status.state !== 'idle';
+    appState.isAnalysisStopping = status.state === 'stopping';
+    if (startPending) return;
+    if (status.state !== 'idle' && analysisState.status === 'idle') {
+      analysisState.status = 'running';
+    } else if (status.state === 'idle' && analysisState.status === 'running') {
+      analysisState.status = 'idle';
+      getCatalogStats()
+        .then((stats) => {
+          appState.catalogStats = stats;
+        })
+        .catch(() => {
+          // Stats refresh on the next catalog change
+        });
     }
-    appState.isAnalysisRunning = false;
+  }
+
+  // Start stays disabled until the analysis has actually ended: the main
+  // process keeps its lock until the stopped birda process exits.
+  async function handleStop() {
+    appState.isAnalysisStopping = true;
+    try {
+      const wasRunning = await cancelAnalysis();
+      if (!wasRunning && !startPending) {
+        appState.isAnalysisRunning = false;
+        appState.isAnalysisStopping = false;
+      }
+    } catch {
+      // Let the user try Stop again
+      appState.isAnalysisStopping = false;
+    }
   }
 
   async function handleStartAnalysis(opts: {
@@ -109,14 +140,11 @@
     day?: number | undefined;
     timezoneOffsetMin?: number | undefined;
   }) {
-    if (!appState.sourcePath) return;
+    if (!appState.sourcePath || appState.isAnalysisRunning) return;
 
     resetAnalysis();
     appState.isAnalysisRunning = true;
-
-    onAnalysisProgress((envelope) => {
-      handleAnalysisEvent(envelope as BirdaEventEnvelope);
-    });
+    startPending = true;
 
     try {
       const result = await startAnalysis({
@@ -130,6 +158,12 @@
         day: opts.day,
         timezone_offset_min: opts.timezoneOffsetMin,
       });
+      if (result.status === 'cancelled' || result.runId === null) {
+        // A stopped run keeps its partial results in the catalog, marked cancelled
+        analysisState.status = 'idle';
+        appState.catalogStats = await getCatalogStats();
+        return;
+      }
       analysisState.status = 'completed';
       appState.lastRunId = result.runId;
       appState.lastSourceFile = appState.sourcePath;
@@ -140,8 +174,9 @@
       analysisState.status = 'failed';
       analysisState.error = (err as Error).message;
     } finally {
+      startPending = false;
       appState.isAnalysisRunning = false;
-      offAnalysisProgress();
+      appState.isAnalysisStopping = false;
     }
   }
 
@@ -205,6 +240,19 @@
       },
     });
 
+    // One progress listener for the window's lifetime, so a Stop then Start
+    // never leaves two listeners counting the same events.
+    const offAnalysisProgress = onAnalysisProgress((envelope) => {
+      handleAnalysisEvent(envelope as BirdaEventEnvelope);
+    });
+    const offAnalysisState = onAnalysisState(applyAnalysisStatus);
+    // Pick up an analysis that was already running when this window loaded.
+    getAnalysisStatus()
+      .then(applyAnalysisStatus)
+      .catch(() => {
+        // Assume idle
+      });
+
     onLog((entry) => {
       const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
       addLog(level, source, message);
@@ -212,6 +260,8 @@
 
     return () => {
       mediaQuery.removeEventListener('change', handler);
+      offAnalysisProgress();
+      offAnalysisState();
     };
   });
 
@@ -223,7 +273,6 @@
   });
 
   onDestroy(() => {
-    offAnalysisProgress();
     offLog();
     offSetupWizard();
     offShowLicenses();
