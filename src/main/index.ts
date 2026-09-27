@@ -259,10 +259,16 @@ void app.whenReady().then(async () => {
     return;
   }
 
-  // Mark any runs stuck in 'running' from a previous session as failed
-  const staleCount = markStaleRunsAsFailed();
-  if (staleCount > 0) {
-    console.log(`[startup] Marked ${staleCount} stale running run(s) as failed`);
+  // Mark any runs stuck in 'running' from a previous session as failed. This is
+  // housekeeping: a catalog that opens but cannot be written (read-only file, or
+  // locked by another process) still gets a window, and its reads keep working.
+  try {
+    const staleCount = markStaleRunsAsFailed();
+    if (staleCount > 0) {
+      console.log(`[startup] Marked ${staleCount} stale running run(s) as failed`);
+    }
+  } catch (err) {
+    console.error('[startup] Failed to mark stale runs as failed:', err);
   }
 
   // Initialize label service from default model's labels with saved language preference
