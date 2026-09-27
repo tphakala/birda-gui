@@ -39,9 +39,9 @@ tasks:
       - npx svelte-check --tsconfig ./tsconfig.json
 
   eslint:
-    desc: Run ESLint on all source files
+    desc: Run ESLint on the whole repo
     cmds:
-      - npx eslint src/ shared/
+      - npx eslint .
 
   lint:
     desc: Run all lint and type checks (ESLint + svelte-check + tsc)
@@ -53,7 +53,7 @@ tasks:
   lint:fix:
     desc: Run ESLint with auto-fix
     cmds:
-      - npx eslint --fix src/ shared/
+      - npx eslint --fix .
 
   typecheck:main:
     desc: Type check main process (no emit)
@@ -65,12 +65,12 @@ tasks:
   format:
     desc: Format all files with Prettier
     cmds:
-      - npx prettier --write "src/**/*.{ts,svelte}" "shared/**/*.ts"
+      - npx prettier --write .
 
   format:check:
     desc: Check formatting (CI-friendly)
     cmds:
-      - npx prettier --check "src/**/*.{ts,svelte}" "shared/**/*.ts"
+      - npx prettier --check .
 
   # === Packaging ===
 

@@ -10,6 +10,20 @@ updates:
     labels:
       - dependencies
       - npm
+    groups:
+      # @sveltejs/vite-plugin-svelte 7.x peers on vite ^8 only, so a vite major
+      # cannot install on its own. Upgrade the Vite toolchain in one PR.
+      vite-toolchain:
+        patterns:
+          - vite
+          - vitest
+          - '@sveltejs/vite-plugin-svelte'
+    ignore:
+      # Tracks the Node.js version bundled with Electron, so majors move by hand
+      # with Electron upgrades.
+      - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: /

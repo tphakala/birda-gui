@@ -10,10 +10,11 @@
     "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": ["node"],
     "paths": {
       "$shared/*": ["./shared/*"]
     }
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "shared/**/*", "scripts/**/*", "build/vite/**/*"]
+  "include": ["src/main/**/*", "src/preload/**/*", "shared/**/*", "scripts/**/*", "build/vite/**/*", "vitest.config.ts"]
 }

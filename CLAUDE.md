@@ -51,7 +51,7 @@ See the [LEANN section](#leann-low-storage-vector-index) below for detailed comm
 | Icons        | Lucide Svelte                      | latest                                 |
 | Validation   | Zod                                | 4.x                                    |
 
-Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`).
+Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the range Vitest 5 supports (see `engines` in `package.json`). `.nvmrc` sets the Node version every GitHub Actions workflow uses.
 
 ## Project Structure
 
@@ -96,7 +96,7 @@ build/                # Electron-builder resources (icons, NSIS installer script
 Two separate tsconfig files (never mix them):
 
 - **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
-- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/` and `build/vite/`. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
+- **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/`, `build/vite/` and `vitest.config.ts`. `allowImportingTsExtensions` is on so the Vite configs import local modules as `./externalize.ts`; Vite's planned native config loader needs the extension. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
 
@@ -111,7 +111,7 @@ task build                  # direct Vite build (main + preload + renderer) plus
 
 # Linting & Type Checking
 task lint                   # ESLint + svelte-check + tsc (all three in parallel)
-task eslint                 # ESLint only on src/ and shared/
+task eslint                 # ESLint only (whole repo, same as npm run lint's ESLint step)
 task check                  # svelte-check only
 task typecheck:main         # tsc on tsconfig.node.json only
 task lint:fix               # ESLint with auto-fix
@@ -237,7 +237,7 @@ Usage in components:
 **Vitest** is configured for unit tests. Run with `npm run test` (`vitest run`); it is part of `npm run validate` and runs in CI.
 
 - Config: `vitest.config.ts` (node environment; aliases mirror the app's `$lib` / `$shared` / `$paraglide` paths).
-- Test files: co-located `*.test.ts` next to the code under test, in both `src/` and `shared/` (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`.
+- Test files: co-located `*.test.ts` next to the code under test (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`, `build/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`, `build/vite/externalize.test.ts`.
 - Scope: framework-free logic only. The node environment has no DOM, so there are no Svelte component or DOM tests.
 
 Additional quality gates: strict TypeScript (both tsconfigs), ESLint with type-aware and security rules, knip (dead code detection), npm audit (dependency security), and pre-commit hooks (lint-staged).

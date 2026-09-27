@@ -6,9 +6,9 @@ import { resolve } from 'path';
 export default defineConfig({
   resolve: {
     alias: {
-      $lib: resolve(__dirname, 'src/renderer/src/lib'),
-      $shared: resolve(__dirname, 'shared'),
-      $paraglide: resolve(__dirname, 'src/renderer/src/paraglide'),
+      $lib: resolve(import.meta.dirname, 'src/renderer/src/lib'),
+      $shared: resolve(import.meta.dirname, 'shared'),
+      $paraglide: resolve(import.meta.dirname, 'src/renderer/src/paraglide'),
     },
   },
   test: {

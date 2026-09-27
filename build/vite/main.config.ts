@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
-import { isExternal } from './externalize';
+import { isExternal } from './externalize.ts';
 
 const root = resolve(import.meta.dirname, '../..');
 

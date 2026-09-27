@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isExternal } from './externalize';
+import { isExternal } from './externalize.ts';
 
 describe('isExternal', () => {
   it('externalizes Node builtins, bare and node: prefixed', () => {
