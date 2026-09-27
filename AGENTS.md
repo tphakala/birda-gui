@@ -189,8 +189,9 @@ Security constraints:
 - Schema: `src/main/db/schema.ts`
 - Migrations: `src/main/db/database.ts` (sequential version-based)
 - Tables: `locations`, `analysis_runs`, `detections`, `audio_files`, `annotations`, `species_lists`, `species_list_entries` (plus `schema_migrations` for migration tracking)
-- View: `species_summary`, which, like the other catalog-wide counts, counts finished runs only
+- View: `species_summary`, which, like the other catalog-wide counts, counts finished runs only. The exception is `saved_locations` in the catalog stats, which counts every location row because Clear Database deletes them all
 - Runs: `finishRun` in `runs.ts` records how a run ended and keeps one result set per source and model
+- Locations: rows are kept as saved sites for the analysis form's location picker, including sites whose runs found nothing; the map and the status bar location count show only locations with detections from finished runs
 - Pragmas: `journal_mode = WAL`, `foreign_keys = ON`
 
 CRUD modules in `src/main/db/`: `runs.ts`, `detections.ts`, `locations.ts`, `species-lists.ts`, `audio-files.ts`, `annotations.ts`.

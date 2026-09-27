@@ -1,5 +1,5 @@
 import { getCatalogStats } from '$lib/utils/ipc';
-import type { RunningAnalysisSettings } from '$shared/types';
+import type { CatalogStats, RunningAnalysisSettings } from '$shared/types';
 
 export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
 
@@ -13,11 +13,7 @@ interface AppState {
   selectedModel: string;
   minConfidence: number;
   analysisConfidence: number;
-  catalogStats: {
-    total_detections: number;
-    total_species: number;
-    total_locations: number;
-  };
+  catalogStats: CatalogStats;
   birdaAvailable: boolean | null;
   showLogPanel: boolean;
   lastRunId: number | null;
@@ -45,6 +41,7 @@ export const appState = $state<AppState>({
     total_detections: 0,
     total_species: 0,
     total_locations: 0,
+    saved_locations: 0,
   },
   birdaAvailable: null,
   showLogPanel: false,
