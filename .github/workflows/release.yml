@@ -16,9 +16,15 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      # Each platform job in `build` runs the build itself.
+      build: false
+
   validate:
     name: Validate
     runs-on: ubuntu-latest
@@ -26,49 +32,21 @@ jobs:
       version: ${{ steps.version.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - run: npm ci
-
-      - name: Generate Paraglide output
-        run: npx paraglide-js compile --project ./project.inlang --outdir ./src/renderer/src/paraglide
-
-      - name: Validate translations
-        run: npm run validate:translations
-
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm run test
-
-      - name: Unused dependencies & exports
-        run: npm run knip
-
-      - name: Audit dependencies
-        run: npm audit --omit=dev
 
       - name: Determine version
         id: version
         shell: bash
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          if [[ "$REF_TYPE" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
-          elif [[ -n "${{ inputs.version }}" ]]; then
-            VERSION="${{ inputs.version }}"
+          elif [[ -n "$VERSION_INPUT" ]]; then
+            VERSION="$VERSION_INPUT"
           else
             VERSION=$(node -p "require('./package.json').version")
           fi
@@ -88,7 +66,9 @@ jobs:
 
   build:
     name: Build (${{ matrix.platform }})
-    needs: validate
+    needs: [checks, validate]
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -105,11 +85,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -168,7 +148,7 @@ jobs:
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.platform }}
           path: |
@@ -187,14 +167,16 @@ jobs:
     name: Create GitHub Release
     needs: [validate, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -204,7 +186,7 @@ jobs:
         run: ls -lh artifacts/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', needs.validate.outputs.version) }}
           name: Birda GUI v${{ needs.validate.outputs.version }}
