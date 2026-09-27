@@ -1,4 +1,4 @@
-# Birda GUI - LLM Context
+# Birda GUI: LLM Context
 
 Desktop GUI for the **birda** bird species detection CLI. Built with Electron + Svelte 5 + TypeScript.
 
@@ -179,7 +179,7 @@ State stores are in `src/renderer/src/lib/stores/`:
 - `log.svelte.ts`: Application log entries
 - `map.svelte.ts`: Map view state
 - `annotation.svelte.ts`: Annotation editor boxes and their persistence
-- `gallery.svelte.ts`: Model gallery install progress and errors
+- `gallery.svelte.ts`: Model gallery state (tab, family, manifests, installed models, downloads, accepted licenses, errors)
 - `toast.svelte.ts`: The single app-wide transient toast
 
 Components mutate store state directly (no actions/reducers pattern).
@@ -253,7 +253,7 @@ CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workfl
 - **Shared types** go in `shared/types.ts`, never duplicated
 - **Component files**: PascalCase `.svelte` (e.g., `DetectionDetail.svelte`)
 - **Store files**: camelCase `.svelte.ts` (e.g., `app.svelte.ts`)
-- **Main process modules**: camelCase `.ts` grouped by domain
+- **Main process modules**: `.ts` files grouped by domain; multi-word names are mostly kebab-case (`species-lists.ts`, `label-service.ts`)
 - **ESM throughout** (`"type": "module"` in package.json), CJS only for the Electron preload bundle
 - **Test files**: co-located `*.test.ts` next to the code under test (Vitest, node environment, framework-free logic only)
 - **Formatting**: single quotes, trailing commas, 120 char lines, 2-space indent
