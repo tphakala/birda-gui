@@ -59,9 +59,15 @@ export default tseslint.config(
     },
   },
 
-  // Node globals for main process and preload
+  // Node globals for the main process, preload, scripts and build configs
   {
-    files: ['src/main/**/*.ts', 'src/preload/**/*.ts'],
+    files: [
+      'src/main/**/*.ts',
+      'src/preload/**/*.ts',
+      'scripts/**/*.{ts,js}',
+      'build/vite/**/*.ts',
+      'vitest.config.ts',
+    ],
     languageOptions: {
       globals: globals.node,
     },
