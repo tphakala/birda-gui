@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'child_process';
-import { findBirda, registerProcess, unregisterProcess } from './runner';
+import { createStopper, findBirda, registerProcess, unregisterProcess } from './runner';
 import { classifyExit } from './analysis-session';
 import { parseProgressLine } from './progress';
 import type {
@@ -58,12 +58,17 @@ let installInProgress = false;
 // it. Set when a cancel arrives before any process exists to kill.
 const cancelState = { requested: false };
 
-/** Kill the in-flight install, if any. Returns true if one was running. */
+let installStopper: ReturnType<typeof createStopper> | null = null;
+
+/**
+ * Stops the in-flight install, if any: SIGTERM, then SIGKILL if it does not
+ * exit. The install keeps its slot until the process closes. Returns true if
+ * one was running.
+ */
 export function cancelInstall(): boolean {
   cancelState.requested = true;
-  if (currentInstall) {
-    currentInstall.kill();
-    currentInstall = null;
+  if (currentInstall && installStopper) {
+    installStopper.stop();
     return true;
   }
   return false;
@@ -104,6 +109,7 @@ export async function installModel(
       });
       registerProcess(proc);
       currentInstall = proc;
+      installStopper = createStopper(proc);
 
       let stdout = '';
       let stderrRemainder = '';
@@ -132,6 +138,7 @@ export async function installModel(
       proc.stdin.end();
 
       proc.on('close', (code) => {
+        installStopper?.clear();
         unregisterProcess(proc);
         if (currentInstall === proc) currentInstall = null;
         if (stderrRemainder.trim()) {
@@ -158,6 +165,9 @@ export async function installModel(
       });
 
       proc.on('error', (err) => {
+        // A process that did start still emits close, which settles the install.
+        if (proc.pid !== undefined) return;
+        installStopper?.clear();
         unregisterProcess(proc);
         if (currentInstall === proc) currentInstall = null;
         reject(new Error(`Model install failed: ${err.message}`));
@@ -165,6 +175,7 @@ export async function installModel(
     });
   } finally {
     currentInstall = null;
+    installStopper = null;
     installInProgress = false;
     cancelState.requested = false;
   }

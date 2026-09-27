@@ -22,6 +22,35 @@ function hasExited(proc: ChildProcess): boolean {
 }
 
 /**
+ * Stops one child process: SIGTERM, then SIGKILL if it has not exited after
+ * CANCEL_KILL_TIMEOUT_MS. stop() does nothing once the process has exited or a
+ * stop is pending; call clear() when the process closes.
+ */
+export function createStopper(proc: ChildProcess, onEscalate?: () => void): { stop: () => void; clear: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return {
+    stop() {
+      if (hasExited(proc) || timer) return;
+      proc.kill('SIGTERM');
+      timer = setTimeout(() => {
+        timer = null;
+        if (!hasExited(proc)) {
+          onEscalate?.();
+          proc.kill('SIGKILL');
+        }
+      }, CANCEL_KILL_TIMEOUT_MS);
+      timer.unref();
+    },
+    clear() {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    },
+  };
+}
+
+/**
  * Terminates all active birda child processes.
  * Called on app shutdown to prevent zombie processes. A process that was
  * already sent SIGTERM and is still running gets SIGKILL, since shutdown
@@ -269,14 +298,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   let logCallback: ((level: LogLevel, message: string) => void) | null = null;
   const stderrLines: string[] = [];
   const cancelState = { requested: false };
-  let killTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function clearKillTimer() {
-    if (killTimer) {
-      clearTimeout(killTimer);
-      killTimer = null;
-    }
-  }
+  let stopper: ReturnType<typeof createStopper> | null = null;
 
   function pushStderr(text: string) {
     if (stderrLines.length < MAX_STDERR_LINES) {
@@ -347,11 +369,36 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       emitLog('info', `Spawning: ${birdaPath} ${args.join(' ')}`);
 
       const cudaEnv = getCudaEnv();
-      child = spawn(birdaPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: cudaEnv ? { ...process.env, ...cudaEnv } : undefined,
-      });
+      try {
+        child = spawn(birdaPath, args, {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: cudaEnv ? { ...process.env, ...cudaEnv } : undefined,
+        });
+      } catch (err) {
+        // spawn throws instead of emitting 'error' for some failures, e.g. an argument with a NUL byte.
+        emitLog('error', `Failed to start birda: ${(err as Error).message}`);
+        reject(new Error(`Failed to start birda: ${(err as Error).message}`));
+        return;
+      }
       registerProcess(child);
+      stopper = createStopper(child, () => {
+        emitLog('warn', `birda did not exit ${CANCEL_KILL_TIMEOUT_MS / 1000}s after SIGTERM, sending SIGKILL`);
+      });
+
+      child.on('error', (err) => {
+        // A process that did start (it has a pid) still emits close, which
+        // settles the promise; an error here is then a failed kill.
+        if (child?.pid !== undefined) {
+          emitLog('error', `birda process error: ${err.message}`);
+          return;
+        }
+        stopper?.clear();
+        if (child) {
+          unregisterProcess(child);
+        }
+        emitLog('error', `Failed to start birda: ${err.message}`);
+        reject(new Error(`Failed to start birda: ${err.message}`));
+      });
 
       if (!child.stdout || !child.stderr) {
         reject(new Error('Failed to initialize child process stdio pipes'));
@@ -381,7 +428,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       });
 
       child.on('close', (code, signal) => {
-        clearKillTimer();
+        stopper?.clear();
         if (child) {
           unregisterProcess(child);
         }
@@ -395,21 +442,6 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         } else {
           reject(new Error(`birda ${how}\n${stderrLines.join('\n')}`));
         }
-      });
-
-      child.on('error', (err) => {
-        // A process that did start (it has a pid) still emits close, which
-        // settles the promise; an error here is then a failed kill.
-        if (child?.pid !== undefined) {
-          emitLog('error', `birda process error: ${err.message}`);
-          return;
-        }
-        clearKillTimer();
-        if (child) {
-          unregisterProcess(child);
-        }
-        emitLog('error', `Failed to start birda: ${err.message}`);
-        reject(new Error(`Failed to start birda: ${err.message}`));
       });
     })();
   });
@@ -425,17 +457,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
     // The child stays registered until it closes, so killAll at quit still reaches it.
     cancel: () => {
       cancelState.requested = true;
-      const proc = child;
-      if (!proc || hasExited(proc) || killTimer) return;
-      proc.kill('SIGTERM');
-      killTimer = setTimeout(() => {
-        killTimer = null;
-        if (!hasExited(proc)) {
-          emitLog('warn', `birda did not exit ${CANCEL_KILL_TIMEOUT_MS / 1000}s after SIGTERM, sending SIGKILL`);
-          proc.kill('SIGKILL');
-        }
-      }, CANCEL_KILL_TIMEOUT_MS);
-      killTimer.unref();
+      stopper?.stop();
     },
     promise,
     stderrLog: () => stderrLines.join('\n'),

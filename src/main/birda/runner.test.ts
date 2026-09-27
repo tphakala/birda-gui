@@ -1,41 +1,11 @@
-import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PassThrough } from 'node:stream';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from './analysis-session';
+import { FakeChild } from './fake-child';
 
 vi.mock('electron', () => ({ app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir') } }));
-
-// A stand-in for a spawned birda that keeps killed, exitCode and signalCode the
-// way Node's ChildProcess does: kill() marks killed but the process only ends
-// when exit() is called.
-class FakeChild extends EventEmitter {
-  pid: number | undefined = 4242;
-  stdout = new PassThrough();
-  stderr = new PassThrough();
-  killed = false;
-  exitCode: number | null = null;
-  signalCode: NodeJS.Signals | null = null;
-  signals: string[] = [];
-
-  kill(signal: NodeJS.Signals = 'SIGTERM'): boolean {
-    if (this.exitCode !== null || this.signalCode !== null) return false;
-    this.signals.push(signal);
-    this.killed = true;
-    return true;
-  }
-
-  exit(code: number | null, signal: NodeJS.Signals | null = null): void {
-    this.exitCode = code;
-    this.signalCode = signal;
-    this.emit('exit', code, signal);
-    this.stdout.end();
-    this.stderr.end();
-    this.emit('close', code, signal);
-  }
-}
 
 const spawned = vi.hoisted(() => ({ children: [] as unknown[] }));
 vi.mock('child_process', async (importOriginal) => ({
@@ -116,8 +86,9 @@ describe('runAnalysis', () => {
 
     child.exit(null, 'SIGTERM');
     await expect(handle.promise).rejects.toBeInstanceOf(AnalysisCancelledError);
+    expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(CANCEL_KILL_TIMEOUT_MS * 2);
-    expect(child.signals).toEqual(['SIGTERM']);
+    expect(child.killCalls).toEqual(['SIGTERM']);
   });
 
   it('sends SIGKILL when birda ignores SIGTERM', async () => {
@@ -154,8 +125,9 @@ describe('runAnalysis', () => {
     child.exit(0);
     await handle.promise;
     handle.cancel();
+    expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(CANCEL_KILL_TIMEOUT_MS);
-    expect(child.signals).toEqual([]);
+    expect(child.killCalls).toEqual([]);
   });
 
   it('waits for close when a started process reports an error', async () => {
@@ -172,6 +144,15 @@ describe('runAnalysis', () => {
 
     child.exit(0);
     await expect(handle.promise).resolves.toBeUndefined();
+  });
+
+  it('rejects when spawn throws', async () => {
+    const { spawn } = await import('child_process');
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      throw new TypeError('argument must not contain null bytes');
+    });
+    const handle = runAnalysis('/rec.wav', options);
+    await expect(handle.promise).rejects.toThrow('Failed to start birda: argument must not contain null bytes');
   });
 
   it('rejects when birda fails to start', async () => {
@@ -209,7 +190,7 @@ describe('killAll', () => {
     const child = await spawnedChild();
     child.exitCode = 0;
     killAll();
-    expect(child.signals).toEqual([]);
+    expect(child.killCalls).toEqual([]);
     child.exit(0);
     await handle.promise;
   });
