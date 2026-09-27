@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isExternal } from './externalize.ts';
+import { createIsExternal, isExternal } from './externalize.ts';
 
 describe('isExternal', () => {
   it('externalizes Node builtins, bare and node: prefixed', () => {
@@ -28,10 +28,13 @@ describe('isExternal', () => {
   });
 
   it('externalizes scoped runtime dependencies and their subpaths', () => {
-    // @electron/rebuild is a runtime dependency; the scoped name embeds a slash.
-    expect(isExternal('@electron/rebuild')).toBe(true);
-    expect(isExternal('@electron/rebuild/lib/main.js')).toBe(true);
-    expect(isExternal('@electron')).toBe(false);
+    // A scoped name embeds a slash, so the package itself, not its scope, is
+    // the unit that must match.
+    const scoped = createIsExternal(['@scope/pkg']);
+    expect(scoped('@scope/pkg')).toBe(true);
+    expect(scoped('@scope/pkg/lib/main.js')).toBe(true);
+    expect(scoped('@scope')).toBe(false);
+    expect(scoped('@scope/other')).toBe(false);
   });
 
   it('does not externalize a package that only shares a name prefix with a dependency', () => {
