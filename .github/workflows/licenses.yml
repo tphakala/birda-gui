@@ -26,6 +26,8 @@ jobs:
 
       - run: npm ci
 
+      # Pinned for reproducible output. The tool is not in package.json, so
+      # Dependabot does not update it; bump the version here by hand.
       - name: Generate third-party license file
         run: npx --yes generate-license-file@4.2.5 --input package.json --output THIRD_PARTY_LICENSES.txt --overwrite
 
