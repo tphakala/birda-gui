@@ -18,6 +18,10 @@ describe('isExternal', () => {
   it('externalizes electron and its subpaths', () => {
     expect(isExternal('electron')).toBe(true);
     expect(isExternal('electron/main')).toBe(true);
+    // A package that only shares the prefix, such as electron-log, is not a
+    // runtime dependency, so it must be bundled: the packaged app would fail
+    // to require it.
+    expect(isExternal('electron-log')).toBe(false);
   });
 
   it('externalizes runtime dependencies and their subpaths', () => {
