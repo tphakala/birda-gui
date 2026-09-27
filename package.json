@@ -35,7 +35,7 @@
   },
   "keywords": [],
   "author": "Tomi P. Hakala <tphakala@users.noreply.github.com>",
-  "license": "CC-BY-NC-SA-4.0",
+  "license": "Apache-2.0",
   "birdaCli": {
     "version": "1.8.1",
     "repo": "tphakala/birda"
@@ -51,6 +51,14 @@
       "out/**/*"
     ],
     "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "NOTICE",
+        "to": "NOTICE"
+      },
       {
         "from": "THIRD_PARTY_LICENSES.txt",
         "to": "THIRD_PARTY_LICENSES.txt"

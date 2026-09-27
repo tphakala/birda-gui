@@ -1,7 +1,7 @@
 # Birda GUI
 
 [![CI](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml)
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F.svg)](https://www.electronjs.org/)
 [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-pink.svg)](https://github.com/sponsors/tphakala)
 
@@ -75,4 +75,4 @@ The build automatically fetches the bundled birda CLI binary. For development, t
 
 ## License
 
-[CC BY-NC-SA 4.0](LICENSE)
+[Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for copyright information.
