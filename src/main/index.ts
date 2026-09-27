@@ -13,7 +13,7 @@ import { pathToFileURL } from 'url';
 import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
-import { closeDb } from './db/database';
+import { closeDb, getDb, getDbPath } from './db/database';
 import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
@@ -245,10 +245,35 @@ void app.whenReady().then(async () => {
   registerBirdaMapProtocol();
   await registerHandlers();
 
-  // Mark any runs stuck in 'running' from a previous session as failed
-  const staleCount = markStaleRunsAsFailed();
-  if (staleCount > 0) {
-    console.log(`[startup] Marked ${staleCount} stale running run(s) as failed`);
+  // Open the catalog before anything uses it: a catalog that cannot be opened or
+  // upgraded otherwise rejects this callback and the app runs with no window.
+  try {
+    getDb();
+  } catch (err) {
+    console.error('[catalog] Failed to open the catalog:', err);
+    electronDialog.showErrorBox(
+      'Cannot open the Birda database',
+      'The database could not be opened or upgraded, so Birda GUI will close.\n\n' +
+        'Make sure no other copy of Birda GUI is running and that the database file and its folder can be written, then start Birda GUI again. ' +
+        'If the file is damaged, move it and any .db-wal and .db-shm files next to it to another folder; Birda GUI then starts with a new, empty database. ' +
+        'Please report the problem with the details below at https://github.com/tphakala/birda-gui/issues\n\n' +
+        `Database file: ${getDbPath()}\n` +
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    app.quit();
+    return;
+  }
+
+  // Mark any runs stuck in 'running' from a previous session as failed. This is
+  // housekeeping: a catalog that opens but cannot be written (read-only file, or
+  // locked by another process) still gets a window, and its reads keep working.
+  try {
+    const staleCount = markStaleRunsAsFailed();
+    if (staleCount > 0) {
+      console.log(`[startup] Marked ${staleCount} stale running run(s) as failed`);
+    }
+  } catch (err) {
+    console.error('[startup] Failed to mark stale runs as failed:', err);
   }
 
   // Initialize label service from default model's labels with saved language preference
