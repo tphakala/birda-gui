@@ -1,11 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from '../birda/analysis-session';
+import { invoke, resetIpc, sentOn } from '../test-support/ipc-harness';
 import type { AnalysisResult, AnalysisStatus, BirdaEventEnvelope } from '$shared/types';
-
-type Handler = (event: unknown, ...args: unknown[]) => unknown;
 
 const h = vi.hoisted(() => {
   // A controllable stand-in for runAnalysis's handle.
@@ -31,8 +30,6 @@ const h = vi.hoisted(() => {
     };
   }
   return {
-    handlers: new Map<string, (event: unknown, ...args: unknown[]) => unknown>(),
-    sent: [] as { channel: string; payload: unknown }[],
     handles: [] as ReturnType<typeof fakeHandle>[],
     fakeHandle,
     settings: { get: vi.fn() },
@@ -40,19 +37,7 @@ const h = vi.hoisted(() => {
   };
 });
 
-vi.mock('electron', () => ({
-  ipcMain: { handle: (channel: string, fn: Handler) => h.handlers.set(channel, fn) },
-  BrowserWindow: {
-    getAllWindows: () => [
-      {
-        isDestroyed: () => false,
-        webContents: { send: (channel: string, payload: unknown) => h.sent.push({ channel, payload }) },
-      },
-    ],
-  },
-  dialog: {},
-  app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir') },
-}));
+vi.mock('electron', async () => (await import('../test-support/ipc-harness')).electronMock);
 
 vi.mock('../birda/runner', () => ({
   runAnalysis: vi.fn(() => {
@@ -75,12 +60,18 @@ vi.mock('../db/detections', () => ({
 }));
 vi.mock('../db/audio-files', () => ({ createAudioFile: vi.fn(() => 1) }));
 vi.mock('../settings/store', () => ({ settingsStore: h.settings }));
+vi.mock('./files', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./files')>()),
+  getAudioMetadata: vi.fn(() => Promise.resolve({ durationSec: 1, sampleRate: 48000, channels: 1, audiomoth: null })),
+}));
 
-const { registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
+const { isAnalysisActive, registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
 const { runAnalysis } = await import('../birda/runner');
 const { createRun, finishRun } = await import('../db/runs');
 const { createLocation, findLocationByCoords } = await import('../db/locations');
 const { createAudioFile } = await import('../db/audio-files');
+const { importDetectionsFromJson, insertDetections } = await import('../db/detections');
+const { getAudioMetadata } = await import('./files');
 registerAnalysisHandlers();
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-analysis-test-'));
@@ -91,12 +82,6 @@ fs.writeFileSync(sourceFile, '');
 afterAll(() => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
-
-function invoke(channel: string, ...args: unknown[]): unknown {
-  const fn = h.handlers.get(channel);
-  if (!fn) throw new Error(`no handler for ${channel}`);
-  return fn({}, ...args);
-}
 
 const analyze = (source = sourceFile, extra: Record<string, unknown> = {}) =>
   invoke('birda:analyze', {
@@ -127,16 +112,33 @@ async function started(count = 1) {
   return h.handles[count - 1];
 }
 
-function lastStatusEvent(): AnalysisStatus {
-  const events = h.sent.filter((s) => s.channel === 'birda:analysis-status-changed');
-  return events[events.length - 1].payload as AnalysisStatus;
+const statusEvents = () => sentOn('birda:analysis-status-changed') as AnalysisStatus[];
+const lastStatusEvent = () => statusEvents().at(-1);
+
+/** A promise settled from outside, for holding an await open. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (err: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
+
+// Temp directories a test created; removed even when the test fails.
+const leftovers: string[] = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
   h.handles = [];
-  h.sent = [];
+  resetIpc();
   h.settings.get.mockResolvedValue({ default_execution_provider: 'cpu' });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const dir of leftovers.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe('birda:analyze', () => {
@@ -343,7 +345,7 @@ describe('birda:analyze outcomes', () => {
     firstHandle.reject(new Error('birda exited with code 2'));
     await expect(first).rejects.toThrow();
     expect(exists(kept)).toBe(true);
-    fs.rmSync(kept, { recursive: true, force: true });
+    leftovers.push(kept);
 
     const second = analyze(tmp);
     const secondHandle = await started(2);
@@ -369,7 +371,6 @@ describe('stopAnalysisForQuit', () => {
     await run;
     expect(finishRun).toHaveBeenCalledTimes(1);
     expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed', false);
-    rm.mockRestore();
   });
 
   it('writes nothing for events that arrive after the quit', async () => {
@@ -395,5 +396,154 @@ describe('stopAnalysisForQuit', () => {
     handle.reject(new AnalysisCancelledError());
     await expect(run).resolves.toMatchObject({ status: 'cancelled' });
     expect(finishRun).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('birda:analyze, the rest of the outcome space', () => {
+  it('replaces earlier results after a single file was analysed', async () => {
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: sourceFile, status: 'processed', detections: 0 }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'completed' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed', true);
+  });
+
+  it('records a directory run with some failed files as completed with errors', async () => {
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 2 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
+    handle.emit(envelope('file_completed', { file: 'b.wav', status: 'failed' }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'completed_with_errors' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed_with_errors', true);
+  });
+
+  it('reports the run and whether its partial results were discarded when stopped', async () => {
+    vi.mocked(finishRun).mockReturnValueOnce({ replaced: 0, discardedPartial: true });
+    const run = analyze();
+    (await started()).reject(new AnalysisCancelledError());
+    const result = await run;
+    expect(result).toEqual({ runId: expect.any(Number) as number, status: 'cancelled', discardedPartial: true });
+  });
+
+  it('counts a JSON import that failed as a failed file', async () => {
+    vi.mocked(importDetectionsFromJson).mockRejectedValueOnce(new Error('bad JSON'));
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'failed' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'failed', false);
+  });
+
+  it('counts a single-file insert that failed as a failed file', async () => {
+    vi.mocked(insertDetections).mockImplementationOnce(() => {
+      throw new Error('disk full');
+    });
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('detections', { file: sourceFile, detections: [{ scientific_name: 'Turdus merula' }] }));
+    handle.emit(envelope('file_completed', { file: sourceFile, status: 'processed', detections: 1 }));
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'failed' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'failed', false);
+  });
+
+  it('records the run only after every pending import has finished', async () => {
+    const importDone = deferred<{ detections: number; sourceFile: string }>();
+    vi.mocked(importDetectionsFromJson).mockReturnValueOnce(importDone.promise);
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 2 }));
+    handle.resolve();
+
+    await vi.waitFor(() => {
+      expect(importDetectionsFromJson).toHaveBeenCalled();
+    });
+    await new Promise((r) => setImmediate(r));
+    expect(finishRun).not.toHaveBeenCalled();
+
+    importDone.resolve({ detections: 2, sourceFile: 'a.wav' });
+    await expect(run).resolves.toMatchObject({ status: 'completed' });
+  });
+
+  it('pushes the running and stopping states to every window as they happen', async () => {
+    const run = analyze();
+    const handle = await started();
+    expect(lastStatusEvent()).toMatchObject({ state: 'running', sourcePath: sourceFile });
+    cancel();
+    expect(lastStatusEvent()).toMatchObject({ state: 'stopping' });
+    const count = statusEvents().length;
+    cancel();
+    expect(statusEvents()).toHaveLength(count);
+    handle.reject(new AnalysisCancelledError());
+    await run;
+  });
+
+  it('reports no analysis to stop when idle', () => {
+    expect(cancel()).toBe(false);
+    expect(isAnalysisActive()).toBe(false);
+  });
+
+  it('is active from the start of an analysis until it has finished', async () => {
+    const run = analyze();
+    const handle = await started();
+    expect(isAnalysisActive()).toBe(true);
+    handle.resolve();
+    await run;
+    expect(isAnalysisActive()).toBe(false);
+  });
+
+  it('takes birda’s final detection total for the progress snapshot', async () => {
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 1 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 2 }));
+    handle.emit(envelope('pipeline_completed', { total_detections: 5 }));
+    expect(status()).toMatchObject({ progress: { totalDetections: 5 } });
+    handle.resolve();
+    await run;
+  });
+});
+
+describe('stopAnalysisForQuit, imports in flight', () => {
+  it('writes nothing for a file whose import was in flight when the app quit', async () => {
+    const metadata = deferred<Awaited<ReturnType<typeof getAudioMetadata>>>();
+    vi.mocked(getAudioMetadata).mockReturnValueOnce(metadata.promise);
+    const run = analyze();
+    const handle = await started();
+    handle.emit(envelope('detections', { file: sourceFile, detections: [{ scientific_name: 'Turdus merula' }] }));
+
+    stopAnalysisForQuit();
+    metadata.resolve({ durationSec: 1, sampleRate: 48000, channels: 1, audiomoth: null });
+    handle.reject(new AnalysisCancelledError());
+    await run;
+    expect(createAudioFile).not.toHaveBeenCalled();
+  });
+
+  it('tells a directory import still reading its JSON to skip the insert after a quit', async () => {
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 1 }));
+    await vi.waitFor(() => {
+      expect(importDetectionsFromJson).toHaveBeenCalled();
+    });
+    const shouldSkipInsert = vi.mocked(importDetectionsFromJson).mock.calls[0][4];
+    expect(shouldSkipInsert?.()).toBe(false);
+
+    stopAnalysisForQuit();
+    expect(shouldSkipInsert?.()).toBe(true);
+    handle.reject(new AnalysisCancelledError());
+    await run;
   });
 });

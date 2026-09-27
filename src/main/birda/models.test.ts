@@ -1,10 +1,8 @@
-import os from 'node:os';
-import path from 'node:path';
-import fs from 'node:fs';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeChild } from './fake-child';
+import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
+import { NO_USER_DATA } from '../test-support/ipc-harness';
 
-vi.mock('electron', () => ({ app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir') } }));
+vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
 
 const spawned = vi.hoisted(() => ({ children: [] as unknown[] }));
 vi.mock('child_process', async (importOriginal) => ({
@@ -19,23 +17,12 @@ vi.mock('child_process', async (importOriginal) => ({
 const { CANCEL_KILL_TIMEOUT_MS, setBirdaPath } = await import('./runner');
 const { ModelInstallCancelledError, cancelInstall, getInstallStatus, installModel } = await import('./models');
 
-const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-models-test-'));
-const birdaPath = path.join(binDir, 'birda');
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
-fs.writeFileSync(birdaPath, '');
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
-fs.chmodSync(birdaPath, 0o755);
-
-async function spawnedChild(): Promise<FakeChild> {
-  await vi.waitFor(() => {
-    expect(spawned.children).toHaveLength(1);
-  });
-  return spawned.children[0] as FakeChild;
-}
+const fakeBirda = createFakeBirda();
+const spawnedChild = () => waitForChild(spawned.children);
 
 beforeEach(() => {
   spawned.children = [];
-  setBirdaPath(birdaPath);
+  setBirdaPath(fakeBirda.path);
 });
 
 afterEach(() => {
@@ -43,10 +30,48 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(binDir, { recursive: true, force: true });
+  fakeBirda.remove();
+});
+
+describe('installModel', () => {
+  it('waits for close when a started install reports an error', async () => {
+    const install = installModel({ id: 'birdnet' });
+    const child = await spawnedChild();
+    let settled = false;
+    install.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+    child.emit('error', new Error('kill EPERM'));
+    await new Promise((r) => setImmediate(r));
+    expect(settled).toBe(false);
+
+    child.stdout.write(JSON.stringify({ payload: { id: 'birdnet' } }));
+    child.exit(0);
+    await expect(install).resolves.toEqual({ id: 'birdnet' });
+  });
+
+  it('rejects an install whose process failed to start, and frees the slot', async () => {
+    const install = installModel({ id: 'birdnet' });
+    (await spawnedChild()).failToSpawn();
+    await expect(install).rejects.toThrow('Model install failed: spawn birda ENOENT');
+    expect(getInstallStatus()).toBeNull();
+  });
 });
 
 describe('cancelInstall', () => {
+  it('leaves no kill timer once a cancelled install exits', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const install = installModel({ id: 'birdnet' });
+    const child = await spawnedChild();
+    cancelInstall();
+    child.exit(null, 'SIGTERM');
+    await expect(install).rejects.toBeInstanceOf(ModelInstallCancelledError);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(CANCEL_KILL_TIMEOUT_MS);
+    expect(child.killCalls).toEqual(['SIGTERM']);
+  });
+
   it('sends SIGKILL to an install that ignores SIGTERM and keeps the slot until it exits', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const install = installModel({ id: 'birdnet' });

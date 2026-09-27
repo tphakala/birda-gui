@@ -1,11 +1,10 @@
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from './analysis-session';
-import { FakeChild } from './fake-child';
+import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
+import { NO_USER_DATA } from '../test-support/ipc-harness';
 
-vi.mock('electron', () => ({ app: { getPath: () => path.join(os.tmpdir(), 'birda-gui-test-no-such-dir') } }));
+vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
 
 const spawned = vi.hoisted(() => ({ children: [] as unknown[] }));
 vi.mock('child_process', async (importOriginal) => ({
@@ -19,25 +18,13 @@ vi.mock('child_process', async (importOriginal) => ({
 
 const { CANCEL_KILL_TIMEOUT_MS, killAll, runAnalysis, setBirdaPath } = await import('./runner');
 
-const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-runner-test-'));
-const birdaPath = path.join(binDir, 'birda');
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
-fs.writeFileSync(birdaPath, '');
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- test fixture under a fresh temp dir
-fs.chmodSync(birdaPath, 0o755);
-
+const fakeBirda = createFakeBirda();
 const options = { model: 'birdnet', minConfidence: 0.1 };
-
-async function spawnedChild(): Promise<FakeChild> {
-  await vi.waitFor(() => {
-    expect(spawned.children).toHaveLength(1);
-  });
-  return spawned.children[0] as FakeChild;
-}
+const spawnedChild = () => waitForChild(spawned.children);
 
 beforeEach(() => {
   spawned.children = [];
-  setBirdaPath(birdaPath);
+  setBirdaPath(fakeBirda.path);
 });
 
 afterEach(() => {
@@ -45,7 +32,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(binDir, { recursive: true, force: true });
+  fakeBirda.remove();
 });
 
 describe('runAnalysis', () => {
@@ -57,7 +44,7 @@ describe('runAnalysis', () => {
   });
 
   it('rejects as cancelled when birda cannot be found after a cancel', async () => {
-    setBirdaPath(path.join(binDir, 'missing', 'birda'));
+    setBirdaPath(path.join(path.dirname(fakeBirda.path), 'missing', 'birda'));
     const handle = runAnalysis('/rec.wav', options);
     handle.cancel();
     await expect(handle.promise).rejects.toBeInstanceOf(AnalysisCancelledError);
@@ -155,12 +142,16 @@ describe('runAnalysis', () => {
     await expect(handle.promise).rejects.toThrow('Failed to start birda: argument must not contain null bytes');
   });
 
-  it('rejects when birda fails to start', async () => {
+  it('rejects when birda fails to start, and releases it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const handle = runAnalysis('/rec.wav', options);
     const child = await spawnedChild();
-    child.pid = undefined;
-    child.emit('error', new Error('spawn ENOENT'));
-    await expect(handle.promise).rejects.toThrow('Failed to start birda: spawn ENOENT');
+    handle.cancel();
+    child.failToSpawn();
+    await expect(handle.promise).rejects.toThrow('Failed to start birda: spawn birda ENOENT');
+    expect(vi.getTimerCount()).toBe(0);
+    killAll();
+    expect(child.killCalls).toEqual(['SIGTERM']);
   });
 });
 
