@@ -4,12 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  # Run manually on a v* tag ref to redo a release; a branch ref is refused.
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version override (e.g., 0.1.0). Defaults to package.json version.'
-        required: false
-        type: string
 
 concurrency:
   group: release
@@ -36,39 +32,29 @@ jobs:
         with:
           persist-credentials: false
 
+      # The packages are named from package.json, so the tag must match it.
+      # Running on a branch is refused: the release would take the tag name
+      # of an existing release and replace its assets with this build.
       - name: Determine version
         id: version
         shell: bash
-        env:
-          REF_TYPE: ${{ github.ref_type }}
-          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          if [[ "$REF_TYPE" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          elif [[ -n "$VERSION_INPUT" ]]; then
-            VERSION="$VERSION_INPUT"
-          else
-            VERSION=$(node -p "require('./package.json').version")
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "::error::Releases run from a v* tag ref, not $GITHUB_REF_TYPE $GITHUB_REF_NAME"
+            exit 1
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [[ "$VERSION" != "$PKG_VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "### Release version: $VERSION" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Validate tag matches package.json
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) !== package.json version ($PKG_VERSION)"
-            exit 1
-          fi
-
   build:
     name: Build (${{ matrix.platform }})
     needs: [checks, validate]
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -125,10 +111,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The release job publishes; electron-builder would otherwise publish
+      # on its own because package.json names a GitHub repository.
       - name: Package
-        run: npx electron-builder ${{ matrix.dist-flag }}
+        run: npx electron-builder ${{ matrix.dist-flag }} --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_TEAM_ID: ${{ matrix.platform == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           APPLE_ID: ${{ matrix.platform == 'macos' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'macos' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
@@ -153,10 +140,6 @@ jobs:
             release/*.dmg
             release/*.AppImage
             release/*.deb
-            release/*.yml
-            release/*.yaml
-            !release/builder-debug.yml
-            !release/builder-effective-config.yaml
           if-no-files-found: error
           retention-days: 5
 
@@ -166,12 +149,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      release-id: ${{ steps.gh-release.outputs.id }}
 
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
@@ -183,9 +164,10 @@ jobs:
         run: ls -lh artifacts/
 
       - name: Create GitHub Release
+        id: gh-release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', needs.validate.outputs.version) }}
+          tag_name: ${{ github.ref_name }}
           name: Birda GUI v${{ needs.validate.outputs.version }}
           draft: false
           prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
@@ -201,10 +183,10 @@ jobs:
 
             | Platform | File | Type |
             |----------|------|------|
-            | Windows | `Birda GUI Setup ${{ needs.validate.outputs.version }}.exe` | Installer |
-            | Windows | `Birda GUI ${{ needs.validate.outputs.version }}.exe` | Portable |
-            | Linux | `Birda GUI-${{ needs.validate.outputs.version }}.AppImage` | AppImage |
-            | Linux | `birda-gui_${{ needs.validate.outputs.version }}_amd64.deb` | Debian package |
-            | macOS | `Birda GUI-${{ needs.validate.outputs.version }}.dmg` | Disk image |
+            | Windows | `Birda-GUI-Setup-${{ needs.validate.outputs.version }}-windows-x64.exe` | Installer |
+            | Windows | `Birda-GUI-${{ needs.validate.outputs.version }}-windows-x64.exe` | Portable |
+            | Linux | `Birda-GUI-${{ needs.validate.outputs.version }}-linux-x86_64.AppImage` | AppImage |
+            | Linux | `Birda-GUI-${{ needs.validate.outputs.version }}-linux-amd64.deb` | Debian package |
+            | macOS | `Birda-GUI-${{ needs.validate.outputs.version }}-macos-arm64.dmg` | Disk image (Apple silicon) |
 
             The birda CLI is bundled with all release builds. No separate installation required.
