@@ -190,3 +190,14 @@ jobs:
             | macOS | `Birda-GUI-${{ needs.validate.outputs.version }}-macos-arm64.dmg` | Disk image (Apple silicon) |
 
             The birda CLI is bundled with all release builds. No separate installation required.
+
+  scan:
+    needs: release
+    permissions:
+      # The scan appends its results to the release notes.
+      contents: write
+    uses: ./.github/workflows/virustotal.yml
+    with:
+      release_id: ${{ needs.release.outputs.release-id }}
+    secrets:
+      VT_API_KEY: ${{ secrets.VT_API_KEY }}
