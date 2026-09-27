@@ -80,7 +80,7 @@ shared/
   types.ts            # TypeScript interfaces shared between main and renderer
 messages/
   en.json             # i18n message catalog (Paraglide)
-build/                # Electron-builder resources (icons, NSIS installer script)
+build/                # Electron-builder resources (icons, NSIS installer script), plus vite/ with the Vite configs
 ```
 
 ## Path Aliases
@@ -123,8 +123,8 @@ task format:check           # Prettier check (CI)
 # Testing
 npm run test                # vitest run (unit tests; no Taskfile target yet)
 
-# Full validation (CI equivalent)
-npm run validate            # format:check + lint + typecheck + test + validate:translations + npm audit
+# Full validation (every CI check except the build)
+npm run validate            # format:check + lint + typecheck + test + knip + validate:translations + npm audit
 
 # Packaging
 task dist                   # Build + electron-builder for current platform
@@ -141,26 +141,26 @@ task clean                  # Remove out/ and release/
 
 - **Tailwind CSS v4** with `@tailwindcss/vite` plugin (no PostCSS config needed)
 - **daisyUI v5** component classes (`btn`, `input`, `modal`, `table`, `badge`, `select`, etc.)
-- Two custom themes: `birda-light` and `birda-dark` (defined in `tailwind.config.ts`)
+- Two custom themes: `birda-light` and `birda-dark` (defined with `@plugin 'daisyui/theme'` in `src/renderer/src/app.css`)
 - Theme switching via `data-theme` attribute on `<html>`
-- Custom brand color: `birda-blue: #023E8A`
+- Brand blue `#023E8A` is the theme primary and accent color (a brighter variant in `birda-dark`)
 - Prettier plugin auto-sorts Tailwind classes
 
 Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unless absolutely necessary.
 
 ## Linting
 
-**ESLint 9 flat config** (`eslint.config.js`):
+**ESLint 10 flat config** (`eslint.config.js`):
 
-- `typescript-eslint:recommended-type-checked` with both tsconfig files
-- `eslint-plugin-security` for `src/main/` and `src/preload/` (Node.js code)
+- `typescript-eslint` `strictTypeChecked` + `stylisticTypeChecked` with both tsconfig files; the root JS configs (`eslint.config.js`, `svelte.config.mjs`) are in no tsconfig and are linted without type information
+- `eslint-plugin-security` for `src/main/` (Node.js code)
 - `eslint-plugin-no-unsanitized` for `src/renderer/` (XSS prevention)
 - `eslint-plugin-svelte:flat/recommended` for `.svelte` files
 - Key rules enforced: `eqeqeq`, `no-eval`, `no-implied-eval`, `prefer-const`, `no-var`
 
 **Prettier** (`.prettierrc`): single quotes, trailing commas, 120 char width, 2-space indent.
 
-**Pre-commit hook** (Husky + lint-staged): runs ESLint fix + Prettier on staged `.ts`/`.svelte` files.
+**Pre-commit hook** (Husky + lint-staged): runs ESLint fix + Prettier on staged `.ts`/`.svelte` files, and Prettier on staged `.json`/`.md`/`.css`/`.html` files.
 
 ## Svelte 5 Patterns
 
@@ -237,10 +237,12 @@ Usage in components:
 **Vitest** is configured for unit tests. Run with `npm run test` (`vitest run`); it is part of `npm run validate` and runs in CI.
 
 - Config: `vitest.config.ts` (node environment; aliases mirror the app's `$lib` / `$shared` / `$paraglide` paths).
-- Test files: co-located `*.test.ts` next to the code under test (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`, `build/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`, `build/vite/externalize.test.ts`.
+- Test files: co-located `*.test.ts` next to the code under test (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`, `build/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`, `build/vite/externalize.test.ts`. `src/renderer/src/lib/aliases.test.ts` value-imports through each path alias, since type-only imports never resolve them.
 - Scope: framework-free logic only. The node environment has no DOM, so there are no Svelte component or DOM tests.
 
 Additional quality gates: strict TypeScript (both tsconfigs), ESLint with type-aware and security rules, knip (dead code detection), npm audit (dependency security), and pre-commit hooks (lint-staged).
+
+CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workflows/checks.yml`, so pull requests and release tags run the same checks.
 
 ## Key Conventions
 
@@ -262,7 +264,7 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 #### Commands
 
 - **Index Name:** `birda-gui`
-- **Rebuild Index:** `fish -c "leann build birda-gui --docs src shared messages build electron-builder.yml package.json tsconfig.json tsconfig.node.json Taskfile.yml eslint.config.js tailwind.config.ts --use-ast-chunking --force"`
+- **Rebuild Index:** `fish -c "leann build birda-gui --docs src shared messages build package.json tsconfig.json tsconfig.node.json Taskfile.yml eslint.config.js vitest.config.ts --use-ast-chunking --force"`
 - **Search:** `fish -c "leann search birda-gui '<query>'"` - Fast file/module location (instant)
 - **Ask:** `fish -c "leann ask birda-gui '<question>'"` - Comprehensive answers with code context (15-37s)
 
