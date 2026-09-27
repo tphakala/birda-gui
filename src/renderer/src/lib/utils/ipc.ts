@@ -54,7 +54,7 @@ export function getAnalysisStatus(): Promise<AnalysisStatus> {
 
 /** Returns a function that removes this listener. */
 export function onAnalysisState(callback: (status: AnalysisStatus) => void): () => void {
-  return window.birda.on('birda:analysis-state', (status) => {
+  return window.birda.on('birda:analysis-status-changed', (status) => {
     callback(status as AnalysisStatus);
   });
 }

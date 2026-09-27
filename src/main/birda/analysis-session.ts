@@ -1,4 +1,4 @@
-import type { AnalysisStatus } from '$shared/types';
+import type { AnalysisProgressSnapshot, AnalysisStatus } from '$shared/types';
 
 /** Rejects an analysis that ended because the user cancelled it. */
 export class AnalysisCancelledError extends Error {
@@ -30,6 +30,18 @@ interface Cancellable {
 export class AnalysisSession {
   private handle: Cancellable | null = null;
   private cancelled = false;
+  /** The catalog run, once created. */
+  runId: number | null = null;
+  /** birda's temporary output directory, for a directory analysis. */
+  outputDir: string | null = null;
+  /** The app is quitting: the run was already recorded and the catalog is closing. */
+  quitting = false;
+  readonly progress: AnalysisProgressSnapshot = {
+    totalFiles: 0,
+    filesProcessed: 0,
+    filesFailed: 0,
+    totalDetections: 0,
+  };
 
   constructor(readonly sourcePath: string) {}
 
@@ -37,7 +49,7 @@ export class AnalysisSession {
     return this.cancelled;
   }
 
-  /** Connects the running birda process. A cancel requested before this is passed on. */
+  /** Connects the birda process. A cancel requested before this is passed on to it. */
   attach(handle: Cancellable): void {
     this.handle = handle;
     if (this.cancelled) handle.cancel();
@@ -63,7 +75,11 @@ export class AnalysisLock {
 
   acquire(sourcePath: string): AnalysisSession {
     if (this.current) {
-      throw new Error('An analysis is already running. Cancel it first.');
+      throw new Error(
+        this.current.cancelRequested
+          ? 'The previous analysis is still stopping. Try again when it has stopped.'
+          : 'An analysis is already running. Cancel it first.',
+      );
     }
     this.current = new AnalysisSession(sourcePath);
     return this.current;
@@ -78,6 +94,7 @@ export class AnalysisLock {
     return {
       state: this.current.cancelRequested ? 'stopping' : 'running',
       sourcePath: this.current.sourcePath,
+      progress: { ...this.current.progress },
     };
   }
 }

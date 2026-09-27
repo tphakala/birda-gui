@@ -53,6 +53,15 @@ describe('AnalysisSession', () => {
 });
 
 describe('AnalysisLock', () => {
+  it('reports a copy of the session progress', () => {
+    const lock = new AnalysisLock();
+    const session = lock.acquire('/a');
+    session.progress.totalFiles = 2;
+    const status = lock.status();
+    session.progress.totalFiles = 3;
+    expect(status).toMatchObject({ progress: { totalFiles: 2 } });
+  });
+
   it('refuses a second analysis while one holds the lock', () => {
     const lock = new AnalysisLock();
     lock.acquire('/a');
@@ -63,8 +72,12 @@ describe('AnalysisLock', () => {
     const lock = new AnalysisLock();
     const session = lock.acquire('/a');
     session.cancel();
-    expect(lock.status()).toEqual({ state: 'stopping', sourcePath: '/a' });
-    expect(() => lock.acquire('/b')).toThrow('already running');
+    expect(lock.status()).toEqual({
+      state: 'stopping',
+      sourcePath: '/a',
+      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0 },
+    });
+    expect(() => lock.acquire('/b')).toThrow('still stopping');
 
     lock.release(session);
     expect(lock.status()).toEqual({ state: 'idle' });
@@ -79,6 +92,10 @@ describe('AnalysisLock', () => {
 
     lock.release(first);
     expect(lock.active).toBe(second);
-    expect(lock.status()).toEqual({ state: 'running', sourcePath: '/b' });
+    expect(lock.status()).toEqual({
+      state: 'running',
+      sourcePath: '/b',
+      progress: { totalFiles: 0, filesProcessed: 0, filesFailed: 0, totalDetections: 0 },
+    });
   });
 });

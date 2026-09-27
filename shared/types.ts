@@ -283,10 +283,26 @@ export interface AnalysisRequest {
 export interface AnalysisResult {
   runId: number | null;
   status: FinishedRunStatus;
+  /** The run's partial results were deleted because an earlier complete result for the same source and model exists. */
+  discardedPartial: boolean;
 }
 
-/** Whether an analysis holds the lock; sent on birda:analysis-state whenever it changes. */
-export type AnalysisStatus = { state: 'idle' } | { state: 'running' | 'stopping'; sourcePath: string };
+/** Progress counted from the analysis events so far, for a window that joins a running analysis. */
+export interface AnalysisProgressSnapshot {
+  totalFiles: number;
+  filesProcessed: number;
+  filesFailed: number;
+  totalDetections: number;
+}
+
+/**
+ * Whether an analysis holds the lock. birda:analysis-status returns it, and
+ * birda:analysis-status-changed sends it whenever it changes; only that event's
+ * idle status carries finished, the outcome of the analysis that just ended.
+ */
+export type AnalysisStatus =
+  | { state: 'idle'; finished?: AnalysisResult & { error?: string } }
+  | { state: 'running' | 'stopping'; sourcePath: string; progress: AnalysisProgressSnapshot };
 
 export interface DetectionFilter {
   species?: string | undefined;

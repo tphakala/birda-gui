@@ -8,7 +8,6 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'app:get-settings',
   'app:set-settings',
   'app:check-birda',
-  'app:get-log',
   'birda:analyze',
   'birda:analysis-status',
   'birda:cancel-analysis',
@@ -71,7 +70,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
 
 const ALLOWED_RECEIVE_CHANNELS = new Set([
   'birda:analysis-progress',
-  'birda:analysis-state',
+  'birda:analysis-status-changed',
   'birda:models-install-progress',
   'cuda:download-progress',
   'app:log',

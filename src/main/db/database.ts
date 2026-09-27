@@ -5,6 +5,8 @@ import { RUN_STATUS_CHECK, SCHEMA_SQL } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
 let db: Database.Database | null = null;
+// Set when the app quits, so late work cannot reopen the catalog after it was closed.
+let closedForShutdown = false;
 
 export function getDbPath(): string {
   return path.join(app.getPath('userData'), 'birda-catalog.db');
@@ -12,6 +14,7 @@ export function getDbPath(): string {
 
 export function getDb(): Database.Database {
   if (db) return db;
+  if (closedForShutdown) throw new Error('The catalog is closed because the app is quitting');
 
   const conn = new Database(getDbPath());
   try {
@@ -531,4 +534,10 @@ export function closeDb(): void {
     db.close();
     db = null;
   }
+}
+
+/** Closes the catalog for good; getDb() throws from then on. */
+export function closeDbForShutdown(): void {
+  closedForShutdown = true;
+  closeDb();
 }
