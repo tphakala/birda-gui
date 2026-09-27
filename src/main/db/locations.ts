@@ -1,5 +1,6 @@
 import { getDb } from './database';
 import type { Location } from '$shared/types';
+import { FINISHED_RUN_IDS } from './schema';
 
 export function createLocation(
   latitude: number,
@@ -53,7 +54,7 @@ export function getLocationsWithCounts(): (Location & { detection_count: number;
         COUNT(*) as detection_count,
         COUNT(DISTINCT scientific_name) as species_count
       FROM detections
-      WHERE location_id IS NOT NULL
+      WHERE location_id IS NOT NULL AND run_id IN (${FINISHED_RUN_IDS})
       GROUP BY location_id
     ) d ON l.id = d.location_id
     ORDER BY detection_count DESC

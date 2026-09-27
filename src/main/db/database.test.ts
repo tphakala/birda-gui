@@ -268,8 +268,11 @@ describe('initializeCatalog', () => {
     expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
-  it('keeps every analysis_runs value and the id sequence through the status rebuilds', () => {
-    const db = v121Catalog([1, 2, 3, 4, 5, 6]);
+  it.each([
+    ['migration 8', [1, 2, 3, 4, 5, 6]],
+    ['migrations 4 and 8', [1, 2, 3]],
+  ])('keeps every analysis_runs value and the id sequence through the rebuild in %s', (_, versions) => {
+    const db = v121Catalog(versions);
     db.exec(`
       INSERT INTO analysis_runs
         (id, location_id, source_path, model, min_confidence, settings_json, status, started_at, completed_at, timezone_offset_min)

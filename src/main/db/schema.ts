@@ -1,7 +1,29 @@
-import { RUN_STATUSES } from '$shared/constants';
+import { RUN_STATUSES, UNFINISHED_RUN_STATUSES } from '$shared/constants';
+
+/** A list of fixed string constants for an SQL IN clause, e.g. 'a','b'. Never for user input. */
+export function sqlList(values: readonly string[]): string {
+  return values.map((v) => `'${v}'`).join(',');
+}
 
 /** The status CHECK for analysis_runs, shared by SCHEMA_SQL and the migration that last changed it. */
-export const RUN_STATUS_CHECK = `CHECK (status IN (${RUN_STATUSES.map((s) => `'${s}'`).join(',')}))`;
+export const RUN_STATUS_CHECK = `CHECK (status IN (${sqlList(RUN_STATUSES)}))`;
+
+/** Ids of finished runs. Catalog-wide counts use only these, so a re-analysis in progress is not counted twice. */
+export const FINISHED_RUN_IDS = `SELECT id FROM analysis_runs WHERE status NOT IN (${sqlList(UNFINISHED_RUN_STATUSES)})`;
+
+/** species_summary, shared by SCHEMA_SQL and the migration that last changed it. */
+export const SPECIES_SUMMARY_VIEW = `
+CREATE VIEW IF NOT EXISTS species_summary AS
+SELECT
+    scientific_name,
+    COUNT(DISTINCT location_id) AS location_count,
+    COUNT(*) AS detection_count,
+    MAX(detected_at) AS last_detected,
+    AVG(confidence) AS avg_confidence
+FROM detections
+WHERE run_id IN (${FINISHED_RUN_IDS})
+GROUP BY scientific_name;
+`;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS locations (
@@ -89,13 +111,5 @@ CREATE TABLE IF NOT EXISTS annotations (
 CREATE INDEX IF NOT EXISTS idx_annotations_audio_file ON annotations(audio_file_id);
 CREATE INDEX IF NOT EXISTS idx_annotations_detection ON annotations(detection_id);
 
-CREATE VIEW IF NOT EXISTS species_summary AS
-SELECT
-    scientific_name,
-    COUNT(DISTINCT location_id) AS location_count,
-    COUNT(*) AS detection_count,
-    MAX(detected_at) AS last_detected,
-    AVG(confidence) AS avg_confidence
-FROM detections
-GROUP BY scientific_name;
+${SPECIES_SUMMARY_VIEW}
 `;

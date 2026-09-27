@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
 import { createRun, finishRun, markStaleRunsAsFailed } from './runs';
+import { getCatalogStats, getSpeciesSummary } from './detections';
 
 // A userData directory that does not exist, so a real getDb() reached by a
 // broken mock fails instead of creating a catalog in the working directory.
@@ -152,6 +153,31 @@ describe('finishRun', () => {
     },
   );
 
+  it.each(['cancelled', 'failed'] as const)(
+    'keeps earlier partial runs when a %s run has no results of its own',
+    (finalStatus) => {
+      const earlier = runWithResults('/rec', 'birdnet', 'cancelled');
+      db()
+        .prepare(
+          "INSERT INTO annotations (audio_file_id, start_time, end_time, scientific_name, source, status) SELECT id, 5, 6, 'Parus major', 'manual', 'manual' FROM audio_files WHERE run_id = ?",
+        )
+        .run(earlier);
+      const current = createRun('/rec', 'birdnet', 0.1).id;
+
+      expect(finishRun(current, finalStatus)).toEqual({ replaced: 0, discardedPartial: false });
+      expect(runIds()).toEqual([earlier, current]);
+      expect(resultRows(earlier)).toEqual([1, 1, 2]);
+    },
+  );
+
+  it('keeps earlier partial runs when a completed run analysed no files', () => {
+    const earlier = runWithResults('/rec', 'birdnet', 'failed');
+    const current = createRun('/rec', 'birdnet', 0.1).id;
+
+    expect(finishRun(current, 'completed', false)).toEqual({ replaced: 0, discardedPartial: false });
+    expect(runIds()).toEqual([earlier, current]);
+  });
+
   it('drops a partial run’s results when the earlier result completed with errors', () => {
     const earlier = runWithResults('/rec', 'birdnet', 'completed_with_errors');
     const current = runWithResults('/rec', 'birdnet', 'running');
@@ -239,5 +265,18 @@ describe('markStaleRunsAsFailed', () => {
     expect(resultRows(stale)).toEqual([0, 0, 0]);
     expect(resultRows(earlier)).toEqual([1, 1, 1]);
     expect(resultRows(other)).toEqual([1, 1, 1]);
+  });
+});
+
+describe('catalog-wide counts', () => {
+  it('count finished runs only, so a re-analysis in progress is not counted twice', () => {
+    runWithResults('/rec', 'birdnet', 'completed');
+    const running = runWithResults('/rec', 'birdnet', 'running');
+
+    expect(getCatalogStats()).toMatchObject({ total_detections: 1, total_species: 1 });
+    expect(getSpeciesSummary()).toMatchObject([{ scientific_name: 'Turdus merula', detection_count: 1 }]);
+
+    finishRun(running, 'completed');
+    expect(getCatalogStats()).toMatchObject({ total_detections: 1 });
   });
 });

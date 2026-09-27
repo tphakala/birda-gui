@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
-import { RUN_STATUS_CHECK, SCHEMA_SQL } from './schema';
+import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
 let db: Database.Database | null = null;
@@ -255,6 +255,16 @@ function runMigrations(db: Database.Database): void {
     console.log('Migrating to version 8: Add cancelled status');
     rebuildAnalysisRuns(db, RUN_STATUS_CHECK, 8);
   }
+
+  // Migration 9: species_summary counts finished runs only
+  if (!applied.has(9)) {
+    console.log('Migrating to version 9: species_summary counts finished runs only');
+    db.transaction(() => {
+      db.exec('DROP VIEW IF EXISTS species_summary');
+      db.exec(SPECIES_SUMMARY_VIEW);
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(9);
+    })();
+  }
 }
 
 /**
@@ -270,6 +280,13 @@ function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version
     db.transaction(() => {
       const seq = db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'analysis_runs'").get() as
         { seq: number } | undefined;
+      // A view that reads analysis_runs would block the rename below while the
+      // table is missing, so views are set aside and restored unchanged.
+      const views = db.prepare("SELECT name, sql FROM sqlite_master WHERE type = 'view'").all() as {
+        name: string;
+        sql: string;
+      }[];
+      for (const view of views) db.exec(`DROP VIEW "${view.name}"`);
       db.exec(`
         CREATE TABLE analysis_runs_new (
           id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -291,6 +308,7 @@ function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version
         DROP TABLE analysis_runs;
         ALTER TABLE analysis_runs_new RENAME TO analysis_runs;
       `);
+      for (const view of views) db.exec(view.sql);
       if (seq) {
         db.prepare("DELETE FROM sqlite_sequence WHERE name = 'analysis_runs'").run();
         db.prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('analysis_runs', ?)").run(seq.seq);
