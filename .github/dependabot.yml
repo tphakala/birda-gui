@@ -11,13 +11,17 @@ updates:
       - dependencies
       - npm
     groups:
-      # @sveltejs/vite-plugin-svelte 7.x peers on vite ^8 only, so a vite major
-      # cannot install on its own. Upgrade the Vite toolchain in one PR.
+      # @sveltejs/vite-plugin-svelte, vitest and @tailwindcss/vite each cap
+      # their vite peer range at ^8, so a vite major cannot install on its own.
+      # @tailwindcss/vite depends on an exact tailwindcss version. Upgrade the
+      # Vite toolchain in one PR.
       vite-toolchain:
         patterns:
           - vite
           - vitest
           - '@sveltejs/vite-plugin-svelte'
+          - '@tailwindcss/vite'
+          - tailwindcss
     ignore:
       # Tracks the Node.js version bundled with Electron, so majors move by hand
       # with Electron upgrades.
