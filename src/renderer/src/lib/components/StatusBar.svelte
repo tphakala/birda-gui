@@ -51,8 +51,8 @@
 <div class="border-base-300 bg-base-200 text-base-content/60 flex items-center gap-4 border-t px-3 py-1.5 text-xs">
   <span>
     {#if appState.isAnalysisRunning}
-      <span class="bg-primary mr-1 inline-block h-2 w-2 animate-pulse rounded-full"></span>
-      {m.status_analyzing()}
+      <span class="bg-primary mr-1 inline-block h-2 w-2 rounded-full motion-safe:animate-pulse"></span>
+      {appState.isAnalysisStopping ? m.analysis_stopping() : m.status_analyzing()}
     {:else}
       {m.status_ready()}
     {/if}
@@ -60,7 +60,10 @@
 
   <div class="bg-base-300 h-3 w-px"></div>
 
-  <span>{m.status_detections({ count: formatNumber(appState.catalogStats.total_detections) })}</span>
+  <!-- Totals of finished analyses; a running one is counted when it ends. -->
+  <span title={m.status_catalogTotals()}
+    >{m.status_detections({ count: formatNumber(appState.catalogStats.total_detections) })}</span
+  >
   <span>{m.status_species({ count: formatNumber(appState.catalogStats.total_species) })}</span>
   <span>{m.status_locations({ count: formatNumber(appState.catalogStats.total_locations) })}</span>
 

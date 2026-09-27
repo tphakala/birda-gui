@@ -3,6 +3,7 @@ import type { Detection, DetectionFilter, SpeciesSummary, CatalogStats, AudioFil
 import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
 import { z } from 'zod';
+import { FINISHED_RUN_IDS } from './schema';
 
 const JSON_READ_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 100;
@@ -77,6 +78,9 @@ function buildWhereClause(filter: DetectionFilter, tableAlias?: string): { where
   if (filter.run_id) {
     conditions.push(`${prefix}run_id = ?`);
     params.push(filter.run_id);
+  } else if (!filter.audio_file_id) {
+    // Across runs, count finished runs only, like species_summary.
+    conditions.push(`${prefix}run_id IN (${FINISHED_RUN_IDS})`);
   }
   if (filter.audio_file_id) {
     conditions.push(`${prefix}audio_file_id = ?`);
@@ -299,7 +303,7 @@ export function getSpeciesLocations(
     SELECT d.location_id, l.latitude, l.longitude, l.name, COUNT(*) as detection_count
     FROM detections d
     JOIN locations l ON d.location_id = l.id
-    WHERE d.scientific_name = ?
+    WHERE d.scientific_name = ? AND d.run_id IN (${FINISHED_RUN_IDS})
     GROUP BY d.location_id
   `,
     )
@@ -323,7 +327,7 @@ export function getLocationSpecies(locationId: number): SpeciesSummary[] {
            MAX(detected_at) as last_detected,
            AVG(confidence) as avg_confidence
     FROM detections
-    WHERE location_id = ?
+    WHERE location_id = ? AND run_id IN (${FINISHED_RUN_IDS})
     GROUP BY scientific_name
     ORDER BY detection_count DESC
   `,
@@ -337,9 +341,11 @@ export function getCatalogStats(): CatalogStats {
     .prepare(
       `
     SELECT
-      (SELECT COUNT(*) FROM detections) as total_detections,
-      (SELECT COUNT(DISTINCT scientific_name) FROM detections) as total_species,
+      COUNT(*) as total_detections,
+      COUNT(DISTINCT scientific_name) as total_species,
       (SELECT COUNT(*) FROM locations) as total_locations
+    FROM detections
+    WHERE run_id IN (${FINISHED_RUN_IDS})
   `,
     )
     .get() as CatalogStats;
@@ -401,6 +407,7 @@ export async function importDetectionsFromJson(
   locationId: number | null,
   audioFileId: number,
   jsonPath: string,
+  shouldSkipInsert?: () => boolean,
 ): Promise<{ detections: number; sourceFile: string }> {
   // Read with retry logic for Windows file locking
   const content = await readJsonWithRetry(jsonPath);
@@ -421,8 +428,9 @@ export async function importDetectionsFromJson(
     common_name: d.common_name, // Preserve common_name from JSON output
   }));
 
-  // Import detections using existing transaction-based function
-  if (birdaDetections.length > 0) {
+  // Import detections using existing transaction-based function. The caller can
+  // skip the insert when the run was finished while the file was being read.
+  if (birdaDetections.length > 0 && !shouldSkipInsert?.()) {
     insertDetections(runId, locationId, audioFileId, birdaDetections);
   }
 

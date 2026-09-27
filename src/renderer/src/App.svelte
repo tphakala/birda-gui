@@ -14,33 +14,34 @@
   import MapPage from './pages/MapPage.svelte';
   import SpeciesPage from './pages/SpeciesPage.svelte';
   import SettingsPage from './pages/SettingsPage.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, refreshCatalogStats } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
+  import { followModelInstalls } from '$lib/stores/modelInstall.svelte';
   import {
     analysisState,
     handleAnalysisEvent,
+    joinRunningAnalysis,
     resetAnalysis,
     type BirdaEventEnvelope,
   } from '$lib/stores/analysis.svelte';
   import { addLog, type LogEntry } from '$lib/stores/log.svelte';
   import {
-    getCatalogStats,
     getSettings,
     listModels,
     startAnalysis,
     cancelAnalysis,
+    getAnalysisStatus,
     onAnalysisProgress,
-    offAnalysisProgress,
+    onAnalysisStatusChanged,
     onLog,
-    offLog,
     onSetupWizard,
-    offSetupWizard,
     onShowLicenses,
-    offShowLicenses,
   } from '$lib/utils/ipc';
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
+  import type { AnalysisResult, AnalysisStatus } from '$shared/types';
+  import { COMPLETE_RUN_STATUSES } from '$shared/constants';
 
-  let cleanupMenu: (() => void) | null = null;
   let showWizard = $state<boolean | null>(null); // null = loading, true/false = resolved
   let showLicenses = $state(false);
 
@@ -48,6 +49,8 @@
   async function syncDefaultModel(): Promise<void> {
     try {
       const models = await listModels();
+      // A joined running analysis has set its own model.
+      if (appState.isAnalysisRunning) return;
       const defaultModel = models.find((m) => m.is_default);
       appState.selectedModel = defaultModel?.id ?? '';
     } catch {
@@ -84,21 +87,90 @@
       // proceed with existing state
     }
     await syncDefaultModel();
-    try {
-      appState.catalogStats = await getCatalogStats();
-    } catch {
-      // DB may not be ready
-    }
+    await refreshCatalogStats();
     showWizard = false;
   }
 
-  async function handleStop() {
-    try {
-      await cancelAnalysis();
-    } catch {
-      // Ensure UI recovers even if cancel IPC fails
+  // True while this window's startAnalysis call is pending. That call owns the
+  // running flags until it settles; status events only drive a window that did
+  // not start the analysis, for example one reloaded mid-run.
+  let startPending = false;
+  // Set once this window has shown the outcome of its own analysis, so the idle
+  // status event for it (which may arrive after the start call settles) is not
+  // shown a second time. Cleared when the next analysis starts.
+  let shownOwnOutcome = false;
+
+  type Outcome = AnalysisResult & { error?: string | undefined };
+
+  // Stop outcomes can say results were deleted, so they stay up longer than the default toast.
+  const STOP_TOAST_MS = 8000;
+
+  /** Shows how an analysis ended and reloads what it changed in the catalog. */
+  function showOutcome(outcome: Outcome) {
+    if (outcome.status === 'cancelled') {
+      // The panel stays, showing what was analysed before the Stop.
+      const nothingKept = outcome.runId === null || analysisState.totalDetections === 0;
+      analysisState.status = 'stopped';
+      analysisState.discarded = outcome.discardedPartial;
+      // The file that was being analysed was not finished.
+      analysisState.currentFile = null;
+      showToast(
+        outcome.discardedPartial
+          ? m.analysis_stoppedDiscarded()
+          : nothingKept
+            ? m.analysis_stopped()
+            : m.analysis_stoppedKept(),
+        { durationMs: STOP_TOAST_MS },
+      );
+    } else if (outcome.status === 'failed') {
+      analysisState.status = 'failed';
+      analysisState.currentFile = null;
+      // A returned failure is a run in which no file was analysed or imported.
+      analysisState.error = outcome.error ?? m.analysis_allFilesFailed();
+    } else {
+      analysisState.status = 'completed';
+      analysisState.hadErrors = outcome.status === 'completed_with_errors';
     }
-    appState.isAnalysisRunning = false;
+    catalogChanged();
+  }
+
+  function applyAnalysisStatus(status: AnalysisStatus) {
+    if (startPending) return;
+    if (status.state !== 'idle') shownOwnOutcome = false;
+    else if (shownOwnOutcome) return;
+    appState.isAnalysisRunning = status.state !== 'idle';
+    appState.isAnalysisStopping = status.state === 'stopping';
+    if (status.state !== 'idle') {
+      // Joining a running analysis: show its source (so Stop is on screen), its
+      // settings and its counts so far.
+      if (analysisState.status === 'idle' || analysisState.status === 'stopped') {
+        appState.sourcePath = status.sourcePath;
+        appState.selectedModel = status.settings.model;
+        appState.analysisConfidence = status.settings.min_confidence;
+        appState.joinedSettings = status.settings;
+        joinRunningAnalysis(status.progress);
+      }
+    } else if (status.finished && analysisState.status !== 'idle') {
+      showOutcome(status.finished);
+    } else if (status.finished) {
+      catalogChanged();
+    }
+  }
+
+  // Start stays unavailable until the analysis has finished: the main process
+  // keeps its lock until then.
+  async function handleStop() {
+    appState.isAnalysisStopping = true;
+    try {
+      const wasRunning = await cancelAnalysis();
+      if (!wasRunning && !startPending) {
+        appState.isAnalysisRunning = false;
+        appState.isAnalysisStopping = false;
+      }
+    } catch {
+      appState.isAnalysisStopping = false;
+      showToast(m.analysis_stopFailed(), { severity: 'error' });
+    }
   }
 
   async function handleStartAnalysis(opts: {
@@ -109,18 +181,20 @@
     day?: number | undefined;
     timezoneOffsetMin?: number | undefined;
   }) {
-    if (!appState.sourcePath) return;
+    const sourcePath = appState.sourcePath;
+    if (!sourcePath || appState.isAnalysisRunning) return;
 
     resetAnalysis();
     appState.isAnalysisRunning = true;
-
-    onAnalysisProgress((envelope) => {
-      handleAnalysisEvent(envelope as BirdaEventEnvelope);
-    });
+    startPending = true;
+    shownOwnOutcome = false;
+    // Set when the start was refused because another analysis holds the lock,
+    // and this window joined that one instead.
+    let joined = false;
 
     try {
       const result = await startAnalysis({
-        source_path: appState.sourcePath,
+        source_path: sourcePath,
         model: appState.selectedModel,
         min_confidence: appState.analysisConfidence,
         latitude: opts.latitude || undefined,
@@ -130,18 +204,32 @@
         day: opts.day,
         timezone_offset_min: opts.timezoneOffsetMin,
       });
-      analysisState.status = 'completed';
-      appState.lastRunId = result.runId;
-      appState.lastSourceFile = appState.sourcePath;
-      appState.selectedRunId = result.runId;
-      appState.activeTab = 'detections';
-      appState.catalogStats = await getCatalogStats();
+      showOutcome(result);
+      shownOwnOutcome = true;
+      if (result.runId !== null && (COMPLETE_RUN_STATUSES as readonly string[]).includes(result.status)) {
+        appState.lastRunId = result.runId;
+        appState.lastSourceFile = sourcePath;
+        appState.selectedRunId = result.runId;
+        appState.activeTab = 'detections';
+      }
     } catch (err) {
-      analysisState.status = 'failed';
-      analysisState.error = (err as Error).message;
+      // A window that did not know about a running analysis (its status reply
+      // had not arrived yet) is refused by the lock: join that analysis instead.
+      const current = await getAnalysisStatus().catch(() => null);
+      if (current && current.state !== 'idle') {
+        joined = true;
+        startPending = false;
+        applyAnalysisStatus(current);
+      } else {
+        showOutcome({ runId: null, status: 'failed', discardedPartial: false, error: (err as Error).message });
+        shownOwnOutcome = true;
+      }
     } finally {
-      appState.isAnalysisRunning = false;
-      offAnalysisProgress();
+      startPending = false;
+      if (!joined) {
+        appState.isAnalysisRunning = false;
+        appState.isAnalysisStopping = false;
+      }
     }
   }
 
@@ -178,40 +266,58 @@
       }
 
       await syncDefaultModel();
-
-      try {
-        appState.catalogStats = await getCatalogStats();
-      } catch {
-        // DB not ready yet
-      }
+      await refreshCatalogStats();
     })();
 
-    onSetupWizard(() => {
-      showWizard = true;
-    });
+    const unsubscribes = [
+      onSetupWizard(() => {
+        showWizard = true;
+      }),
+      onShowLicenses(() => {
+        showLicenses = true;
+      }),
+      setupMenuListeners({
+        canOpenFile: () => {
+          if (!appState.isAnalysisRunning) return true;
+          showToast(m.analysis_lockedDuringRun(), { severity: 'warning' });
+          return false;
+        },
+        onOpenFile: (path: string) => {
+          // The analysis may have started while the dialog was open.
+          if (!appState.isAnalysisRunning) appState.sourcePath = path;
+        },
+        onFocusSearch: () => {
+          // The visible species search that is not behind the annotation editor.
+          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
+          [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
+        },
+      }),
+      // One progress listener for the window's lifetime, so a Stop then Start
+      // never leaves two listeners counting the same events.
+      onAnalysisProgress((envelope) => {
+        const event = envelope as BirdaEventEnvelope;
+        handleAnalysisEvent(event);
+        // The run exists once birda starts; views that list runs can show it.
+        if (event.event === 'pipeline_started') appState.runsVersion++;
+      }),
+      onAnalysisStatusChanged(applyAnalysisStatus),
+      followModelInstalls(),
+      onLog((entry) => {
+        const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
+        addLog(level, source, message);
+      }),
+    ];
 
-    onShowLicenses(() => {
-      showLicenses = true;
-    });
-
-    cleanupMenu = setupMenuListeners({
-      onOpenFile: (path: string) => {
-        appState.sourcePath = path;
-      },
-      onFocusSearch: () => {
-        // The visible species search that is not behind the annotation editor.
-        const inputs = document.querySelectorAll<HTMLInputElement>('input[data-focus-search]');
-        [...inputs].find((input) => input.checkVisibility() && !input.closest('[inert]'))?.focus();
-      },
-    });
-
-    onLog((entry) => {
-      const { level, source, message } = entry as { level: LogEntry['level']; source: string; message: string };
-      addLog(level, source, message);
-    });
+    // Pick up an analysis that was already running when this window loaded.
+    getAnalysisStatus()
+      .then(applyAnalysisStatus)
+      .catch(() => {
+        // Assume idle
+      });
 
     return () => {
       mediaQuery.removeEventListener('change', handler);
+      for (const unsubscribe of unsubscribes) unsubscribe();
     };
   });
 
@@ -220,14 +326,6 @@
     const isDark = appState.theme === 'dark' || (appState.theme === 'system' && systemPrefersDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'birda-dark' : 'birda-light');
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-  });
-
-  onDestroy(() => {
-    offAnalysisProgress();
-    offLog();
-    offSetupWizard();
-    offShowLicenses();
-    cleanupMenu?.();
   });
 </script>
 

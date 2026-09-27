@@ -4,27 +4,31 @@ import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
 import { z } from 'zod';
-import { runAnalysis, findBirda, type AnalysisHandle, type LogLevel } from '../birda/runner';
-import { createRun, updateRunStatus, deleteCompletedRunsForSource } from '../db/runs';
+import { runAnalysis, findBirda, registerProcess, unregisterProcess, type LogLevel } from '../birda/runner';
+import { AnalysisCancelledError, AnalysisLock, type AnalysisSession } from '../birda/analysis-session';
+import { createRun, finishRun } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
 import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
-import { createAudioFile } from '../db/audio-files';
+import { createAudioFile, deleteAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
-import type { AudioFileMetadata } from '$shared/types';
+import { sendToWindows } from './broadcast';
 import type {
+  AnalysisResult,
+  AudioFileMetadata,
   BirdaEventEnvelope,
-  PipelineStartedPayload,
-  FileStartedPayload,
-  FileCompletedPayload,
   DetectionsPayload,
-} from '../birda/types';
+  FileCompletedPayload,
+  FileStartedPayload,
+  FinishedRunStatus,
+  PipelineStartedPayload,
+} from '$shared/types';
+import { applyProgressEvent } from '$shared/analysis-progress';
+import { dayOfYearOf, parseRecordingName } from '$shared/recording-name';
 
-const LEAP_YEAR_FOR_DOY = 2024; // Used to handle Feb 29 in DOY calculation
-const MAX_TRACKED_FILES = 100;
 const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
 
-let currentAnalysis: AnalysisHandle | null = null;
+const analysisLock = new AnalysisLock();
 
 // Simple semaphore for limiting concurrent operations
 class Semaphore {
@@ -56,34 +60,30 @@ class Semaphore {
   }
 }
 
-function sendLog(win: BrowserWindow, level: LogLevel, source: string, message: string): void {
-  if (!win.isDestroyed()) {
-    win.webContents.send('app:log', { level, source, message });
-  }
+function sendLog(level: LogLevel, source: string, message: string): void {
+  sendToWindows('app:log', { level, source, message });
 }
 
-// Helper to track files with overflow warning
-// Returns true if overflow warning was just triggered
-function trackFileWithOverflow(
-  win: BrowserWindow,
-  fileArray: string[],
-  file: string,
-  alreadyOverflowed: boolean,
-  context: string,
-): boolean {
-  if (fileArray.length < MAX_TRACKED_FILES) {
-    fileArray.push(file);
-    return false;
-  } else if (!alreadyOverflowed) {
-    sendLog(win, 'warn', 'analysis', `Truncated ${context} files list at ${MAX_TRACKED_FILES} entries`);
-    return true;
-  }
-  return false;
+function sendAnalysisStatus(finished?: AnalysisResult & { error?: string }): void {
+  const status = analysisLock.status();
+  sendToWindows(
+    'birda:analysis-status-changed',
+    status.state === 'idle' && finished ? { ...status, finished } : status,
+  );
 }
 
 async function createTempOutputDir(): Promise<string> {
   // Use mkdtemp for atomic unique directory creation
   return fs.promises.mkdtemp(path.join(tmpdir(), 'birda-'));
+}
+
+async function hasEntries(dir: string): Promise<boolean> {
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    return (await fs.promises.readdir(dir)).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 async function cleanupTempDir(tempDir: string): Promise<void> {
@@ -111,6 +111,8 @@ const AnalysisRequestSchema = z.object({
   timezone_offset_min: z.number().int().optional(),
 });
 
+type AnalysisRequestInput = z.infer<typeof AnalysisRequestSchema>;
+
 /**
  * Parse audio file metadata for storage in audio_files table
  * Priority: AudioMoth metadata > filename parsing (defaults to UTC if no timezone set)
@@ -128,8 +130,7 @@ async function parseFileMetadata(filePath: string, runTimezoneOffset: number | n
   }
   // Priority 2: Filename parsing (default to UTC if no timezone set)
   else {
-    const basename = filePath.replace(/^.*[\\/]/, '');
-    const parsed = parseRecordingStart(basename);
+    const parsed = parseRecordingStart(filePath);
     if (parsed) {
       // Default to UTC (offset 0) if no timezone specified
       const offset = timezoneOffset ?? 0;
@@ -151,122 +152,128 @@ async function parseFileMetadata(filePath: string, runTimezoneOffset: number | n
   };
 }
 
-export function registerAnalysisHandlers(): void {
-  ipcMain.handle('birda:analyze', async (event, rawRequest: unknown) => {
-    // Validate input
-    const request = AnalysisRequestSchema.parse(rawRequest);
-    if (currentAnalysis) {
-      throw new Error('An analysis is already running. Cancel it first.');
+function resolveLocation(request: AnalysisRequestInput): number | null {
+  if (request.latitude === undefined || request.longitude === undefined) return null;
+  const existing = findLocationByCoords(request.latitude, request.longitude);
+  if (existing) {
+    sendLog(
+      'info',
+      'analysis',
+      `Using existing location: id=${existing.id} (${request.latitude}, ${request.longitude})`,
+    );
+    return existing.id;
+  }
+  const loc = createLocation(request.latitude, request.longitude, request.location_name);
+  sendLog('info', 'analysis', `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`);
+  return loc.id;
+}
+
+/**
+ * Month and day for the range filter: the request's values, else parsed from a
+ * YYYYMMDD_HHMMSS source name. dayOfYear is for BSG models, which take
+ * --day-of-year instead of --month/--day; both are passed.
+ */
+function resolveDate(request: AnalysisRequestInput): {
+  month: number | undefined;
+  day: number | undefined;
+  dayOfYear: number | undefined;
+} {
+  let month = request.month;
+  let day = request.day;
+  if (month === undefined || day === undefined) {
+    // The same rule the analysis page uses to show the date.
+    const parsed = parseRecordingName(request.source_path);
+    if (parsed) {
+      month ??= parsed.month;
+      day ??= parsed.day;
+      sendLog('info', 'analysis', `Parsed recording date from filename: month=${month}, day=${day}`);
+    }
+  }
+  if (month === undefined || day === undefined) return { month, day, dayOfYear: undefined };
+  const dayOfYear = dayOfYearOf(month, day);
+  sendLog('info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
+  return { month, day, dayOfYear };
+}
+
+/** Keeps the session's progress snapshot, for a window that joins mid-run. */
+function trackProgress(session: AnalysisSession, envelope: BirdaEventEnvelope): void {
+  applyProgressEvent(session.progress, envelope);
+  if (envelope.event === 'file_completed') {
+    const payload = envelope.payload as FileCompletedPayload;
+    session.progress.completedFiles.push({ file: payload.file, status: payload.status });
+  }
+}
+
+/** Records a failed run without letting a catalog error replace the error being reported. */
+function recordFailure(runId: number): void {
+  try {
+    finishRun(runId, 'failed');
+  } catch (err) {
+    sendLog('error', 'analysis', `Could not record run ${runId} as failed: ${(err as Error).message}`);
+  }
+}
+
+/** Runs one analysis for a session that holds the lock. */
+async function analyze(session: AnalysisSession, request: AnalysisRequestInput): Promise<AnalysisResult> {
+  // Detect if source is directory
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
+  const sourceStat = await fs.promises.stat(request.source_path);
+  const isDirectory = sourceStat.isDirectory();
+
+  let outputDir: string | undefined;
+  // birda's output is kept for debugging when the run failed and birda wrote something.
+  let keepOutput = false;
+
+  try {
+    if (isDirectory) {
+      outputDir = await createTempOutputDir();
+      session.outputDir = outputDir;
+      sendLog('info', 'analysis', `Created temp output directory: ${outputDir}`);
     }
 
-    // Lock immediately with placeholder to prevent race condition
-    const placeholderHandle: AnalysisHandle = {
-      cancel: () => {
-        /* no-op */
-      },
-      promise: Promise.resolve(),
-      on: () => {
-        /* no-op */
-      },
-      stderrLog: () => '',
+    sendLog(
+      'info',
+      'analysis',
+      `Starting analysis: model=${request.model}, confidence=${request.min_confidence}, source=${request.source_path}`,
+    );
+
+    // Load settings to get execution provider
+    const settings = await settingsStore.get();
+
+    // Stopped during setup: leave nothing in the catalog. Nothing below awaits
+    // until the session is attached to the runner, which honours a Stop from
+    // then on, including one while birda is being located.
+    if (session.cancelRequested) {
+      sendLog('info', 'analysis', 'Analysis cancelled before it started');
+      return { runId: null, status: 'cancelled', discardedPartial: false };
+    }
+
+    const locationId = resolveLocation(request);
+    const run = createRun(
+      request.source_path,
+      request.model,
+      request.min_confidence,
+      locationId,
+      undefined,
+      request.timezone_offset_min,
+    );
+    session.runId = run.id;
+    sendLog('info', 'analysis', `Created analysis run: id=${run.id}`);
+
+    // Records the run's final status. session.runId goes back to null once the
+    // status is recorded, so a quit after this does not record it again.
+    const record = (status: FinishedRunStatus, replaceEarlier = true) => {
+      const effect = finishRun(run.id, status, replaceEarlier);
+      session.runId = null;
+      return effect;
     };
-    currentAnalysis = placeholderHandle;
-
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) {
-      currentAnalysis = null; // Release lock
-      throw new Error('No window found');
-    }
+    const recordFailedRun = () => {
+      recordFailure(run.id);
+      session.runId = null;
+    };
 
     try {
-      // Detect if source is directory
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      const sourceStat = await fs.promises.stat(request.source_path);
-      const isDirectory = sourceStat.isDirectory();
-
-      let outputDir: string | undefined;
-
-      if (isDirectory) {
-        outputDir = await createTempOutputDir();
-        sendLog(win, 'info', 'analysis', `Created temp output directory: ${outputDir}`);
-      }
-
-      sendLog(
-        win,
-        'info',
-        'analysis',
-        `Starting analysis: model=${request.model}, confidence=${request.min_confidence}, source=${request.source_path}`,
-      );
-
-      // Resolve or create location
-      let locationId: number | null = null;
-      if (request.latitude !== undefined && request.longitude !== undefined) {
-        const existing = findLocationByCoords(request.latitude, request.longitude);
-        if (existing) {
-          locationId = existing.id;
-          sendLog(
-            win,
-            'info',
-            'analysis',
-            `Using existing location: id=${existing.id} (${request.latitude}, ${request.longitude})`,
-          );
-        } else {
-          const loc = createLocation(request.latitude, request.longitude, request.location_name);
-          locationId = loc.id;
-          sendLog(
-            win,
-            'info',
-            'analysis',
-            `Created location: id=${loc.id} (${request.latitude}, ${request.longitude})`,
-          );
-        }
-      }
-
-      // Delete any previous completed runs for the same source+model to avoid duplicates
-      const deletedCount = deleteCompletedRunsForSource(request.source_path, request.model);
-      if (deletedCount > 0) {
-        sendLog(win, 'info', 'analysis', `Replaced ${deletedCount} previous run(s) (same source + model)`);
-      }
-
-      // Create run record
-      const run = createRun(
-        request.source_path,
-        request.model,
-        request.min_confidence,
-        locationId,
-        undefined,
-        request.timezone_offset_min,
-      );
-      sendLog(win, 'info', 'analysis', `Created analysis run: id=${run.id}`);
-
-      // Resolve month/day: prefer values from request, then try to parse from filename
-      let month = request.month;
-      let day = request.day;
-      if (month === undefined || day === undefined) {
-        const base = path.basename(request.source_path).replace(/\.[^.]+$/, '');
-        const dateMatch = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
-        if (dateMatch) {
-          month = month ?? Number(dateMatch[2]);
-          day = day ?? Number(dateMatch[3]);
-          sendLog(win, 'info', 'analysis', `Parsed recording date from filename: month=${month}, day=${day}`);
-        }
-      }
-
-      // Compute day-of-year from month/day for BSG SDM support.
-      // BSG models use --day-of-year (1-366) instead of --month/--day.
-      // We pass both so BirdNET gets month/day and BSG gets day-of-year.
-      let dayOfYear: number | undefined;
-      if (month !== undefined && day !== undefined) {
-        const d = new Date(LEAP_YEAR_FOR_DOY, month - 1, day); // leap year to handle Feb 29
-        const start = new Date(LEAP_YEAR_FOR_DOY, 0, 0);
-        dayOfYear = Math.floor((d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-        sendLog(win, 'info', 'analysis', `Computed day-of-year: ${dayOfYear} (from month=${month}, day=${day})`);
-      }
-
-      // Load settings to get execution provider
-      const settings = await settingsStore.get();
-
-      // Start analysis
+      const { month, day, dayOfYear } = resolveDate(request);
       const handle = runAnalysis(request.source_path, {
         model: request.model,
         minConfidence: request.min_confidence,
@@ -278,199 +285,286 @@ export function registerAnalysisHandlers(): void {
         dayOfYear,
         outputDir,
       });
-      // Replace placeholder with real handle
-      currentAnalysis = handle;
+      session.attach(handle);
 
       let totalDetections = 0;
-      const failedFiles: string[] = [];
-      const skippedFiles: string[] = [];
       let failedFileCount = 0;
       let skippedFileCount = 0;
-      let totalFiles = 0;
+      // A property, not a let: TypeScript would treat a let set only in the event callback as always false.
+      const pipeline = { started: false };
       const pendingImports = new Set<Promise<void>>();
-      let failedFilesOverflow = false;
-      let skippedFilesOverflow = false;
       const importSemaphore = new Semaphore(MAX_CONCURRENT_IMPORTS);
+
+      const track = (work: () => Promise<void>) => {
+        const importPromise = work().catch((err: unknown) => {
+          sendLog('error', 'analysis', `Event handler error: ${(err as Error).message}`);
+        });
+        pendingImports.add(importPromise);
+        void importPromise.finally(() => pendingImports.delete(importPromise));
+      };
 
       // Forward runner log events to renderer
       handle.on('log', (level: LogLevel, message: string) => {
-        sendLog(win, level, 'runner', message);
+        sendLog(level, 'runner', message);
       });
 
       // Forward NDJSON events to renderer and capture detections
       handle.on('data', (envelope: BirdaEventEnvelope) => {
-        // Synchronously forward event to renderer
-        if (!win.isDestroyed()) {
-          win.webContents.send('birda:analysis-progress', envelope);
-        }
+        trackProgress(session, envelope);
+        sendToWindows('birda:analysis-progress', envelope);
+        // After a quit the run is recorded and the catalog is closing.
+        if (session.quitting) return;
 
-        // Capture async processing as a tracked promise
-        const importPromise = (async () => {
-          try {
-            // Directory mode events
-            if (isDirectory && outputDir) {
-              if (envelope.event === 'pipeline_started') {
-                const payload = envelope.payload as PipelineStartedPayload;
-                totalFiles = payload.total_files;
-                sendLog(win, 'info', 'analysis', `Starting directory analysis: ${totalFiles} files`);
-              } else if (envelope.event === 'file_started') {
-                const payload = envelope.payload as FileStartedPayload;
-                sendLog(win, 'info', 'analysis', `Processing file: ${payload.file}`);
-              } else if (envelope.event === 'file_completed') {
-                const payload = envelope.payload as FileCompletedPayload;
-
-                if (payload.status === 'processed') {
-                  // Limit concurrent imports to prevent resource exhaustion
-                  await importSemaphore.acquire();
-                  try {
-                    const jsonPath = deriveJsonPath(outputDir, payload.file);
-
-                    // NEW: Parse file metadata and create audio_file record
-                    const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
-                    const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
-
-                    // Import detections with audio_file_id reference
-                    const result = await importDetectionsFromJson(run.id, locationId, audioFileId, jsonPath);
-
-                    totalDetections += result.detections;
-                    sendLog(
-                      win,
-                      'info',
-                      'analysis',
-                      `Imported ${result.detections} detections from ${result.sourceFile}`,
-                    );
-                  } catch (err) {
-                    sendLog(win, 'error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
-                    failedFileCount++;
-                    if (trackFileWithOverflow(win, failedFiles, payload.file, failedFilesOverflow, 'failed')) {
-                      failedFilesOverflow = true;
-                    }
-                  } finally {
-                    importSemaphore.release();
-                  }
-                } else if (payload.status === 'skipped' || payload.status === 'locked') {
-                  // A locked file was claimed by another worker in a distributed
-                  // run; birda reports it as a skip, not a failure, so count it
-                  // as one here too rather than inflating the failed total.
-                  skippedFileCount++;
-                  if (trackFileWithOverflow(win, skippedFiles, payload.file, skippedFilesOverflow, 'skipped')) {
-                    skippedFilesOverflow = true;
-                  }
-                  const reason = payload.status === 'locked' ? 'Locked by another worker, skipped' : 'Skipped';
-                  sendLog(win, 'info', 'analysis', `${reason} ${payload.file}`);
-                } else {
-                  // Must be 'failed' - only remaining case
-                  failedFileCount++;
-                  if (trackFileWithOverflow(win, failedFiles, payload.file, failedFilesOverflow, 'failed')) {
-                    failedFilesOverflow = true;
-                  }
-                  sendLog(win, 'warn', 'analysis', `Failed to process ${payload.file}`);
-                }
-              }
-            }
-            // Single file mode events (existing behavior)
-            else if (envelope.event === 'detections') {
-              const payload = envelope.payload as DetectionsPayload;
-              if (payload.detections.length > 0) {
-                try {
-                  // NEW: Create audio_file record for single file
-                  const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
-                  const audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
-
-                  insertDetections(run.id, locationId, audioFileId, payload.detections);
-                  totalDetections += payload.detections.length;
-                  sendLog(
-                    win,
-                    'info',
-                    'analysis',
-                    `Inserted ${payload.detections.length} detection(s) from ${payload.file}`,
-                  );
-                } catch (err) {
-                  sendLog(win, 'error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
-                }
-              }
-            }
-          } catch (err) {
-            sendLog(win, 'error', 'analysis', `Event handler error: ${(err as Error).message}`);
-          }
-        })();
-
-        pendingImports.add(importPromise);
-        void importPromise.finally(() => pendingImports.delete(importPromise));
-      });
-
-      // Track final status for conditional cleanup
-      let finalStatus: 'completed' | 'completed_with_errors' | 'failed' = 'completed';
-
-      try {
-        await handle.promise;
-
-        // Wait for all pending imports to complete before calculating status
-        await Promise.allSettled(Array.from(pendingImports));
-
-        // Determine final status
-        if (isDirectory) {
-          const processedCount = totalFiles - skippedFileCount - failedFileCount;
-
-          if (failedFileCount > 0) {
-            finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
-          }
-
+        // birda reports pipeline and per-file events for a single file too, so
+        // both modes count files the same way. A directory run imports each
+        // processed file's JSON; a single file sends its detections inline.
+        if (envelope.event === 'pipeline_started') {
+          pipeline.started = true;
           sendLog(
-            win,
             'info',
             'analysis',
-            `Directory analysis complete: ${processedCount} processed, ${skippedFileCount} skipped, ${failedFileCount} failed`,
+            `Starting analysis of ${(envelope.payload as PipelineStartedPayload).total_files} file(s)`,
           );
-        }
-
-        sendLog(win, 'info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
-        updateRunStatus(run.id, finalStatus);
-        return { runId: run.id, status: finalStatus };
-      } catch (err) {
-        finalStatus = 'failed';
-        updateRunStatus(run.id, 'failed');
-        const stderrLog = handle.stderrLog();
-        const errorMsg = `Analysis failed: ${(err as Error).message}`;
-        sendLog(win, 'error', 'analysis', errorMsg);
-        if (stderrLog) {
-          sendLog(win, 'error', 'analysis', `stderr output:\n${stderrLog}`);
-        }
-        throw new Error(`${errorMsg}${stderrLog ? '\n\nstderr:\n' + stderrLog : ''}`, { cause: err });
-      } finally {
-        currentAnalysis = null;
-
-        // Cleanup temp directory on success, preserve on failure for debugging
-        if (outputDir) {
-          if (finalStatus === 'failed') {
-            sendLog(win, 'warn', 'analysis', `Preserving temp directory for debugging: ${outputDir}`);
+        } else if (envelope.event === 'file_started') {
+          sendLog('info', 'analysis', `Processing file: ${(envelope.payload as FileStartedPayload).file}`);
+        } else if (envelope.event === 'file_completed') {
+          const payload = envelope.payload as FileCompletedPayload;
+          if (payload.status === 'processed') {
+            if (outputDir) {
+              const jsonDir = outputDir;
+              track(async () => {
+                // Limit concurrent imports to prevent resource exhaustion
+                await importSemaphore.acquire();
+                let audioFileId: number | null = null;
+                try {
+                  const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                  if (session.quitting) return;
+                  audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+                  const result = await importDetectionsFromJson(
+                    run.id,
+                    locationId,
+                    audioFileId,
+                    deriveJsonPath(jsonDir, payload.file),
+                    () => session.quitting,
+                  );
+                  totalDetections += result.detections;
+                  sendLog('info', 'analysis', `Imported ${result.detections} detections from ${result.sourceFile}`);
+                } catch (err) {
+                  sendLog('error', 'analysis', `Failed to import ${payload.file}: ${(err as Error).message}`);
+                  failedFileCount++;
+                  // A file that was not imported is not a result of the run.
+                  if (audioFileId !== null && !session.quitting) deleteAudioFile(audioFileId);
+                } finally {
+                  importSemaphore.release();
+                }
+              });
+            }
+          } else if (payload.status === 'skipped' || payload.status === 'locked') {
+            // A locked file was claimed by another worker in a distributed
+            // run; birda reports it as a skip, not a failure, so count it
+            // as one here too rather than inflating the failed total.
+            skippedFileCount++;
+            const reason = payload.status === 'locked' ? 'Locked by another worker, skipped' : 'Skipped';
+            sendLog('info', 'analysis', `${reason} ${payload.file}`);
           } else {
-            await cleanupTempDir(outputDir);
-            sendLog(win, 'info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+            // The remaining status is 'failed'
+            failedFileCount++;
+            sendLog('warn', 'analysis', `Failed to process ${payload.file}`);
+          }
+        } else if (envelope.event === 'detections' && !outputDir) {
+          const payload = envelope.payload as DetectionsPayload;
+          if (payload.detections.length > 0) {
+            track(async () => {
+              let audioFileId: number | null = null;
+              try {
+                const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                if (session.quitting) return;
+                audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
+                insertDetections(run.id, locationId, audioFileId, payload.detections);
+                totalDetections += payload.detections.length;
+                sendLog('info', 'analysis', `Inserted ${payload.detections.length} detection(s) from ${payload.file}`);
+              } catch (err) {
+                sendLog('error', 'analysis', `Failed to insert detections: ${(err as Error).message}`);
+                failedFileCount++;
+                if (audioFileId !== null && !session.quitting) deleteAudioFile(audioFileId);
+              }
+            });
           }
         }
+      });
+
+      let runError: unknown = null;
+      try {
+        await handle.promise;
+      } catch (err) {
+        runError = err;
       }
+
+      // Wait for all pending imports so none writes to the run after its status is set.
+      // On a quit the status was set earlier; imports check session.quitting before writing.
+      await Promise.allSettled(Array.from(pendingImports));
+
+      // stopAnalysisForQuit has recorded the run and the catalog is closing.
+      if (session.quitting) {
+        return { runId: run.id, status: 'cancelled', discardedPartial: false };
+      }
+
+      if (runError instanceof AnalysisCancelledError) {
+        const { discardedPartial } = record('cancelled');
+        sendLog(
+          'info',
+          'analysis',
+          discardedPartial
+            ? `Analysis cancelled: its partial results were discarded; the earlier complete results for this source and model are kept`
+            : `Analysis cancelled: ${totalDetections} detection(s) kept in run ${run.id}`,
+        );
+        return { runId: run.id, status: 'cancelled', discardedPartial };
+      }
+
+      if (runError !== null) {
+        // Keep birda's output for debugging unless it wrote nothing.
+        keepOutput = outputDir !== undefined && (await hasEntries(outputDir));
+        // The runner's error already carries birda's stderr.
+        const errorMsg = `Analysis failed: ${(runError as Error).message}`;
+        sendLog('error', 'analysis', errorMsg);
+        // A quit during the await above has already recorded the run.
+        if (session.runPending) recordFailedRun();
+        throw new Error(errorMsg, { cause: runError });
+      }
+
+      // Determine final status. Without a pipeline_started event (an older
+      // birda) a single-file run is assumed to have processed its one file.
+      const processedCount = pipeline.started
+        ? session.progress.totalFiles - skippedFileCount - failedFileCount
+        : isDirectory
+          ? 0
+          : 1;
+      let finalStatus: FinishedRunStatus = 'completed';
+      if (failedFileCount > 0) {
+        finalStatus = processedCount > 0 ? 'completed_with_errors' : 'failed';
+      }
+      sendLog(
+        'info',
+        'analysis',
+        `Analysis complete: ${processedCount} processed, ${skippedFileCount} skipped, ${failedFileCount} failed`,
+      );
+      if (finalStatus === 'failed') keepOutput = outputDir !== undefined && (await hasEntries(outputDir));
+
+      sendLog('info', 'analysis', `Analysis completed: ${totalDetections} total detection(s)`);
+      // A run that analysed no files (all skipped, locked or failed) does not replace earlier results.
+      const { replaced, discardedPartial } = record(finalStatus, processedCount > 0);
+      if (replaced > 0) {
+        sendLog('info', 'analysis', `Replaced ${replaced} previous run(s) (same source + model)`);
+      }
+      return { runId: run.id, status: finalStatus, discardedPartial };
     } catch (err) {
-      // Release lock on setup error ONLY if still placeholder
-      if (currentAnalysis === placeholderHandle) {
-        currentAnalysis = null;
-      }
+      // Anything that failed after the run was created, before its status was recorded.
+      if (session.runPending && !session.quitting) recordFailedRun();
       throw err;
     }
-  });
-
-  ipcMain.handle('birda:cancel-analysis', () => {
-    if (currentAnalysis) {
-      currentAnalysis.cancel();
-      currentAnalysis = null;
-      return true;
+  } finally {
+    if (outputDir && session.quitting) {
+      // stopAnalysisForQuit may have removed it already; this covers a quit during mkdtemp.
+      await cleanupTempDir(outputDir);
+    } else if (outputDir) {
+      if (keepOutput) {
+        sendLog('warn', 'analysis', `Preserving temp directory for debugging: ${outputDir}`);
+      } else {
+        await cleanupTempDir(outputDir);
+        sendLog('info', 'analysis', `Cleaned up temp directory: ${outputDir}`);
+      }
     }
-    return false;
+  }
+}
+
+/** Whether an analysis holds the lock, running or stopping. */
+export function isAnalysisActive(): boolean {
+  return analysisLock.active !== null;
+}
+
+/** The run of the analysis holding the lock, while its final status is not recorded yet. */
+export function activeRunId(): number | null {
+  return analysisLock.active?.runId ?? null;
+}
+
+/**
+ * Called before the app quits: stops a running analysis and, unless its run
+ * was already recorded, records it as cancelled now, since the catalog closes
+ * before birda's exit is handled. Later calls do nothing.
+ */
+
+export function stopAnalysisForQuit(): void {
+  const session = analysisLock.active;
+  if (!session || session.quitting) return;
+  session.quitting = true;
+  session.cancel();
+  if (session.runId !== null) {
+    try {
+      finishRun(session.runId, 'cancelled');
+    } catch (err) {
+      console.error(`Could not record run ${session.runId} as cancelled:`, err);
+    }
+    session.runId = null;
+  }
+  if (session.outputDir) {
+    try {
+      fs.rmSync(session.outputDir, { recursive: true, force: true });
+    } catch (err) {
+      console.error(`Could not remove ${session.outputDir}:`, err);
+    }
+  }
+}
+
+export function registerAnalysisHandlers(): void {
+  ipcMain.handle('birda:analyze', async (_event, rawRequest: unknown): Promise<AnalysisResult> => {
+    const request = AnalysisRequestSchema.parse(rawRequest);
+    // Taken synchronously, before the first await, so two requests cannot both start
+    const session = analysisLock.acquire(request.source_path, {
+      model: request.model,
+      min_confidence: request.min_confidence,
+      latitude: request.latitude,
+      longitude: request.longitude,
+      location_name: request.location_name,
+      month: request.month,
+      day: request.day,
+    });
+    let finished: (AnalysisResult & { error?: string }) | undefined;
+    try {
+      sendAnalysisStatus();
+      const result = await analyze(session, request);
+      finished = result;
+      return result;
+    } catch (err) {
+      // A throw is reported as failed, even after a Stop. analyze has tried to
+      // record a created run as failed (unless the app is quitting); a throw
+      // before a run existed has nothing to record. runId is null: the
+      // renderer uses it only to show a completed or cancelled run.
+      finished = {
+        runId: null,
+        status: 'failed',
+        discardedPartial: false,
+        error: (err as Error).message,
+      };
+      throw err;
+    } finally {
+      analysisLock.release(session);
+      sendAnalysisStatus(finished);
+    }
   });
 
-  ipcMain.handle('app:get-log', () => {
-    return currentAnalysis?.stderrLog() ?? '';
+  // Stop keeps the lock: it is released when the analysis has finished, so a
+  // new analysis cannot start while the stopped one is still winding down.
+  ipcMain.handle('birda:cancel-analysis', () => {
+    const session = analysisLock.active;
+    if (!session) return false;
+    if (!session.cancelRequested) {
+      session.cancel();
+      sendAnalysisStatus();
+    }
+    return true;
   });
+
+  ipcMain.handle('birda:analysis-status', () => analysisLock.status());
 
   ipcMain.handle(
     'birda:extract-clip',
@@ -496,11 +590,13 @@ export function registerAnalysisHandlers(): void {
       console.log(`[extract-clip] Running: ${birdaPath} ${args.join(' ')}`);
 
       return new Promise<string>((resolve, reject) => {
-        const _child = execFile(
+        // Registered so killAll stops it at quit, like any birda process.
+        const child = execFile(
           birdaPath,
           args,
           { maxBuffer: 10 * 1024 * 1024, timeout: 30000 },
           (err, stdout, stderr) => {
+            unregisterProcess(child);
             if (err) {
               console.error(`[extract-clip] Failed:`, err.message, stderr);
               reject(new Error(`Clip extraction failed: ${stderr || err.message}`));
@@ -512,10 +608,17 @@ export function registerAnalysisHandlers(): void {
               reject(new Error(`Clip extraction returned empty path. stderr: ${stderr}`));
               return;
             }
-            updateDetectionClipPath(detectionId, clipPath);
+            try {
+              updateDetectionClipPath(detectionId, clipPath);
+            } catch (dbErr) {
+              // The catalog can be closed if this finishes while the app quits.
+              reject(dbErr instanceof Error ? dbErr : new Error(String(dbErr)));
+              return;
+            }
             resolve(clipPath);
           },
         );
+        registerProcess(child);
       });
     },
   );

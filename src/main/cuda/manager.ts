@@ -18,6 +18,22 @@ import {
 
 const execFileAsync = promisify(execFileCallback);
 
+/** Rejects a download that was cancelled. */
+export class CudaDownloadCancelledError extends Error {
+  constructor() {
+    super('Download cancelled by user');
+    this.name = 'CudaDownloadCancelledError';
+  }
+}
+
+/** Rejects a download requested while another one is running. */
+export class CudaDownloadBusyError extends Error {
+  constructor() {
+    super('A CUDA download is already in progress');
+    this.name = 'CudaDownloadBusyError';
+  }
+}
+
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
 const SAFE_FILENAME_RE = /^[a-zA-Z0-9._-]+$/;
 
@@ -25,6 +41,8 @@ const SAFE_FILENAME_RE = /^[a-zA-Z0-9._-]+$/;
 let activeRequest: ClientRequest | null = null;
 let downloadInProgress = false;
 let downloadCancelled = false;
+// A download can be cancelled until extraction starts.
+let cancellable = false;
 
 function validateVersion(version: string): void {
   if (!VERSION_RE.test(version)) {
@@ -197,11 +215,12 @@ export async function downloadCudaLibs(
   validateVersion(version);
 
   if (downloadInProgress) {
-    throw new Error('A CUDA download is already in progress');
+    throw new CudaDownloadBusyError();
   }
 
   downloadInProgress = true;
   downloadCancelled = false;
+  cancellable = true;
   let archivePath: string | null = null;
   let extractionStarted = false;
 
@@ -209,7 +228,7 @@ export async function downloadCudaLibs(
     const manifest = await fetchManifest(version);
     // downloadCancelled may be set by cancelDownload() during the await above
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (downloadCancelled) throw new Error('Download cancelled by user');
+    if (downloadCancelled) throw new CudaDownloadCancelledError();
 
     const platformKey = getPlatformKey();
     // eslint-disable-next-line security/detect-object-injection
@@ -239,7 +258,7 @@ export async function downloadCudaLibs(
     if (downloadCancelled) {
       res.resume();
       req.destroy();
-      throw new Error('Download cancelled by user');
+      throw new CudaDownloadCancelledError();
     }
     activeRequest = req;
 
@@ -255,9 +274,13 @@ export async function downloadCudaLibs(
     const fileStream = fs.createWriteStream(archivePath);
     await pipeline(res, progress, fileStream);
     activeRequest = null;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- may be set during the download
+    if (downloadCancelled) throw new CudaDownloadCancelledError();
 
-    // Extract asynchronously to avoid blocking the main thread
+    // Extract asynchronously to avoid blocking the main thread. From here on
+    // the download cannot be cancelled.
     extractionStarted = true;
+    cancellable = false;
     onProgress(0, 0, 'extracting');
     if (assetName.endsWith('.zip')) {
       const psArchive = archivePath.replaceAll("'", "''");
@@ -302,26 +325,38 @@ export async function downloadCudaLibs(
         // Best effort cleanup
       }
     }
-    throw err;
+    throw downloadError(err, downloadCancelled);
   } finally {
     downloadInProgress = false;
+    cancellable = false;
   }
 }
 
 /**
+ * The error a download reports. After a Cancel it is always the cancel: a
+ * request destroyed mid-transfer makes the stream fail with its own error
+ * (for example "aborted"), not the one passed to destroy().
+ */
+export function downloadError(err: unknown, cancelled: boolean): Error {
+  if (cancelled) return err instanceof CudaDownloadCancelledError ? err : new CudaDownloadCancelledError();
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+/**
  * Cancels an in-progress CUDA download.
- * Sets a flag checked between async phases (manifest fetch, HTTP connect)
- * and destroys the active HTTP request if one exists.
- * Returns true if a download was in progress, false otherwise.
+ * Sets a flag checked between async phases (manifest fetch, HTTP connect,
+ * end of transfer) and destroys the active HTTP request if one exists.
+ * Returns false when no download can be cancelled: none is running, or it is
+ * already extracting or verifying.
  */
 export function cancelDownload(): boolean {
+  if (!cancellable) return false;
   downloadCancelled = true;
   if (activeRequest) {
-    activeRequest.destroy(new Error('Download cancelled by user'));
+    activeRequest.destroy(new CudaDownloadCancelledError());
     activeRequest = null;
-    return true;
   }
-  return downloadInProgress;
+  return true;
 }
 
 export function removeCudaLibs(): void {

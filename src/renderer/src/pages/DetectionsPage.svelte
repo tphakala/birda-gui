@@ -4,14 +4,15 @@
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import SpeciesCards from '$lib/components/SpeciesCards.svelte';
   import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged } from '$lib/stores/app.svelte';
+  import { showToast } from '$lib/stores/toast.svelte';
+  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import {
     getRuns,
     getDetections,
     getRunSpecies,
     getHourlyDetections,
     deleteRun,
-    getCatalogStats,
     getSpeciesLists,
   } from '$lib/utils/ipc';
   import { formatNumber } from '$lib/utils/format';
@@ -89,15 +90,68 @@
     };
   }
 
-  async function refreshRuns() {
+  // One getRuns at a time: an analysis that ends and selects its new run asks
+  // for the list twice in the same moment. A call made while one is in flight
+  // asks for one more load after it, so no caller gets a list from before its change.
+  let runsRequest: Promise<void> | null = null;
+  let runsWanted = 0;
+
+  function refreshRuns(): Promise<void> {
+    runsWanted++;
+    if (runsRequest) return runsRequest;
+    runsRequest = (async () => {
+      let loaded;
+      do {
+        loaded = runsWanted;
+        await loadRuns();
+      } while (runsWanted !== loaded);
+    })().finally(() => {
+      runsRequest = null;
+    });
+    return runsRequest;
+  }
+
+  async function loadRuns() {
+    const selectedAtStart = appState.selectedRunId;
+    const previous = runs.find((r) => r.id === selectedAtStart);
     try {
       runs = await getRuns();
+      // A selection made during the request is newer than this list; leave it.
+      if (
+        appState.selectedRunId === selectedAtStart &&
+        selectedAtStart !== null &&
+        !runs.some((r) => r.id === selectedAtStart)
+      ) {
+        // The selected run is gone, e.g. replaced by a newer analysis of the
+        // same source and model: select that one, or nothing.
+        const replacement = previous
+          ? runs
+              .filter((r) => r.source_path === previous.source_path && r.model === previous.model)
+              .sort((a, b) => b.id - a.id)[0]
+          : undefined;
+        appState.selectedRunId = replacement?.id ?? null;
+      }
     } catch {
       runs = [];
     } finally {
       runsLoading = false;
     }
   }
+
+  // Reload the run list whenever the catalog's runs change, and the shown
+  // detections when the selected run survives (a Stop can discard its rows).
+  let seenRunsVersion = appState.runsVersion;
+  $effect(() => {
+    if (appState.runsVersion !== seenRunsVersion) {
+      seenRunsVersion = appState.runsVersion;
+      const selected = appState.selectedRunId;
+      // A selection that changes in this same update is loaded by the selection effect.
+      const selectionChanging = selected !== prevSelectedRunId;
+      void refreshRuns().then(() => {
+        if (!selectionChanging && selected !== null && appState.selectedRunId === selected) loadActiveView();
+      });
+    }
+  });
 
   async function loadRunDetections() {
     if (!appState.selectedRunId) return;
@@ -177,16 +231,19 @@
     appState.selectedRunId = runId;
   }
 
-  async function handleRunDelete(runId: number) {
+  async function handleRunDelete(runId: number): Promise<void> {
     try {
       await deleteRun(runId);
       runs = runs.filter((r) => r.id !== runId);
       if (appState.selectedRunId === runId) {
         appState.selectedRunId = null;
       }
-      appState.catalogStats = await getCatalogStats();
+      catalogChanged();
+      // A finished analysis's panel may describe results that are gone now.
+      dismissAnalysis();
     } catch (error) {
       console.error('Failed to delete run', runId, error);
+      showToast(m.runs_deleteFailed(), { severity: 'error' });
     }
   }
 
@@ -308,7 +365,7 @@
         {#if selectedRun.is_directory}
           <span class="truncate font-medium" title={selectedRun.source_path}>{selectedRun.source_path}</span>
           <span class="text-base-content/40">|</span>
-          <span class="text-base-content/60">{selectedRun.file_count} files</span>
+          <span class="text-base-content/60">{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span>
         {:else}
           <span class="font-medium">{sourceFileName}</span>
         {/if}
@@ -374,8 +431,11 @@
           />
           {#if speciesQuery}
             <button
+              type="button"
               onclick={clearSpeciesFilter}
-              class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
+              aria-label={m.common_button_clear()}
+              title={m.common_button_clear()}
+              class="text-base-content/60 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
             >
               <X size={12} />
             </button>
@@ -469,7 +529,7 @@
     <!-- No run selected -->
     <div class="flex flex-1 flex-col items-center justify-center gap-3">
       <List size={40} class="text-base-content/15" />
-      <p class="text-base-content/40 text-sm">{m.runs_selectRun()}</p>
+      <p class="text-base-content/60 text-sm">{runs.length > 0 ? m.runs_selectRun() : m.runs_empty()}</p>
     </div>
   {/if}
 </div>

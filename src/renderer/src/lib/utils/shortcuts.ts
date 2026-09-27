@@ -8,10 +8,13 @@ export function isTab(value: unknown): value is Tab {
 }
 
 export function setupMenuListeners(callbacks: {
+  /** Whether a source may be opened now; called before the dialog opens. */
+  canOpenFile: () => boolean;
   onOpenFile: (path: string) => void;
   onFocusSearch: () => void;
 }): () => void {
   const handleOpenFile = () => {
+    if (!callbacks.canOpenFile()) return;
     void (async () => {
       const path = await openFileDialog();
       if (path) callbacks.onOpenFile(path);
@@ -19,6 +22,7 @@ export function setupMenuListeners(callbacks: {
   };
 
   const handleOpenFolder = () => {
+    if (!callbacks.canOpenFile()) return;
     void (async () => {
       const path = await openFolderDialog();
       if (path) callbacks.onOpenFile(path);
@@ -40,17 +44,15 @@ export function setupMenuListeners(callbacks: {
     appState.showLogPanel = !appState.showLogPanel;
   };
 
-  window.birda.on('menu:open-file', handleOpenFile);
-  window.birda.on('menu:open-folder', handleOpenFolder);
-  window.birda.on('menu:switch-tab', handleSwitchTab);
-  window.birda.on('menu:focus-search', handleFocusSearch);
-  window.birda.on('menu:toggle-log', handleToggleLog);
+  const unsubscribes = [
+    window.birda.on('menu:open-file', handleOpenFile),
+    window.birda.on('menu:open-folder', handleOpenFolder),
+    window.birda.on('menu:switch-tab', handleSwitchTab),
+    window.birda.on('menu:focus-search', handleFocusSearch),
+    window.birda.on('menu:toggle-log', handleToggleLog),
+  ];
 
   return () => {
-    window.birda.removeAllListeners('menu:open-file');
-    window.birda.removeAllListeners('menu:open-folder');
-    window.birda.removeAllListeners('menu:switch-tab');
-    window.birda.removeAllListeners('menu:focus-search');
-    window.birda.removeAllListeners('menu:toggle-log');
+    for (const unsubscribe of unsubscribes) unsubscribe();
   };
 }

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import type { AudioFileInfo, AudioMothMeta, SourceScanResult } from '$shared/types';
+import { parseRecordingName } from '$shared/recording-name';
 
 const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a']);
 
@@ -81,20 +82,14 @@ function parseAudioMothComment(comment: string | undefined, artist: string | und
 
 /**
  * Parse recording start time from AudioMoth-style filenames: YYYYMMDD_HHMMSS
- * Returns null if the filename doesn't match the pattern.
+ * Returns null if the filename doesn't match the pattern or holds an impossible date or time.
  * Allows additional suffixes after timestamp (e.g., "20250328_032043_48khz.flac")
  */
 export function parseRecordingStart(filename: string): Date | null {
-  // Strip path and extension, match YYYYMMDD_HHMMSS (allow suffixes)
-  const base = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
-  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/.exec(base);
-  if (!match) return null;
-  const [, y, mo, d, h, mi, s] = match;
+  const parsed = parseRecordingName(filename, { allowSuffix: true });
+  if (!parsed) return null;
   // Parse as UTC to avoid timezone interpretation issues
-  const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
-  // Validate the parsed date components match (catches invalid months/days)
-  if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +mo - 1 || date.getUTCDate() !== +d) return null;
-  return date;
+  return new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute, parsed.second));
 }
 
 /**

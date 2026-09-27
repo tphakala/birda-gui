@@ -31,7 +31,6 @@
     optimizeDatabase,
     vacuumDatabase,
     getAvailableLanguages,
-    getCatalogStats,
     clearDatabase,
     detectGpuCapabilities,
     checkCudaStatus,
@@ -40,11 +39,12 @@
     removeCudaLibs,
     getCudaDownloadSize,
     onCudaDownloadProgress,
-    offCudaDownloadProgress,
+    onCudaDownloadFinished,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged } from '$lib/stores/app.svelte';
+  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
     BirdaCheckResponse,
@@ -153,7 +153,24 @@
   let cudaRemoveError = $state<string | null>(null);
   let cudaDownloadSizeBytes = $state(0);
   let showCudaRemoveConfirm = $state(false);
-  let cudaPollTimer: ReturnType<typeof setInterval> | null = null;
+  // Progress and the outcome of a CUDA download, whichever window started it,
+  // for as long as this panel is mounted.
+  // Counts cuda:download-finished events, to tell a refused download from one that ended.
+  let cudaFinishedCount = 0;
+  const offCudaListeners = [
+    onCudaDownloadProgress((progress) => {
+      // Progress goes to every window, so this also follows a download another window started.
+      cudaDownloading = true;
+      cudaProgress = progress;
+    }),
+    onCudaDownloadFinished((finished) => {
+      cudaFinishedCount++;
+      cudaDownloading = false;
+      cudaProgress = null;
+      if (finished.outcome === 'failed') cudaError = finished.error ?? '';
+      void refreshCudaStatus();
+    }),
+  ];
 
   $effect(() => {
     // Only sync theme to appState after settings are loaded to prevent flash
@@ -212,33 +229,11 @@
   async function refreshCudaStatus() {
     try {
       cudaStatus = await checkCudaStatus();
-      // Rehydrate download state if a download is running (e.g., after tab navigation)
+      // Follow a download that is already running (after a tab switch or a
+      // reload); cuda:download-finished ends it.
       if (cudaStatus.downloadInProgress && !cudaDownloading) {
         cudaDownloading = true;
         cudaProgress = null;
-        onCudaDownloadProgress((progress) => {
-          cudaProgress = progress;
-        });
-        // Poll for completion since we can't await the original IPC invoke
-        if (cudaPollTimer) clearInterval(cudaPollTimer);
-        cudaPollTimer = setInterval(() => {
-          void checkCudaStatus()
-            .then((status) => {
-              if (!status.downloadInProgress) {
-                if (cudaPollTimer) {
-                  clearInterval(cudaPollTimer);
-                  cudaPollTimer = null;
-                }
-                cudaDownloading = false;
-                cudaProgress = null;
-                offCudaDownloadProgress();
-                cudaStatus = status;
-              }
-            })
-            .catch(() => {
-              // Ignore polling errors
-            });
-        }, 2000);
       }
       if (!cudaStatus.installed && cudaStatus.platformSupported) {
         cudaDownloadSizeBytes = await getCudaDownloadSize(BIRDA_CLI_VERSION);
@@ -253,29 +248,19 @@
     cudaDownloading = true;
     cudaError = null;
     cudaProgress = null;
-
-    onCudaDownloadProgress((progress) => {
-      cudaProgress = progress;
-    });
-
+    const seenAt = cudaFinishedCount;
     try {
       await downloadCudaLibs(BIRDA_CLI_VERSION);
-      await refreshCudaStatus();
-    } catch (e) {
-      const msg = (e as Error).message;
-      // Don't show error when user cancelled the download
-      if (!msg.includes('cancelled')) {
-        cudaError = msg;
-      }
-    } finally {
-      cudaDownloading = false;
-      cudaProgress = null;
-      offCudaDownloadProgress();
+    } catch {
+      // The outcome, a failure included, arrives on cuda:download-finished,
+      // which refreshes the status. Only a download refused because another
+      // is running sends none; cudaDownloading stays set until that one ends.
+      if (cudaFinishedCount === seenAt) await refreshCudaStatus();
     }
   }
 
   async function handleCudaCancelDownload() {
-    // State cleanup is handled by handleCudaDownload's finally block
+    // The panel's state is reset by cuda:download-finished.
     await cancelCudaDownload();
   }
 
@@ -357,7 +342,9 @@
       // Clear all, which opened the dialog, is disabled while clearing and once the catalog is empty.
       await tick();
       focusIfLost(dbContentHeading);
-      appState.catalogStats = await getCatalogStats();
+      catalogChanged();
+      // A finished analysis's panel may describe results that are gone now.
+      dismissAnalysis();
       if (clearResultTimer) clearTimeout(clearResultTimer);
       clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {
@@ -426,8 +413,7 @@
     if (clearResultTimer) clearTimeout(clearResultTimer);
     if (optimizeTimer) clearTimeout(optimizeTimer);
     if (vacuumTimer) clearTimeout(vacuumTimer);
-    if (cudaPollTimer) clearInterval(cudaPollTimer);
-    offCudaDownloadProgress();
+    for (const off of offCudaListeners) off();
     appState.settingsHasUnsavedChanges = false;
   });
 </script>
@@ -545,7 +531,7 @@
               <button
                 class="btn btn-ghost btn-sm"
                 onclick={handleCudaCancelDownload}
-                disabled={cudaProgress?.phase !== 'downloading'}
+                disabled={cudaProgress !== null && cudaProgress.phase !== 'downloading'}
               >
                 {m.settings_cuda_cancelButton()}
               </button>
@@ -780,7 +766,7 @@
       <div class="flex items-center gap-3">
         <button onclick={save} disabled={saving} class="btn btn-primary gap-1.5">
           {#if saving}
-            <Loader size={14} class="animate-spin" />
+            <Loader size={14} class="motion-safe:animate-spin" />
           {:else}
             <Save size={14} />
           {/if}
@@ -855,7 +841,7 @@
           <div>
             <button onclick={runHealthCheck} disabled={checkingHealth} class="btn btn-outline btn-sm gap-1.5">
               {#if checkingHealth}
-                <Loader size={14} class="animate-spin" />
+                <Loader size={14} class="motion-safe:animate-spin" />
                 {m.settings_data_checking()}
               {:else}
                 <RefreshCw size={14} />
@@ -878,7 +864,7 @@
             <div class="flex items-center gap-3">
               <button onclick={runOptimize} disabled={optimizing} class="btn btn-outline btn-sm gap-1.5">
                 {#if optimizing}
-                  <Loader size={14} class="animate-spin" />
+                  <Loader size={14} class="motion-safe:animate-spin" />
                 {:else}
                   <RefreshCw size={14} />
                 {/if}
@@ -893,7 +879,7 @@
             <div class="flex items-center gap-3">
               <button onclick={runVacuum} disabled={vacuuming} class="btn btn-outline btn-sm gap-1.5">
                 {#if vacuuming}
-                  <Loader size={14} class="animate-spin" />
+                  <Loader size={14} class="motion-safe:animate-spin" />
                 {:else}
                   <Database size={14} />
                 {/if}
@@ -929,7 +915,8 @@
                 clearError = null;
                 showClearConfirm = true;
               }}
-              disabled={clearing || appState.catalogStats.total_detections === 0}
+              disabled={clearing || appState.catalogStats.total_detections === 0 || appState.isAnalysisRunning}
+              title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
               class="btn btn-error btn-sm gap-1.5"
             >
               <Trash size={14} />
@@ -1001,7 +988,7 @@
         </button>
         <button onclick={confirmClearDatabase} disabled={clearing} class="btn btn-error gap-1.5">
           {#if clearing}
-            <Loader size={14} class="animate-spin" />
+            <Loader size={14} class="motion-safe:animate-spin" />
           {/if}
           {m.settings_clearModal_deleteAll()}
         </button>

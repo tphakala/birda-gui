@@ -1,5 +1,6 @@
 import { execFile, spawn } from 'child_process';
-import { findBirda, registerProcess, unregisterProcess } from './runner';
+import { findBirda, superviseChild, type SupervisedChild } from './runner';
+import { classifyExit } from './process-exit';
 import { parseProgressLine } from './progress';
 import type {
   InstalledModel,
@@ -8,6 +9,7 @@ import type {
   ModelInstalledResult,
   ModelManifest,
   ModelInstallProgress,
+  ModelInstallRequest,
 } from '$shared/types';
 
 interface BirdaJsonEnvelope {
@@ -46,50 +48,78 @@ export async function listAvailable(): Promise<AvailableModel[]> {
   return payload.models ?? [];
 }
 
-// The single in-flight install process, tracked so the renderer can cancel it.
-// Only one install runs at a time, so one ref suffices for the spawned process.
-let currentInstall: ReturnType<typeof spawn> | null = null;
-// Reserves the single-install slot from the very start of installModel, before
-// currentInstall exists, so a concurrent call during findBirda() is rejected.
-let installInProgress = false;
-// Held in an object (not a bare `let`) so TS does not narrow it to a literal
-// across the `await findBirda()` in installModel, where cancelInstall may mutate
-// it. Set when a cancel arrives before any process exists to kill.
+// Set by cancelInstall for the install holding the slot, and read after the
+// await in installModel and in the close handler. It is read through
+// cancelRequested(): TypeScript narrows a checked property across an await
+// just as it does a let.
 const cancelState = { requested: false };
 
-/** Kill the in-flight install, if any. Returns true if one was running. */
+// The install holding the single install slot, from the start of installModel
+// until it settles; the slot is taken before the first await, so a concurrent
+// call during findBirda() is refused.
+let currentRequest: ModelInstallRequest | null = null;
+// Its process, once spawned.
+let installProcess: SupervisedChild | null = null;
+
+/**
+ * Stops the install holding the slot, if any, including one still locating
+ * birda: SIGTERM, then SIGKILL if it does not exit. The install keeps its slot
+ * until it settles. Returns true if an install holds the slot.
+ */
 export function cancelInstall(): boolean {
+  if (!currentRequest) return false;
   cancelState.requested = true;
-  if (currentInstall) {
-    currentInstall.kill();
-    currentInstall = null;
-    return true;
-  }
-  return false;
+  installProcess?.stop();
+  return true;
 }
 
 // Read through a function so TS does not narrow the post-await check to a literal.
 const cancelRequested = (): boolean => cancelState.requested;
 
+/** Rejects an install requested while another one holds the single install slot. */
+export class ModelInstallBusyError extends Error {
+  constructor() {
+    super('Another model install is already running');
+    this.name = 'ModelInstallBusyError';
+  }
+}
+
+/** Rejects an install that ended because it was cancelled. */
+export class ModelInstallCancelledError extends Error {
+  constructor() {
+    super('Model install cancelled');
+    this.name = 'ModelInstallCancelledError';
+  }
+}
+
+/** The install in flight, for a window that did not start it. */
+export function getInstallStatus(): ModelInstallRequest | null {
+  return currentRequest;
+}
+
 export async function installModel(
-  opts: { id: string; region?: string | undefined; variant?: string | undefined },
+  opts: ModelInstallRequest,
   onProgress?: (progress: ModelInstallProgress) => void,
 ): Promise<ModelInstalledResult> {
-  // Reserve the single-install slot BEFORE the first await. currentInstall is not
-  // set until after spawn, so a concurrent call arriving during findBirda() would
-  // slip past a currentInstall check; installInProgress closes that window. The
-  // reservation and cancel state are released in the finally when this operation
+  // The slot and cancel state are released in the finally when this operation
   // settles, so cancellation before close stays cancellation.
-  if (installInProgress) {
-    throw new Error('Another model install is already running');
+  if (currentRequest) {
+    throw new ModelInstallBusyError();
   }
-  installInProgress = true;
+  currentRequest = { id: opts.id, region: opts.region, variant: opts.variant };
   cancelState.requested = false;
   try {
-    const birdaPath = await findBirda();
+    let birdaPath: string;
+    try {
+      birdaPath = await findBirda();
+    } catch (err) {
+      // A Stop while birda was being located is a cancel, even if locating it failed.
+      if (cancelRequested()) throw new ModelInstallCancelledError();
+      throw err;
+    }
     // A cancel that arrived while findBirda() was resolving must still stop the spawn.
     if (cancelRequested()) {
-      throw new Error('Model install cancelled');
+      throw new ModelInstallCancelledError();
     }
     const args = ['--output-mode', 'json', 'models', 'install', opts.id];
     if (opts.region) args.push('--region', opts.region);
@@ -101,8 +131,8 @@ export async function installModel(
       const proc = spawn(birdaPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      registerProcess(proc);
-      currentInstall = proc;
+      const tracked = superviseChild(proc);
+      installProcess = tracked;
 
       let stdout = '';
       let stderrRemainder = '';
@@ -131,18 +161,18 @@ export async function installModel(
       proc.stdin.end();
 
       proc.on('close', (code) => {
-        unregisterProcess(proc);
-        if (currentInstall === proc) currentInstall = null;
+        tracked.release();
         if (stderrRemainder.trim()) {
           emit(stderrRemainder.trim());
         }
-        if (code !== 0) {
-          // A non-zero exit right after a cancel is the kill, not a real failure;
-          // report it as a cancellation so the renderer labels it correctly.
-          if (cancelRequested()) {
-            reject(new Error('Model install cancelled'));
-            return;
-          }
+        const outcome = classifyExit(code, cancelRequested());
+        // A non-zero exit right after a cancel is the kill, not a real failure;
+        // report it as a cancellation so the renderer labels it correctly.
+        if (outcome === 'cancelled') {
+          reject(new ModelInstallCancelledError());
+          return;
+        }
+        if (outcome === 'failed') {
           reject(new Error(`Model install failed: ${stdout}`));
           return;
         }
@@ -156,14 +186,18 @@ export async function installModel(
       });
 
       proc.on('error', (err) => {
-        unregisterProcess(proc);
-        if (currentInstall === proc) currentInstall = null;
+        // A process that did start still emits close, which settles the install.
+        if (proc.pid !== undefined) {
+          console.warn(`Model install process error: ${err.message}`);
+          return;
+        }
+        tracked.release();
         reject(new Error(`Model install failed: ${err.message}`));
       });
     });
   } finally {
-    currentInstall = null;
-    installInProgress = false;
+    installProcess = null;
+    currentRequest = null;
     cancelState.requested = false;
   }
 }

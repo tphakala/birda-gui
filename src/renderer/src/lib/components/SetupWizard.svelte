@@ -22,15 +22,13 @@
     openExecutableDialog,
     listModels,
     listAvailableModels,
-    installModel,
     getAvailableLanguages,
-    onModelInstallProgress,
-    offModelInstallProgress,
     getSystemLocale,
   } from '$lib/utils/ipc';
   import type { InstalledModel, AvailableModel, BirdaCheckResponse } from '$shared/types';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
+  import { modelInstall, reportInstallOutcomes, startModelInstall } from '$lib/stores/modelInstall.svelte';
   import * as m from '$paraglide/messages';
   import { LANGUAGES, getLanguage } from '$lib/i18n/languages';
   import { detectLanguage } from '$lib/i18n/detect';
@@ -90,8 +88,10 @@
   // --- Models ---
   let installedModels = $state<InstalledModel[]>([]);
   let availableModels = $state<AvailableModel[]>([]);
-  let installing = $state<string | null>(null);
-  let installProgress = $state('');
+  // The install in flight, whichever window or component started it.
+  const installing = $derived(modelInstall.current?.request.id ?? null);
+  const installProgress = $derived(modelInstall.current?.progress?.line ?? '');
+  let installAnnouncement = $state('');
   let modelsError = $state<string | null>(null);
   let licenseModel = $state<AvailableModel | null>(null);
   const installedIds = $derived(new Set(installedModels.map((mod) => mod.id)));
@@ -132,25 +132,23 @@
     if (!licenseModel) return;
     const id = licenseModel.id;
     licenseModel = null;
-    installing = id;
-    installProgress = '';
     modelsError = null;
-
-    onModelInstallProgress((progress) => {
-      installProgress = progress.line;
-    });
-
-    try {
-      await installModel({ id });
-      await refreshModels();
-    } catch (e) {
-      modelsError = m.settings_models_failedInstall({ modelId: id, error: (e as Error).message });
-    } finally {
-      installing = null;
-      installProgress = '';
-      offModelInstallProgress();
-    }
+    // The outcome is reported by the effect below.
+    await startModelInstall({ id });
   }
+
+  // Report each install that ends once, including one followed after a reload.
+  reportInstallOutcomes((finished) => {
+    const modelId = finished.request.id;
+    if (finished.outcome === 'installed') {
+      installAnnouncement = m.gallery_installedToast({ model: modelId });
+      void refreshModels();
+    } else if (finished.outcome === 'cancelled') {
+      installAnnouncement = m.gallery_download_cancelled();
+    } else {
+      modelsError = m.settings_models_failedInstall({ modelId, error: finished.error ?? '' });
+    }
+  });
 
   // --- UI Language ---
   let selectedUiLanguage = $state('en');
@@ -185,10 +183,6 @@
     } catch {
       // Will retry when step is reached
     }
-  });
-
-  onDestroy(() => {
-    offModelInstallProgress();
   });
 
   // When entering model step, refresh if we have no data yet
@@ -326,7 +320,7 @@
           <div class="card-body gap-4 p-6">
             {#if birdaStatus === null}
               <div class="text-base-content/50 flex items-center gap-2 text-sm">
-                <Loader size={16} class="animate-spin" />
+                <Loader size={16} class="motion-safe:animate-spin" />
                 <span>{m.wizard_cli_checking()}</span>
               </div>
             {:else if birdaStatus.available}
@@ -391,6 +385,7 @@
           <p class="text-base-content/60 mt-1 text-sm">{m.wizard_model_subtitle()}</p>
         </div>
 
+        <div class="sr-only" aria-live="polite">{installAnnouncement}</div>
         {#if modelsError}
           <div role="alert" class="alert alert-error mt-4">
             <span class="text-sm">{modelsError}</span>
@@ -443,7 +438,7 @@
                     </span>
                   {:else if isInstalling}
                     <span class="text-primary flex items-center gap-1.5 text-xs">
-                      <Loader size={12} class="animate-spin" />
+                      <Loader size={12} class="motion-safe:animate-spin" />
                       {m.settings_models_installing()}
                     </span>
                   {:else}
@@ -476,7 +471,7 @@
             </div>
           {:else}
             <div class="text-base-content/50 py-8 text-center text-sm">
-              <Loader size={20} class="mx-auto mb-2 animate-spin opacity-30" />
+              <Loader size={20} class="mx-auto mb-2 opacity-30 motion-safe:animate-spin" />
               <p>{m.settings_models_loadingCatalog()}</p>
             </div>
           {/if}
@@ -490,6 +485,7 @@
           <button
             onclick={nextStep}
             disabled={installedModels.length === 0 || installing !== null}
+            title={installing !== null ? m.settings_models_installing() : undefined}
             class="btn btn-primary gap-1"
           >
             {m.wizard_next()}

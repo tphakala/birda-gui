@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { AudioLines, CircleAlert, Loader, X } from '@lucide/svelte';
-  import { formatDate } from '$lib/utils/format';
+  import { AudioLines, CircleAlert, CircleSlash, Loader, Trash } from '@lucide/svelte';
+  import Modal from '$lib/components/Modal.svelte';
+  import { tick } from 'svelte';
+  import { focusIfLost } from '$lib/utils/dialog';
+  import { formatDate, formatNumber } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -14,7 +17,7 @@
     runs: RunWithStats[];
     selectedRunId: number | null;
     onselect: (runId: number) => void;
-    ondelete?: (runId: number) => void;
+    ondelete?: (runId: number) => Promise<void>;
     loading?: boolean;
   } = $props();
 
@@ -22,22 +25,58 @@
     return sourcePath.split(/[\\/]/).pop() ?? sourcePath;
   }
 
+  // A run is deleted only after a confirmation; its audio files and annotations go with it.
+  let confirmOpen = $state(false);
+  let pendingDelete = $state<RunWithStats | null>(null);
+  let listHeading = $state<HTMLHeadingElement | undefined>();
+
+  async function deleteRun(run: RunWithStats) {
+    await ondelete?.(run.id);
+    // The deleted row held focus; once it is gone, keep focus in the list.
+    await tick();
+    focusIfLost(listHeading);
+  }
+
+  function requestDelete(run: RunWithStats) {
+    // Even a run with no detections can hold audio files and their annotations.
+    pendingDelete = run;
+    confirmOpen = true;
+  }
+
+  function confirmDelete() {
+    const run = pendingDelete;
+    pendingDelete = null;
+    confirmOpen = false;
+    if (run) void deleteRun(run);
+  }
+
+  function cancelDelete() {
+    pendingDelete = null;
+    confirmOpen = false;
+  }
+
   function detectionLabel(count: number): string {
     return count === 1
-      ? m.runs_detectionCountSingular({ count: String(count) })
-      : m.runs_detectionCount({ count: String(count) });
+      ? m.runs_detectionCountSingular({ count: formatNumber(count) })
+      : m.runs_detectionCount({ count: formatNumber(count) });
   }
 </script>
 
 <div class="border-base-300 bg-base-200 flex w-64 shrink-0 flex-col overflow-hidden border-r">
   <div class="border-base-300 flex items-center gap-1.5 border-b px-3 py-2">
-    <h3 class="text-sm font-medium">{m.runs_title()}</h3>
+    <h3
+      bind:this={listHeading}
+      tabindex="-1"
+      class="focus-visible:outline-primary text-sm font-medium focus-visible:outline-2"
+    >
+      {m.runs_title()}
+    </h3>
   </div>
 
   <div class="flex-1 overflow-y-auto">
     {#if loading}
       <div class="flex items-center justify-center py-8">
-        <Loader size={20} class="text-base-content/40 animate-spin" />
+        <Loader size={20} class="text-base-content/40 motion-safe:animate-spin" />
       </div>
     {:else if runs.length === 0}
       <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
@@ -80,20 +119,25 @@
                   <CircleAlert size={10} />
                   {m.runs_status_failed()}
                 </span>
+              {:else if run.status === 'cancelled'}
+                <span class="badge badge-warning badge-xs gap-0.5">
+                  <CircleSlash size={10} />
+                  {m.runs_status_cancelled()}
+                </span>
               {/if}
             </span>
           </button>
-          {#if run.status === 'failed' && ondelete}
+          {#if (run.status === 'failed' || run.status === 'cancelled') && ondelete}
             <button
               type="button"
               onclick={() => {
-                ondelete(run.id);
+                requestDelete(run);
               }}
               class="text-base-content/30 hover:text-error absolute top-1.5 right-1.5 rounded p-0.5 transition-colors"
               title={m.runs_deleteRun()}
               aria-label={m.runs_deleteRun()}
             >
-              <X size={14} />
+              <Trash size={14} />
             </button>
           {/if}
         </div>
@@ -101,3 +145,26 @@
     {/if}
   </div>
 </div>
+
+<Modal
+  bind:open={confirmOpen}
+  title={m.runs_confirmDelete_title()}
+  icon={Trash}
+  iconClass="text-error"
+  descriptionId="run-delete-body"
+  alert
+  showCloseButton={false}
+>
+  <p id="run-delete-body" class="text-base-content/80 text-sm">
+    {#if pendingDelete}
+      {m.runs_confirmDelete_body({
+        source: sourceName(pendingDelete.source_path),
+        detections: detectionLabel(pendingDelete.detection_count),
+      })}
+    {/if}
+  </p>
+  {#snippet actions()}
+    <button type="button" class="btn btn-sm" onclick={cancelDelete}>{m.common_button_cancel()}</button>
+    <button type="button" class="btn btn-error btn-sm" onclick={confirmDelete}>{m.runs_deleteRun()}</button>
+  {/snippet}
+</Modal>

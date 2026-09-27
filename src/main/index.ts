@@ -13,11 +13,12 @@ import { pathToFileURL } from 'url';
 import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
-import { closeDb, getDb, getDbPath } from './db/database';
+import { closeDbForShutdown, getDb, getDbPath } from './db/database';
 import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
 import { killAll as killAllBirdaProcesses } from './birda/runner';
+import { stopAnalysisForQuit } from './ipc/analysis';
 
 // Must be called before app.whenReady(); tells Chromium the scheme supports fetch().
 // secure + corsEnabled are required for cross-origin fetch from the dev server origin
@@ -223,7 +224,27 @@ function registerBirdaMapProtocol() {
   });
 }
 
+// One instance per user: a second one would share the catalog and finish the
+// first instance's running analysis as stale at its startup.
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!app.isReady()) return;
+    if (!mainWindow) {
+      // macOS keeps the app running with no window open.
+      createWindow();
+      return;
+    }
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  });
+}
+
 void app.whenReady().then(async () => {
+  // A second instance quits without touching the catalog.
+  if (!hasInstanceLock) return;
   // Security: allow permissions the app needs, deny everything else
   const ALLOWED_PERMISSIONS = new Set([
     'clipboard-read',
@@ -313,23 +334,28 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.on('before-quit', () => {
+function shutdown(): void {
+  stopAnalysisForQuit();
   killAllBirdaProcesses();
+}
+
+app.on('before-quit', () => {
+  shutdown();
 });
 
 app.on('will-quit', () => {
-  killAllBirdaProcesses();
-  closeDb();
+  shutdown();
+  closeDbForShutdown();
 });
 
 process.on('SIGINT', () => {
-  killAllBirdaProcesses();
-  closeDb();
+  shutdown();
+  closeDbForShutdown();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  killAllBirdaProcesses();
-  closeDb();
+  shutdown();
+  closeDbForShutdown();
   process.exit(0);
 });

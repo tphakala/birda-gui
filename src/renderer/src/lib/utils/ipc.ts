@@ -1,5 +1,10 @@
 import type {
   AnalysisRequest,
+  CudaDownloadFinished,
+  ModelInstallFinished,
+  ModelInstallRequest,
+  AnalysisResult,
+  AnalysisStatus,
   Annotation,
   AnnotationInput,
   EnrichedDetection,
@@ -35,27 +40,34 @@ declare global {
   interface Window {
     birda: {
       invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-      on: (channel: string, callback: (...args: unknown[]) => void) => void;
-      removeAllListeners: (channel: string) => void;
+      on: (channel: string, callback: (...args: unknown[]) => void) => () => void;
     };
   }
 }
 
 // Analysis
-export function startAnalysis(request: AnalysisRequest): Promise<{ runId: number; status: string }> {
-  return window.birda.invoke('birda:analyze', request) as Promise<{ runId: number; status: string }>;
+export function startAnalysis(request: AnalysisRequest): Promise<AnalysisResult> {
+  return window.birda.invoke('birda:analyze', request) as Promise<AnalysisResult>;
+}
+
+export function getAnalysisStatus(): Promise<AnalysisStatus> {
+  return window.birda.invoke('birda:analysis-status') as Promise<AnalysisStatus>;
+}
+
+/** Returns a function that removes this listener. */
+export function onAnalysisStatusChanged(callback: (status: AnalysisStatus) => void): () => void {
+  return window.birda.on('birda:analysis-status-changed', (status) => {
+    callback(status as AnalysisStatus);
+  });
 }
 
 export function cancelAnalysis(): Promise<boolean> {
   return window.birda.invoke('birda:cancel-analysis') as Promise<boolean>;
 }
 
-export function onAnalysisProgress(callback: (envelope: unknown) => void): void {
-  window.birda.on('birda:analysis-progress', callback);
-}
-
-export function offAnalysisProgress(): void {
-  window.birda.removeAllListeners('birda:analysis-progress');
+/** Returns a function that removes this listener. */
+export function onAnalysisProgress(callback: (envelope: unknown) => void): () => void {
+  return window.birda.on('birda:analysis-progress', callback);
 }
 
 // Catalog
@@ -140,12 +152,20 @@ export function getModelManifest(id: string): Promise<ModelManifest> {
   return window.birda.invoke('birda:models-manifest', id) as Promise<ModelManifest>;
 }
 
-export function installModel(opts: {
-  id: string;
-  region?: string | undefined;
-  variant?: string | undefined;
-}): Promise<ModelInstalledResult> {
+export function installModel(opts: ModelInstallRequest): Promise<ModelInstalledResult> {
   return window.birda.invoke('birda:models-install', opts) as Promise<ModelInstalledResult>;
+}
+
+/** The model install in flight, if any, whichever window started it. */
+export function getModelInstallStatus(): Promise<ModelInstallRequest | null> {
+  return window.birda.invoke('birda:models-install-status') as Promise<ModelInstallRequest | null>;
+}
+
+/** Returns a function that removes this listener. */
+export function onModelInstallFinished(callback: (finished: ModelInstallFinished) => void): () => void {
+  return window.birda.on('birda:models-install-finished', (finished) => {
+    callback(finished as ModelInstallFinished);
+  });
 }
 
 export function cancelInstall(): Promise<boolean> {
@@ -203,12 +223,16 @@ export function removeCudaLibs(): Promise<void> {
   return window.birda.invoke('cuda:remove') as Promise<void>;
 }
 
-export function onCudaDownloadProgress(callback: (progress: CudaDownloadProgress) => void): void {
-  window.birda.on('cuda:download-progress', callback as (...args: unknown[]) => void);
+/** Returns a function that removes this listener. */
+export function onCudaDownloadFinished(callback: (finished: CudaDownloadFinished) => void): () => void {
+  return window.birda.on('cuda:download-finished', (finished) => {
+    callback(finished as CudaDownloadFinished);
+  });
 }
 
-export function offCudaDownloadProgress(): void {
-  window.birda.removeAllListeners('cuda:download-progress');
+/** Returns a function that removes this listener. */
+export function onCudaDownloadProgress(callback: (progress: CudaDownloadProgress) => void): () => void {
+  return window.birda.on('cuda:download-progress', callback as (...args: unknown[]) => void);
 }
 
 // File system
@@ -240,12 +264,9 @@ export function readCoordinates(folderPath: string): Promise<{ latitude: number;
 }
 
 // Log
-export function onLog(callback: (entry: { level: string; source: string; message: string }) => void): void {
-  window.birda.on('app:log', callback as (...args: unknown[]) => void);
-}
-
-export function offLog(): void {
-  window.birda.removeAllListeners('app:log');
+/** Returns a function that removes this listener. */
+export function onLog(callback: (entry: { level: string; source: string; message: string }) => void): () => void {
+  return window.birda.on('app:log', callback as (...args: unknown[]) => void);
 }
 
 // Clip extraction
@@ -280,21 +301,15 @@ export function resolveAllLabels(scientificNames: string[]): Promise<Record<stri
 }
 
 // Model install progress
-export function onModelInstallProgress(callback: (progress: ModelInstallProgress) => void): void {
-  window.birda.on('birda:models-install-progress', callback as unknown as (...args: unknown[]) => void);
-}
-
-export function offModelInstallProgress(): void {
-  window.birda.removeAllListeners('birda:models-install-progress');
+/** Returns a function that removes this listener. */
+export function onModelInstallProgress(callback: (progress: ModelInstallProgress) => void): () => void {
+  return window.birda.on('birda:models-install-progress', callback as unknown as (...args: unknown[]) => void);
 }
 
 // Menu events
-export function onSetupWizard(callback: () => void): void {
-  window.birda.on('menu:setup-wizard', callback);
-}
-
-export function offSetupWizard(): void {
-  window.birda.removeAllListeners('menu:setup-wizard');
+/** Returns a function that removes this listener. */
+export function onSetupWizard(callback: () => void): () => void {
+  return window.birda.on('menu:setup-wizard', callback);
 }
 
 // Region export
@@ -307,12 +322,9 @@ export function getLicenses(): Promise<string | null> {
   return window.birda.invoke('app:get-licenses') as Promise<string | null>;
 }
 
-export function onShowLicenses(callback: () => void): void {
-  window.birda.on('menu:show-licenses', callback);
-}
-
-export function offShowLicenses(): void {
-  window.birda.removeAllListeners('menu:show-licenses');
+/** Returns a function that removes this listener. */
+export function onShowLicenses(callback: () => void): () => void {
+  return window.birda.on('menu:show-licenses', callback);
 }
 
 // Species Lists

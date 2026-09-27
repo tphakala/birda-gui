@@ -50,6 +50,8 @@ src/
         utils/        # Helpers (ipc.ts wrappers, format.ts, shortcuts.ts)
 shared/
   types.ts            # TypeScript interfaces shared between main and renderer
+  constants.ts        # Constants shared between main and renderer, including the run status lists
+  *.ts                # Framework-free logic both processes use (progress counting, recording name parsing), unit tested
 messages/
   en.json             # i18n message catalog (Paraglide)
 build/                # Electron-builder resources (macOS entitlements, NSIS installer script), plus vite/ with the Vite configs and the externalize helper and its test
@@ -146,12 +148,13 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 State stores are in `src/renderer/src/lib/stores/`:
 
-- `app.svelte.ts`: Global UI state (active tab, settings, selections)
+- `app.svelte.ts`: Global UI state (active tab, settings, selections). `catalogChanged()` bumps `runsVersion`, which views that show runs watch to reload, and refreshes the status bar counts
 - `analysis.svelte.ts`: Analysis progress tracking
 - `log.svelte.ts`: Application log entries
 - `map.svelte.ts`: Map view state
 - `annotation.svelte.ts`: Annotation editor boxes and their persistence
-- `gallery.svelte.ts`: Model gallery state (tab, family, manifests, installed models, downloads, accepted licenses, errors)
+- `gallery.svelte.ts`: Model gallery state (tab, family, manifests, installed models, accepted licenses, errors)
+- `modelInstall.svelte.ts`: The model install in flight and the last one that ended, for the whole window; `followModelInstalls()` (called once from App) keeps it in step with the main process
 - `toast.svelte.ts`: The single app-wide transient toast
 
 Components mutate store state directly (no actions/reducers pattern).
@@ -160,9 +163,9 @@ Components mutate store state directly (no actions/reducers pattern).
 
 Electron IPC uses a **secure preload bridge** with allowlisted channels:
 
-1. **Preload** (`src/preload/index.ts`) exposes `window.birda.invoke()` and `window.birda.on()` with channel allowlists
-2. **Main handlers** (`src/main/ipc/`) register `ipcMain.handle()` for each channel
-3. **Renderer wrappers** (`src/renderer/src/lib/utils/ipc.ts`) provide typed async functions
+1. **Preload** (`src/preload/index.ts`) exposes `window.birda.invoke()` and `window.birda.on()` with channel allowlists. `on()` returns a function that removes only that listener; there is no way to clear a whole channel.
+2. **Main handlers** (`src/main/ipc/`) register `ipcMain.handle()` for each channel. Events for the renderer go through `sendToWindows()` (`src/main/ipc/broadcast.ts`), so a reloaded or reopened window receives them too.
+3. **Renderer wrappers** (`src/renderer/src/lib/utils/ipc.ts`) provide typed async functions; every `on*` wrapper returns the unsubscribe function from `on()`.
 
 When adding a new IPC channel:
 
@@ -186,7 +189,8 @@ Security constraints:
 - Schema: `src/main/db/schema.ts`
 - Migrations: `src/main/db/database.ts` (sequential version-based)
 - Tables: `locations`, `analysis_runs`, `detections`, `audio_files`, `annotations`, `species_lists`, `species_list_entries` (plus `schema_migrations` for migration tracking)
-- View: `species_summary`
+- View: `species_summary`, which, like the other catalog-wide counts, counts finished runs only
+- Runs: `finishRun` in `runs.ts` records how a run ended and keeps one result set per source and model
 - Pragmas: `journal_mode = WAL`, `foreign_keys = ON`
 
 CRUD modules in `src/main/db/`: `runs.ts`, `detections.ts`, `locations.ts`, `species-lists.ts`, `audio-files.ts`, `annotations.ts`.
@@ -214,7 +218,7 @@ The inlang plugins in `project.inlang/settings.json` are pinned to exact version
 **Vitest** is configured for unit tests. Run with `npm run test` (`vitest run`); it is part of `npm run validate` and runs in CI.
 
 - Config: `vitest.config.ts` (node environment; aliases mirror the app's `$lib` / `$shared` / `$paraglide` paths).
-- Test files: co-located `*.test.ts` next to the code under test (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`, `build/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`, `build/vite/externalize.test.ts`. `src/renderer/src/lib/aliases.test.ts` value-imports through each path alias, since type-only imports never resolve them.
+- Test files: co-located `*.test.ts` next to the code under test (include globs `src/**/*.test.ts`, `shared/**/*.test.ts`, `build/**/*.test.ts`). Current examples: `src/main/birda/progress.test.ts`, `src/renderer/src/lib/gallery/logic.test.ts`, `build/vite/externalize.test.ts`. Main-process tests share an Electron IPC mock and a fake birda process from `src/main/test-support/`. `src/renderer/src/lib/aliases.test.ts` value-imports through each path alias, since type-only imports never resolve them.
 - Scope: framework-free logic only. The node environment has no DOM, so there are no Svelte component or DOM tests.
 
 Additional quality gates: strict TypeScript (both tsconfigs), ESLint with type-aware and security rules, knip (dead code detection), npm audit (dependency security), and pre-commit hooks (lint-staged).

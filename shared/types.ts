@@ -1,3 +1,4 @@
+import type { RUN_STATUSES } from './constants';
 // === CUDA Library Management ===
 
 export interface CudaStatus {
@@ -22,6 +23,12 @@ export interface CudaDownloadProgress {
   totalBytes: number;
   /** Current phase: 'downloading' | 'extracting' | 'verifying' */
   phase: 'downloading' | 'extracting' | 'verifying';
+}
+
+/** Sent to every window on cuda:download-finished when a CUDA download settles. */
+export interface CudaDownloadFinished {
+  outcome: 'installed' | 'cancelled' | 'failed';
+  error?: string | undefined;
 }
 
 export interface CudaDownloadResult {
@@ -114,6 +121,11 @@ export interface Location {
   created_at: string;
 }
 
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+/** The status a run ends with. */
+export type FinishedRunStatus = Extract<RunStatus, 'completed' | 'completed_with_errors' | 'failed' | 'cancelled'>;
+
 export interface AnalysisRun {
   id: number;
   location_id: number | null;
@@ -121,7 +133,7 @@ export interface AnalysisRun {
   model: string;
   min_confidence: number;
   settings_json: string | null;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'completed_with_errors';
+  status: RunStatus;
   started_at: string | null;
   completed_at: string | null;
   /** UTC offset in minutes of the recording's timezone (0 = UTC, null = unknown). */
@@ -273,6 +285,50 @@ export interface AnalysisRequest {
   timezone_offset_min?: number | undefined;
 }
 
+/**
+ * What birda:analyze resolves with, and the finished outcome of the idle status
+ * event. runId is null when no run was created (cancelled during setup) and in
+ * a failure reported by the status event.
+ */
+export interface AnalysisResult {
+  runId: number | null;
+  status: FinishedRunStatus;
+  /** The run's partial results were deleted because an earlier complete result for the same source and model exists. */
+  discardedPartial: boolean;
+}
+
+/** Progress counted from the analysis events so far, for a window that joins a running analysis. */
+export interface AnalysisProgressSnapshot {
+  totalFiles: number;
+  filesProcessed: number;
+  filesFailed: number;
+  totalDetections: number;
+  /** Each file finished so far, in order, for the per-file status list. */
+  completedFiles: { file: string; status: FileCompletedPayload['status'] }[];
+}
+
+/** The settings of the analysis that holds the lock, for a window that joins it. */
+export type RunningAnalysisSettings = Pick<
+  AnalysisRequest,
+  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day'
+>;
+
+/**
+ * Whether an analysis holds the lock. birda:analysis-status returns it, and
+ * birda:analysis-status-changed sends it when the state changes (start, Stop,
+ * end); progress between those is sent as analysis events, not as status.
+ * Only the event's idle status carries finished, the outcome of the analysis
+ * that just ended.
+ */
+export type AnalysisStatus =
+  | { state: 'idle'; finished?: AnalysisResult & { error?: string } }
+  | {
+      state: 'running' | 'stopping';
+      sourcePath: string;
+      settings: RunningAnalysisSettings;
+      progress: AnalysisProgressSnapshot;
+    };
+
 export interface DetectionFilter {
   species?: string | undefined;
   scientific_names?: string[] | undefined;
@@ -374,6 +430,20 @@ export interface ModelManifest {
   variants: ManifestVariant[];
 }
 
+/** What birda:models-install was asked to install. */
+export interface ModelInstallRequest {
+  id: string;
+  region?: string | undefined;
+  variant?: string | undefined;
+}
+
+/** Sent to every window on birda:models-install-finished when an install settles. */
+export interface ModelInstallFinished {
+  request: ModelInstallRequest;
+  outcome: 'installed' | 'cancelled' | 'failed';
+  error?: string | undefined;
+}
+
 /** Structured install progress parsed from birda's stderr progress bar. */
 export interface ModelInstallProgress {
   line: string;
@@ -455,8 +525,10 @@ export interface FileCompletedPayload {
   // 'locked' means another worker held the per-file lock, so birda skipped the
   // file rather than failing it (birda's FileStatus::Locked). Treat it as a skip.
   status: 'processed' | 'failed' | 'skipped' | 'locked';
-  detections: number;
-  duration_ms: number;
+  /** Absent when the file failed or was skipped. */
+  detections?: number;
+  /** Absent when the file failed or was skipped. */
+  duration_ms?: number;
 }
 
 export interface PipelineCompletedPayload {

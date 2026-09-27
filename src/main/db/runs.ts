@@ -1,5 +1,7 @@
 import { getDb } from './database';
-import type { AnalysisRun, RunWithStats } from '$shared/types';
+import type { AnalysisRun, FinishedRunStatus, RunWithStats } from '$shared/types';
+import { COMPLETE_RUN_STATUSES, PARTIAL_RUN_STATUSES } from '$shared/constants';
+import { sqlList } from './schema';
 
 export function createRun(
   sourcePath: string,
@@ -27,27 +29,9 @@ export function createRun(
   return run;
 }
 
-export function updateRunStatus(id: number, status: AnalysisRun['status']): void {
-  const db = getDb();
-  if (status === 'completed' || status === 'failed' || status === 'completed_with_errors') {
-    db.prepare("UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ?").run(status, id);
-  } else {
-    db.prepare('UPDATE analysis_runs SET status = ? WHERE id = ?').run(status, id);
-  }
-}
-
 function getRunById(id: number): AnalysisRun | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
-}
-
-function findCompletedRuns(sourcePath: string, model: string): AnalysisRun[] {
-  const db = getDb();
-  return db
-    .prepare(
-      "SELECT * FROM analysis_runs WHERE source_path = ? AND model = ? AND status IN ('completed', 'completed_with_errors') ORDER BY completed_at DESC",
-    )
-    .all(sourcePath, model) as AnalysisRun[];
 }
 
 export function deleteRun(id: number): void {
@@ -57,13 +41,21 @@ export function deleteRun(id: number): void {
   db.prepare('DELETE FROM analysis_runs WHERE id = ?').run(id);
 }
 
-/** Mark any runs left in 'running' state as 'failed'; they are stale from a previous session. */
+/**
+ * Finishes any runs left in 'running' state as 'failed'; they are stale from a
+ * previous session. They go through finishRun, in one transaction, so their
+ * partial results follow the same one-result-set rule as a run that failed
+ * while the app was open.
+ */
 export function markStaleRunsAsFailed(): number {
   const db = getDb();
-  const result = db
-    .prepare("UPDATE analysis_runs SET status = 'failed', completed_at = datetime('now') WHERE status = 'running'")
-    .run();
-  return result.changes;
+  return db.transaction(() => {
+    const stale = db.prepare("SELECT id FROM analysis_runs WHERE status = 'running' ORDER BY id").all() as {
+      id: number;
+    }[];
+    for (const { id } of stale) finishRun(id, 'failed');
+    return stale.length;
+  })();
 }
 
 export function getRunsWithStats(): RunWithStats[] {
@@ -73,16 +65,13 @@ export function getRunsWithStats(): RunWithStats[] {
       `
     SELECT
       ar.*,
-      COUNT(DISTINCT d.id) as detection_count,
-      COUNT(DISTINCT af.id) as file_count,
+      (SELECT COUNT(*) FROM detections d WHERE d.run_id = ar.id) as detection_count,
+      (SELECT COUNT(*) FROM audio_files af WHERE af.run_id = ar.id) as file_count,
       l.name as location_name,
       l.latitude,
       l.longitude
     FROM analysis_runs ar
-    LEFT JOIN detections d ON ar.id = d.run_id
-    LEFT JOIN audio_files af ON ar.id = af.run_id
     LEFT JOIN locations l ON ar.location_id = l.id
-    GROUP BY ar.id
     ORDER BY ar.started_at DESC
   `,
     )
@@ -95,14 +84,69 @@ export function getRunsWithStats(): RunWithStats[] {
   }));
 }
 
-export function deleteCompletedRunsForSource(sourcePath: string, model: string): number {
-  const db = getDb();
+/** What finishRun did to other results for the same source and model. */
+export interface FinishRunEffect {
+  /** Earlier runs deleted because this run replaced them. */
+  replaced: number;
+  /** This run had detections, and they were deleted because an earlier complete result exists. */
+  discardedPartial: boolean;
+}
 
-  return db.transaction(() => {
-    const runs = findCompletedRuns(sourcePath, model);
-    for (const run of runs) {
-      deleteRun(run.id);
+const COMPLETE = sqlList(COMPLETE_RUN_STATUSES);
+const PARTIAL = sqlList(PARTIAL_RUN_STATUSES);
+
+/**
+ * Records the status a run ended with and keeps one result set per source and
+ * model, so no detection is counted twice. Other runs are touched only when
+ * they are earlier (lower id) and finished; deleting a run cascades to its
+ * detections, audio files and annotations. "Results" means detections, and a
+ * complete result is a completed run that analysed at least one file.
+ * - A completed run replaces every earlier finished run, unless replaceEarlier
+ *   is false because it analysed no files.
+ * - A cancelled or failed run deletes its own partial results when an earlier
+ *   complete result exists, and stays as a record with no results.
+ * - Otherwise a cancelled or failed run with results replaces earlier
+ *   cancelled and failed runs; one without results replaces nothing.
+ */
+export function finishRun(id: number, status: FinishedRunStatus, replaceEarlier = true): FinishRunEffect {
+  const db = getDb();
+  const none: FinishRunEffect = { replaced: 0, discardedPartial: false };
+
+  return db.transaction((): FinishRunEffect => {
+    const run = db
+      .prepare(
+        "UPDATE analysis_runs SET status = ?, completed_at = datetime('now') WHERE id = ? RETURNING source_path, model",
+      )
+      .get(status, id) as { source_path: string; model: string } | undefined;
+    if (!run) return none;
+    const sameSource = [run.source_path, run.model, id] as const;
+
+    if ((COMPLETE_RUN_STATUSES as readonly string[]).includes(status)) {
+      if (!replaceEarlier) return none;
+      const { changes } = db
+        .prepare(
+          `DELETE FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status IN (${COMPLETE},${PARTIAL})`,
+        )
+        .run(...sameSource);
+      return { replaced: changes, discardedPartial: false };
     }
-    return runs.length;
+
+    const hasResults = db.prepare('SELECT 1 FROM detections WHERE run_id = ? LIMIT 1').get(id) !== undefined;
+    const earlierComplete = db
+      .prepare(
+        `SELECT 1 FROM analysis_runs r WHERE source_path = ? AND model = ? AND id < ? AND status IN (${COMPLETE})
+           AND EXISTS (SELECT 1 FROM audio_files WHERE run_id = r.id)`,
+      )
+      .get(...sameSource);
+    if (earlierComplete) {
+      // Detections and annotations cascade from audio_files.
+      db.prepare('DELETE FROM audio_files WHERE run_id = ?').run(id);
+      return { replaced: 0, discardedPartial: hasResults };
+    }
+    if (!hasResults) return none;
+    const { changes } = db
+      .prepare(`DELETE FROM analysis_runs WHERE source_path = ? AND model = ? AND id < ? AND status IN (${PARTIAL})`)
+      .run(...sameSource);
+    return { replaced: changes, discardedPartial: false };
   })();
 }
