@@ -80,7 +80,7 @@ shared/
   types.ts            # TypeScript interfaces shared between main and renderer
 messages/
   en.json             # i18n message catalog (Paraglide)
-build/                # Electron-builder resources (icons, NSIS installer script), plus vite/ with the Vite configs
+build/                # Electron-builder resources (macOS entitlements, NSIS installer script), plus vite/ with the Vite configs and their test
 ```
 
 ## Path Aliases
@@ -95,7 +95,7 @@ build/                # Electron-builder resources (icons, NSIS installer script
 
 Two separate tsconfig files (never mix them):
 
-- **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib` and `$paraglide` aliases.
+- **`tsconfig.json`**: Renderer + Shared. Extends `@tsconfig/svelte`. Includes DOM libs, `$lib`, `$shared` and `$paraglide` aliases.
 - **`tsconfig.node.json`**: Main + Preload + Shared, plus `scripts/`, `build/vite/` and `vitest.config.ts`. `allowImportingTsExtensions` is on so the Vite configs import local modules as `./externalize.ts`; Vite's planned native config loader needs the extension. Node.js only, no DOM. Has `types: ["node"]`: TypeScript 6 does not auto-include `@types/*` packages, so Node's globals are listed explicitly rather than relying on the reference in Electron's own type declarations.
 
 Both use: `strict: true`, `exactOptionalPropertyTypes: true`, `noEmit: true`, `moduleResolution: "bundler"`.
@@ -110,10 +110,10 @@ task dev                    # renderer HMR + Electron via scripts/dev.ts (restar
 task build                  # direct Vite build (main + preload + renderer) plus node --check of the bundles, via npm run build
 
 # Linting & Type Checking
-task lint                   # ESLint + svelte-check + tsc (all three in parallel)
+task lint                   # npm run lint (ESLint + svelte-check), then tsc on tsconfig.node.json
 task eslint                 # ESLint only (same files as npm run lint's ESLint step)
 task check                  # svelte-check only
-task typecheck:main         # tsc on tsconfig.node.json only
+task typecheck:main         # npm run typecheck: tsc on tsconfig.node.json (svelte-check covers tsconfig.json)
 task lint:fix               # ESLint with auto-fix
 
 # Formatting
@@ -122,6 +122,7 @@ task format:check           # Prettier check (CI)
 
 # Testing
 npm run test                # vitest run (unit tests; no Taskfile target yet)
+npm run paraglide           # compile messages into src/renderer/src/paraglide (gitignored); lint, lint:fix, check, knip and test run it first
 
 # Full validation (every CI check except the build)
 npm run validate            # format:check + lint + typecheck + test + knip + validate:translations + npm audit
@@ -159,7 +160,7 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 **Prettier** (`.prettierrc`): single quotes, trailing commas, 120 char width, 2-space indent.
 
-**Pre-commit hook** (Husky + lint-staged): runs ESLint fix + Prettier on staged `.ts`/`.svelte` files, and Prettier on staged `.json`/`.md`/`.css`/`.html` files.
+**Pre-commit hook** (Husky + lint-staged): runs ESLint fix + Prettier on staged `.ts`/`.svelte`/`.js`/`.mjs` files, and Prettier on staged `.jsonc`/`.md`/`.css`/`.html`/`.yml`/`.yaml` files (`.prettierignore` excludes `*.json`).
 
 ## Svelte 5 Patterns
 
@@ -169,7 +170,7 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 - **Derived**: `$derived()` for computed values
 - **Effects**: `$effect()` for side effects
 - **Props**: `let { prop1, prop2 } = $props()` destructuring
-- **Events**: Native DOM `on:` directives
+- **Events**: event attributes (`onclick={...}`), not legacy `on:` directives
 
 State stores are in `src/renderer/src/lib/stores/`:
 
@@ -177,6 +178,9 @@ State stores are in `src/renderer/src/lib/stores/`:
 - `analysis.svelte.ts`: Analysis progress tracking
 - `log.svelte.ts`: Application log entries
 - `map.svelte.ts`: Map view state
+- `annotation.svelte.ts`: Annotation editor boxes and their persistence
+- `gallery.svelte.ts`: Model gallery install progress and errors
+- `toast.svelte.ts`: The single app-wide transient toast
 
 Components mutate store state directly (no actions/reducers pattern).
 
@@ -209,11 +213,11 @@ Security constraints:
 - Location: `{userData}/birda-catalog.db`
 - Schema: `src/main/db/schema.ts`
 - Migrations: `src/main/db/database.ts` (sequential version-based)
-- Tables: `locations`, `analysis_runs`, `detections`, `species_lists`, `species_list_entries`
+- Tables: `locations`, `analysis_runs`, `detections`, `audio_files`, `annotations`, `species_lists`, `species_list_entries` (plus `schema_migrations` for migration tracking)
 - View: `species_summary`
 - Pragmas: `journal_mode = WAL`, `foreign_keys = ON`
 
-CRUD modules in `src/main/db/`: `runs.ts`, `detections.ts`, `locations.ts`, `species-lists.ts`.
+CRUD modules in `src/main/db/`: `runs.ts`, `detections.ts`, `locations.ts`, `species-lists.ts`, `audio-files.ts`, `annotations.ts`.
 
 ## i18n
 
@@ -241,7 +245,7 @@ Usage in components:
 
 Additional quality gates: strict TypeScript (both tsconfigs), ESLint with type-aware and security rules, knip (dead code detection), npm audit (dependency security), and pre-commit hooks (lint-staged).
 
-CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workflows/checks.yml`, so pull requests and release tags run the same checks.
+CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workflows/checks.yml`, so pull requests and release tags run the same checks; the release skips the build step there because its platform jobs build the app.
 
 ## Key Conventions
 
@@ -250,7 +254,7 @@ CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workfl
 - **Component files**: PascalCase `.svelte` (e.g., `DetectionDetail.svelte`)
 - **Store files**: camelCase `.svelte.ts` (e.g., `app.svelte.ts`)
 - **Main process modules**: camelCase `.ts` grouped by domain
-- **ESM throughout** (`"type": "module"` in package.json), CJS only for Electron main/preload output
+- **ESM throughout** (`"type": "module"` in package.json), CJS only for the Electron preload bundle
 - **Test files**: co-located `*.test.ts` next to the code under test (Vitest, node environment, framework-free logic only)
 - **Formatting**: single quotes, trailing commas, 120 char lines, 2-space indent
 
@@ -264,8 +268,8 @@ LEANN is a local, privacy-focused vector database and RAG system optimized for l
 
 - **Index Name:** `birda-gui`
 - **Rebuild Index:** `fish -c "leann build birda-gui --docs src shared messages build package.json tsconfig.json tsconfig.node.json Taskfile.yml eslint.config.js vitest.config.ts --use-ast-chunking --force"`
-- **Search:** `fish -c "leann search birda-gui '<query>'"` - Fast file/module location (instant)
-- **Ask:** `fish -c "leann ask birda-gui '<question>'"` - Comprehensive answers with code context (15-37s)
+- **Search:** `fish -c "leann search birda-gui '<query>'"`: fast file and module location (instant)
+- **Ask:** `fish -c "leann ask birda-gui '<question>'"`: comprehensive answers with code context (15 to 37 s)
 
 #### When to Use LEANN
 

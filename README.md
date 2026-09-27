@@ -59,7 +59,7 @@ npm run dist:linux   # Linux (AppImage + deb)
 npm run dist:mac     # macOS (dmg)
 ```
 
-The build automatically fetches the bundled birda CLI binary. For development, the [birda](https://github.com/tphakala/birda) CLI must be installed and available on your PATH.
+The build automatically fetches the bundled birda CLI binary into `resources/birda-cli/`. In development the app uses the CLI path set in Settings, then that bundled copy (fetched by `task fetch-cli` or any build), then a [birda](https://github.com/tphakala/birda) CLI on your PATH.
 
 ## Tech Stack
 
