@@ -1,39 +1,6 @@
-# Birda GUI: LLM Context
+# Birda GUI: agent guide
 
 Desktop GUI for the **birda** bird species detection CLI. Built with Electron + Svelte 5 + TypeScript.
-
-## 🔍 Understanding the Codebase: USE LEANN FIRST
-
-**CRITICAL:** Before reading files, grepping, or exploring the codebase to understand how something works, you MUST use LEANN first. LEANN is a semantic vector search system that provides accurate, context-aware answers about the codebase architecture and implementation patterns.
-
-### When You Need to Understand Code or Project Structure
-
-1. **ALWAYS START WITH LEANN**. Use `fish -c "leann ask birda-gui '<your question>'"` for:
-   - "How does [feature/system] work?"
-   - "Where is [functionality] implemented?"
-   - "What patterns are used for [architecture concern]?"
-   - "How do [components] interact?"
-
-2. **THEN use direct tools** (Read/Grep/Glob) only for:
-   - Reading specific files LEANN pointed you to
-   - Examining exact line-level implementation details
-   - Verifying or modifying code you already understand
-
-**Example workflow:**
-
-❌ **WRONG:** Grep for "IPC" → Read multiple files → Try to piece together understanding
-
-✅ **CORRECT:** `leann ask birda-gui "How does the Electron IPC architecture work?"` → Get comprehensive answer with file references → Read specific files if needed for implementation details
-
-**LEANN provides:**
-
-- Semantic understanding (not just keyword matching)
-- Architectural context and patterns
-- Accurate file and module references
-- Explanation of how components interact
-- AST-aware code context
-
-See the [LEANN section](#leann-low-storage-vector-index) below for detailed commands and usage patterns.
 
 ## Tech Stack
 
@@ -260,56 +227,9 @@ CI (`ci.yml`) and the release workflow (`release.yml`) both call `.github/workfl
 - **Test files**: co-located `*.test.ts` next to the code under test (Vitest, node environment, framework-free logic only)
 - **Formatting**: single quotes, trailing commas, 120 char lines, 2-space indent
 
-## Development Tools & Context
+## Cross-Project Reference: birda
 
-### LEANN (Low-storage Vector Index)
-
-LEANN is a local, privacy-focused vector database and RAG system optimized for low storage. It uses AST-aware chunking to maintain semantic code boundaries, making it highly effective for finding relevant logic and gathering context in large or unfamiliar codebases without keyword matching.
-
-#### Commands
-
-- **Index Name:** `birda-gui`
-- **Rebuild Index:** `fish -c "leann build birda-gui --docs src shared messages build package.json tsconfig.json tsconfig.node.json Taskfile.yml eslint.config.js vitest.config.ts --use-ast-chunking --force"`
-- **Search:** `fish -c "leann search birda-gui '<query>'"`: fast file and module location (instant)
-- **Ask:** `fish -c "leann ask birda-gui '<question>'"`: comprehensive answers with code context (15 to 37 s)
-
-#### When to Use LEANN
-
-**Prefer LEANN for:**
-
-- Semantic/exploratory searches: "How does IPC communication work?"
-- Architecture questions: "What Svelte 5 stores are available?"
-- Pattern discovery: "How are database operations structured?"
-- Context gathering before implementation: "How does the birda CLI integration work?"
-- Finding code without knowing exact file names or keywords
-
-**Use direct tools (Grep/Glob/Read) for:**
-
-- Exact file path reads when you know the location
-- Specific symbol searches when you know the name (component names, function names)
-- Single file content searches
-- Quick syntax checks
-
-#### Effective Query Examples
-
-**Good queries:**
-
-- "How does the Electron IPC architecture work?"
-- "What Svelte 5 stores are available and what state do they manage?"
-- "How is the birda CLI process spawned and how is NDJSON parsed?"
-- "How does the database schema and migration system work?"
-- "What is the i18n setup with Paraglide?"
-
-**Less effective:**
-
-- Very specific line-level questions (use Read tool instead)
-- Queries about code you've already read in the current session
-- File existence checks (use Glob instead)
-
-### Cross-Project Reference: birda
-
-The Rust CLI backend for Birda is located at `../birda`.
+The Rust CLI backend lives in the [birda](https://github.com/tphakala/birda) repository, usually checked out next to this one as `../birda`.
 
 - When changing output types in TypeScript ([shared/types.ts](shared/types.ts)), ensure compatibility with Rust output structures in `../birda/src/output/types.rs`.
 - NDJSON streaming format from birda CLI is parsed in [src/main/birda/](src/main/birda/)
-- LEANN also has an index for `birda` to aid in cross-project navigation.
