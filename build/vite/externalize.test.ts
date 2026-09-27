@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createIsExternal, isExternal } from './externalize.ts';
+import { createIsExternal, isExternal, runtimeDepsOf } from './externalize.ts';
 
 describe('isExternal', () => {
   it('externalizes Node builtins, bare and node: prefixed', () => {
@@ -18,10 +18,9 @@ describe('isExternal', () => {
   it('externalizes electron and its subpaths', () => {
     expect(isExternal('electron')).toBe(true);
     expect(isExternal('electron/main')).toBe(true);
-    // A package that only shares the prefix, such as electron-log, is not a
-    // runtime dependency, so it must be bundled: the packaged app would fail
-    // to require it.
-    expect(isExternal('electron-log')).toBe(false);
+    // Only electron itself and its subpaths are external: a package that
+    // merely shares the prefix is bundled like any other non-dependency.
+    expect(createIsExternal([])('electron-log')).toBe(false);
   });
 
   it('externalizes runtime dependencies and their subpaths', () => {
@@ -53,5 +52,16 @@ describe('isExternal', () => {
     expect(isExternal('./coverageCache')).toBe(false);
     expect(isExternal('$shared/types')).toBe(false);
     expect(isExternal('')).toBe(false);
+  });
+
+  it('treats dependencies, peer and optional dependencies as runtime, not dev dependencies', () => {
+    expect(
+      runtimeDepsOf({
+        dependencies: { a: '1' },
+        peerDependencies: { b: '1' },
+        optionalDependencies: { c: '1' },
+      }),
+    ).toEqual(['a', 'b', 'c']);
+    expect(runtimeDepsOf({})).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@ import { builtinModules } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-interface PackageJson {
+export interface PackageJson {
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
@@ -10,13 +10,17 @@ interface PackageJson {
 
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../package.json'), 'utf8')) as PackageJson;
 
-// Every runtime dependency (including peer and optional) must stay external:
-// it is shipped in node_modules and required at runtime, not bundled.
-const runtimeDeps = [
-  ...Object.keys(pkg.dependencies ?? {}),
-  ...Object.keys(pkg.peerDependencies ?? {}),
-  ...Object.keys(pkg.optionalDependencies ?? {}),
-];
+/**
+ * Every runtime dependency (including peer and optional) must stay external:
+ * it is shipped in node_modules and required at runtime, not bundled.
+ */
+export function runtimeDepsOf(manifest: PackageJson): string[] {
+  return [
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
+  ];
+}
 const builtins = new Set<string>(builtinModules);
 
 /**
@@ -39,4 +43,4 @@ export function createIsExternal(deps: readonly string[]): (id: string) => boole
  * bundles, using this package's runtime dependencies. Native modules like
  * better-sqlite3 must never be bundled.
  */
-export const isExternal = createIsExternal(runtimeDeps);
+export const isExternal = createIsExternal(runtimeDepsOf(pkg));
