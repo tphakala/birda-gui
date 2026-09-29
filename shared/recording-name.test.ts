@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayOfYearOf, parseRecordingName } from './recording-name';
+import { dayOfYearOf, detectionHourOf, parseRecordingName } from './recording-name';
 
 describe('parseRecordingName', () => {
   it.each([
@@ -46,5 +46,23 @@ describe('dayOfYearOf', () => {
     [12, 31, 366],
   ])('month %i day %i is day %i', (month, day, expected) => {
     expect(dayOfYearOf(month, day)).toBe(expected);
+  });
+});
+
+describe('detectionHourOf', () => {
+  it('adds the offset into the file to the hour in the name', () => {
+    expect(detectionHourOf('/rec/20240501_053000.wav', 0)).toBe(5);
+    expect(detectionHourOf('/rec/20240501_053000.wav', 1800)).toBe(6);
+    expect(detectionHourOf('/rec/20240501_233000.wav', 3600)).toBe(0);
+  });
+
+  it('reads a name with a suffix the same way', () => {
+    expect(detectionHourOf('/rec/20250328_032043_48khz.flac', 3600)).toBe(4);
+  });
+
+  it('falls back to the hour within the recording without a valid name', () => {
+    expect(detectionHourOf('/rec/recording.wav', 7300)).toBe(2);
+    expect(detectionHourOf('/rec/20241345_053000.wav', 7300)).toBe(2);
+    expect(detectionHourOf('/rec/recording.wav', 90000)).toBe(1);
   });
 });

@@ -1,5 +1,10 @@
-import type { AnalysisProgressSnapshot, BirdaEventEnvelope, ProgressPayload } from '$shared/types';
-import { applyProgressEvent } from '$shared/analysis-progress';
+import type {
+  AnalysisProgressSnapshot,
+  BirdaEventEnvelope,
+  FileCompletedPayload,
+  ProgressPayload,
+} from '$shared/types';
+import { applyProgressEvent, fileStatusOf, type FileStatus } from '$shared/analysis-progress';
 
 // Re-export event types for renderer use
 export type { BirdaEventEnvelope };
@@ -23,7 +28,8 @@ interface AnalysisProgress {
   /** Stopped, and the partial results were discarded for earlier complete ones. */
   discarded: boolean;
   error: string | null;
-  events: BirdaEventEnvelope[];
+  /** Outcome per source file path, set as each file_completed event arrives. */
+  fileStatuses: Record<string, FileStatus>;
 }
 
 export const analysisState = $state<AnalysisProgress>({
@@ -36,7 +42,7 @@ export const analysisState = $state<AnalysisProgress>({
   hadErrors: false,
   discarded: false,
   error: null,
-  events: [],
+  fileStatuses: {},
 });
 
 export function dismissAnalysis(): void {
@@ -55,13 +61,13 @@ export function resetAnalysis(): void {
   analysisState.hadErrors = false;
   analysisState.discarded = false;
   analysisState.error = null;
-  analysisState.events = [];
+  analysisState.fileStatuses = {};
 }
 
 /**
  * Starts showing an analysis this window joined mid-run, from the counts the
- * main process kept. Finished files become file_completed events, which the
- * per-file status list reads.
+ * main process kept, including each finished file's status for the per-file
+ * status list.
  */
 export function joinRunningAnalysis(progress: AnalysisProgressSnapshot): void {
   resetAnalysis();
@@ -70,29 +76,10 @@ export function joinRunningAnalysis(progress: AnalysisProgressSnapshot): void {
   analysisState.filesProcessed = progress.filesProcessed;
   analysisState.filesFailed = progress.filesFailed;
   analysisState.totalDetections = progress.totalDetections;
-  analysisState.events = progress.completedFiles.map((f) => ({
-    spec_version: '',
-    timestamp: '',
-    event: 'file_completed',
-    payload: { file: f.file, status: f.status },
-  }));
+  for (const f of progress.completedFiles) analysisState.fileStatuses[f.file] = fileStatusOf(f.status);
 }
 
-const MAX_EVENTS = 500;
-
 export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
-  analysisState.events.push(envelope);
-
-  // Trim only progress events when limit reached - keep file_completed events for UI state
-  if (analysisState.events.length > MAX_EVENTS) {
-    const criticalEvents = analysisState.events.filter((e) => e.event !== 'progress');
-    const progressEvents = analysisState.events.filter((e) => e.event === 'progress');
-
-    // Keep all critical events + recent progress events
-    const trimmedProgress = progressEvents.slice(-Math.max(0, MAX_EVENTS - criticalEvents.length));
-    analysisState.events = [...criticalEvents, ...trimmedProgress];
-  }
-
   applyProgressEvent(analysisState, envelope);
   switch (envelope.event) {
     case 'pipeline_started': {
@@ -110,6 +97,8 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
       break;
     }
     case 'file_completed': {
+      const p = envelope.payload as FileCompletedPayload;
+      analysisState.fileStatuses[p.file] = fileStatusOf(p.status);
       analysisState.currentFile = null;
       break;
     }

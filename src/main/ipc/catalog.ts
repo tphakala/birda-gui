@@ -13,6 +13,7 @@ import { clearDatabase, checkDatabaseHealth, optimizeDatabase, vacuumDatabase } 
 import { getLocations, getLocationsWithCounts } from '../db/locations';
 import { getRunsWithStats, deleteRun } from '../db/runs';
 import { resolveAll, searchByCommonName } from '../labels/label-service';
+import { detectionHourOf } from '$shared/recording-name';
 import type {
   Detection,
   DetectionFilter,
@@ -32,30 +33,6 @@ function enrichDetections(detections: (Detection & { audio_file: AudioFile | nul
     ...d,
     common_name: nameMap.get(d.scientific_name) ?? d.scientific_name,
   }));
-}
-
-/**
- * Compute the wall-clock hour (0-23) of a detection by parsing
- * the AudioMoth-style filename (YYYYMMDD_HHMMSS) and adding start_time offset.
- * AudioMoth timestamps are UTC, so we use Date.UTC for correct parsing.
- * Falls back to the hour derived from start_time offset when the filename
- * doesn't match the expected pattern.
- */
-function computeDetectionHour(filePath: string, startTime: number): number {
-  const base = filePath.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
-  const match = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(base);
-  if (match) {
-    const [, y, mo, d, h, mi, s] = match;
-    const date = new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
-    // Validate parsed date wasn't silently corrected (e.g. month 13 → next year)
-    if (date.getUTCFullYear() !== +y || date.getUTCMonth() !== +mo - 1 || date.getUTCDate() !== +d) {
-      return Math.floor(startTime / 3600) % 24;
-    }
-    const actual = new Date(date.getTime() + startTime * 1000);
-    return actual.getUTCHours();
-  }
-  // Fallback: treat start_time as offset from midnight (hour within recording)
-  return Math.floor(startTime / 3600) % 24;
 }
 
 /** Resolve common name species filter to scientific names via label service. */
@@ -117,7 +94,7 @@ export function registerCatalogHandlers(): void {
     const speciesNames = new Set<string>();
 
     for (const row of rows) {
-      const hour = computeDetectionHour(row.file_path, row.start_time);
+      const hour = detectionHourOf(row.file_path, row.start_time);
       const key = `${row.scientific_name}\0${hour}`;
       counters.set(key, (counters.get(key) ?? 0) + 1);
       speciesNames.add(row.scientific_name);
