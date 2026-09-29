@@ -15,6 +15,7 @@
     installed,
     download,
     installDisabled = false,
+    error = null,
     onInstall,
     onCancel,
     onClose,
@@ -25,6 +26,8 @@
     installed: boolean;
     download?: Download | undefined;
     installDisabled?: boolean;
+    // Why the last install of this variant failed, shown here because the page behind the modal is hidden.
+    error?: string | null;
     onInstall: () => void;
     onCancel: () => void;
     onClose: () => void;
@@ -92,6 +95,10 @@
       <p class="text-base-content/50 mt-3 text-xs">{m.gallery_license_agree({ license: license.type })}</p>
     {/if}
     <p class="text-base-content/50 mt-1 text-xs">{m.gallery_hardware_auto()}</p>
+
+    {#if error}
+      <p role="alert" class="text-error mt-3 text-sm">{error}</p>
+    {/if}
 
     <div class="modal-action">
       {#if download}

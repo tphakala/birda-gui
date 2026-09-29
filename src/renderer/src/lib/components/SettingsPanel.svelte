@@ -21,7 +21,6 @@
   import {
     getSettings,
     setSettings,
-    checkBirda,
     getBirdaConfig,
     openExecutableDialog,
     openFolderDialog,
@@ -42,12 +41,12 @@
     onCudaDownloadFinished,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
+  import { latestRequest } from '$lib/utils/latest';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState, catalogChanged, speciesListsChanged } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, refreshBirdaStatus, speciesListsChanged } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
-    BirdaCheckResponse,
     CudaStatus,
     CudaDownloadProgress,
     DatabaseHealthResult,
@@ -110,7 +109,7 @@
   ];
 
   let settingsLoaded = $state(false);
-  let birdaStatus = $state<BirdaCheckResponse | null>(null);
+  const birdaStatus = $derived(appState.birdaStatus);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let savedSettings = $state<AppSettings | null>(null);
@@ -204,12 +203,8 @@
 
       dataPath = await getDataPath();
       await runHealthCheck();
-      birdaStatus = await checkBirda();
-      if (birdaStatus.available) {
-        birdaConfig = await getBirdaConfig();
-        availableLanguages = await getAvailableLanguages();
-        await refreshGpuCapabilities();
-      }
+      const detailsError = await loadBirdaDetails();
+      if (detailsError) error = detailsError;
       // CUDA status is independent of birda CLI availability
       await refreshCudaStatus();
     } catch (e) {
@@ -217,12 +212,47 @@
     }
   }
 
-  async function refreshGpuCapabilities() {
+  /** Gates loadBirdaDetails so a load for an earlier birda path cannot overwrite a later one's. */
+  const detailsRequest = latestRequest();
+
+  /**
+   * Checks birda, then loads what depends on it (config, languages, GPU providers); with no usable birda they
+   * are cleared. The pieces load independently, so one that fails leaves the others. Returns the first failure's
+   * message, or null.
+   */
+  async function loadBirdaDetails(): Promise<string | null> {
+    const isLatest = detailsRequest();
+    await refreshBirdaStatus();
+    if (!isLatest()) return null;
+    if (!appState.birdaStatus?.available) {
+      birdaConfig = null;
+      availableLanguages = [];
+      gpuCapabilities = null;
+      return null;
+    }
+    const [config, languages, gpu] = await Promise.allSettled([
+      getBirdaConfig(),
+      getAvailableLanguages(),
+      detectGpuProviders(),
+    ]);
+    // Config and providers belong to the birda that was checked; a newer load for another path replaces them
+    if (isLatest()) {
+      birdaConfig = config.status === 'fulfilled' ? config.value : null;
+      gpuCapabilities = gpu.status === 'fulfilled' ? gpu.value : null;
+    }
+    availableLanguages = languages.status === 'fulfilled' ? languages.value : [];
+    const failed = [config, languages].find((r) => r.status === 'rejected');
+    if (!failed) return null;
+    const reason: unknown = failed.reason;
+    return (reason instanceof Error ? reason.message : String(reason)) || 'Unknown error';
+  }
+
+  async function detectGpuProviders() {
     try {
-      gpuCapabilities = await detectGpuCapabilities();
+      return await detectGpuCapabilities();
     } catch (e) {
       console.error('GPU detection failed:', e);
-      gpuCapabilities = null;
+      return null;
     }
   }
 
@@ -289,7 +319,8 @@
     try {
       // Compare against savedSettings (last saved state), not current settings
       // because the dropdown binding already changed settings.ui_language
-      const previousLang = savedSettings?.ui_language;
+      const previous = savedSettings;
+      const previousLang = previous?.ui_language;
       settings = await setSettings($state.snapshot(settings));
       savedSettings = structuredClone($state.snapshot(settings));
 
@@ -300,7 +331,17 @@
         console.error('Failed to save theme to localStorage:', e);
       }
 
-      birdaStatus = await checkBirda();
+      // The settings are saved by now, so a birda that cannot list its config or languages is not a failed save
+      if (previous?.birda_path !== settings.birda_path) {
+        const detailsError = await loadBirdaDetails();
+        if (detailsError) console.error('Failed to load birda details:', detailsError);
+      } else await refreshBirdaStatus();
+
+      // The default confidence applies to the next analysis, not one that is running: App applies it when that ends
+      if (previous?.default_confidence !== settings.default_confidence) {
+        if (appState.isAnalysisRunning) appState.pendingConfidence = settings.default_confidence;
+        else appState.analysisConfidence = settings.default_confidence;
+      }
 
       // If UI language changed, apply new locale
       if (previousLang !== settings.ui_language && isLocale(settings.ui_language)) {

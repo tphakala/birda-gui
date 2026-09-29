@@ -31,6 +31,14 @@
   let removeTarget = $state<InstalledModel | null>(null);
   // Why the removal failed, shown inside the dialog that stays open.
   let removeError = $state<string | null>(null);
+  // The last install failure of a variant while its region dialog was open; the dialog shows it
+  // while that variant is still the one open, so it clears itself when the dialog closes or changes.
+  let detailFailure = $state<{ key: string; message: string } | null>(null);
+  const detailError = $derived(
+    detailVariant && detailFailure?.key === variantKey(galleryStore.family, detailVariant.region)
+      ? detailFailure.message
+      : null,
+  );
   let busyId = $state<string | null>(null);
   let announce = $state('');
 
@@ -125,7 +133,13 @@
     } else if (finished.outcome === 'cancelled') {
       announce = m.gallery_download_cancelled();
     } else {
-      galleryStore.error = m.gallery_download_failed({ model, error: finished.error ?? '' });
+      const message = m.gallery_download_failed({ model, error: finished.error ?? '' });
+      const key = variantKey(finished.request.id, finished.request.region);
+      if (detailVariant && key === variantKey(galleryStore.family, detailVariant.region)) {
+        detailFailure = { key, message };
+      } else {
+        galleryStore.error = message;
+      }
     }
   });
 
@@ -144,6 +158,7 @@
   // Returns true on success, false on cancel or error, so updateAll can stop.
   // The outcome is reported by the effect above.
   function doInstall(family: string, variant: ManifestVariant): Promise<boolean> {
+    detailFailure = null;
     return startModelInstall({ id: family, region: variant.region });
   }
 
@@ -333,7 +348,10 @@
       {downloads}
       {installing}
       onSelectFamily={(id: string) => (galleryStore.family = id)}
-      onOpenRegion={(v: ManifestVariant) => (detailVariant = v)}
+      onOpenRegion={(v: ManifestVariant) => {
+        detailFailure = null;
+        detailVariant = v;
+      }}
       onInstall={handleInstall}
       onCancel={handleCancel}
     />
@@ -353,13 +371,17 @@
       installed={detailInstalled}
       download={downloads[variantKey(galleryStore.family, detailVariant.region)]}
       installDisabled={installing}
+      error={detailError}
       onInstall={() => {
         if (detailVariant) handleInstall(detailVariant);
       }}
       onCancel={() => {
         void handleCancel();
       }}
-      onClose={() => (detailVariant = null)}
+      onClose={() => {
+        detailFailure = null;
+        detailVariant = null;
+      }}
     />
   {/if}
 

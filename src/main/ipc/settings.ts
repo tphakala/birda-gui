@@ -18,9 +18,7 @@ let cachedVersionCheck: Promise<BirdaCheckResponse> | null = null;
 export async function registerSettingsHandlers(): Promise<void> {
   // Apply saved birda path at startup so all handlers can find birda immediately
   const initial = await settingsStore.get();
-  if (initial.birda_path) {
-    setBirdaPath(initial.birda_path);
-  }
+  setBirdaPath(initial.birda_path.trim() || null);
 
   ipcMain.handle('app:get-settings', async () => {
     return await settingsStore.get();
@@ -38,8 +36,9 @@ export async function registerSettingsHandlers(): Promise<void> {
     const updated = await settingsStore.update(validated);
 
     // Side effects after successful update
-    if (updated.birda_path && updated.birda_path !== current.birda_path) {
-      setBirdaPath(updated.birda_path);
+    if (updated.birda_path !== current.birda_path) {
+      // An empty path clears the override, so birda is found bundled or on PATH again
+      setBirdaPath(updated.birda_path.trim() || null);
       // Invalidate version check cache when path changes
       cachedVersionCheck = null;
     }

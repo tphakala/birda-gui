@@ -15,7 +15,7 @@
   import DatePicker from '$lib/components/DatePicker.svelte';
   import SourceFilesPanel from '$lib/components/SourceFilesPanel.svelte';
   import { appState } from '$lib/stores/app.svelte';
-  import { dismissAnalysis } from '$lib/stores/analysis.svelte';
+  import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
   import { lockedTitle } from '$lib/utils/runLock';
   import {
     openFileDialog,
@@ -98,10 +98,13 @@
     if (!currentPath) {
       scanResult = null;
       scanning = false;
+      // Clearing the source ends what the panel described
+      if (!appState.isAnalysisRunning) dismissAnalysis();
       return;
     }
     // A finished or stopped analysis's per-file statuses belong to its source, not this one.
-    if (!appState.isAnalysisRunning) dismissAnalysis();
+    // Only a different source dismisses it: the page remounts on every visit to the tab.
+    if (!appState.isAnalysisRunning && analysisState.source !== currentPath) dismissAnalysis();
     // Scan source files
     scanning = true;
     scanResult = null;
