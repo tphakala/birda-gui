@@ -8,9 +8,11 @@
 /**
  * Build a birda-media:// URL from a native file path.
  * Windows paths like D:\clips\file.wav become birda-media:///D%3A/clips/file.wav.
+ * A path that already starts with / is POSIX, so its backslashes stay part of the
+ * file name.
  */
 export function toBirdaMediaUrl(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, '/');
+  const normalized = filePath.startsWith('/') ? filePath : filePath.replace(/\\/g, '/');
   const withLeadingSlash = normalized.startsWith('/') ? normalized : '/' + normalized;
   // Percent-encode each segment so #, ?, % and unicode in file names survive URL
   // parsing; mediaUrlToPath decodes the pathname again.

@@ -15,7 +15,6 @@
     Calendar,
     Play,
   } from '@lucide/svelte';
-  import { SvelteMap } from 'svelte/reactivity';
   import { analysisState } from '$lib/stores/analysis.svelte';
   import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
   import type { SourceScanResult } from '$shared/types';
@@ -37,24 +36,11 @@
     analysisRunning: boolean;
   } = $props();
 
-  const fileStatuses = $derived.by(() => {
-    const statuses = new SvelteMap<string, FileStatus>();
-    if (!analysisRunning && analysisState.status === 'idle') return statuses;
-
-    for (const [file, status] of Object.entries(analysisState.fileStatuses)) {
-      statuses.set(file, status);
-    }
-
-    if (analysisState.currentFile) {
-      statuses.set(analysisState.currentFile.path, 'processing');
-    }
-
-    return statuses;
-  });
-
+  // Reads one entry per row, so a progress event does not copy every file's status.
   function getStatus(filePath: string): FileStatus | null {
     if (!analysisRunning && analysisState.status === 'idle') return null;
-    return fileStatuses.get(filePath) ?? 'pending';
+    if (analysisState.currentFile?.path === filePath) return 'processing';
+    return analysisState.fileStatuses[filePath] ?? 'pending';
   }
 
   function getPercent(filePath: string): number {

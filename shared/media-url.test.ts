@@ -11,6 +11,7 @@ describe('birda-media URL round trip', () => {
     '/rec/100% sure/x.wav',
     '/rec/Ääni ja kuva/x.wav',
     '/rec/a b/c&d=e/x.wav',
+    '/rec/a\\b.wav',
   ])('restores the posix path %s', (p) => {
     expect(mediaUrlToPath(toBirdaMediaUrl(p), 'linux')).toBe(p);
   });
