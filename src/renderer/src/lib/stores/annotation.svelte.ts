@@ -2,6 +2,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { Annotation, AnnotationInput, AnnotationSource } from '$shared/types';
 import { listAnnotations, upsertAnnotation, deleteAnnotation, getDetections, resolveAllLabels } from '$lib/utils/ipc';
 import { showToast } from '$lib/stores/toast.svelte';
+import { latestRequest } from '$lib/utils/latest';
 
 /** A box in the editor: either a persisted annotation or an unsaved AI suggestion. */
 export interface EditorBox {
@@ -45,6 +46,9 @@ export const annotationEditor = $state<AnnotationEditorState>({
 });
 
 let manualBoxSeq = 0;
+/** Gates loadBoxes so a slow load for an earlier file cannot write into the current one. */
+const loadRequest = latestRequest();
+
 /** Keys with a persist in flight; blocks duplicate INSERTs from rapid repeat actions on the same box. */
 const persistInFlight = new SvelteSet<string>();
 /** Keys whose latest state still needs persisting once the in-flight call for that key finishes. */
@@ -65,6 +69,8 @@ export function openAnnotationEditor(audioFileId: number, filePath: string): voi
 }
 
 export function closeAnnotationEditor(): void {
+  // A load still in flight must not write into the next file's state.
+  loadRequest();
   annotationEditor.open = false;
   annotationEditor.audioFileId = null;
   annotationEditor.filePath = null;
@@ -94,6 +100,7 @@ function annotationToBox(a: Annotation, commonName: string): EditorBox {
 async function loadBoxes(): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
+  const isLatest = loadRequest();
   annotationEditor.loading = true;
   annotationEditor.error = null;
   try {
@@ -102,6 +109,7 @@ async function loadBoxes(): Promise<void> {
       listAnnotations(audioFileId),
       getDetections({ audio_file_id: audioFileId, limit: MAX_DETECTION_SUGGESTIONS, offset: 0 }),
     ]);
+    if (!isLatest()) return;
     const referencedDetectionIds = new Set(
       annotations.map((a) => a.detection_id).filter((x): x is number => x !== null),
     );
@@ -113,6 +121,7 @@ async function loadBoxes(): Promise<void> {
     ];
     if (unresolved.length > 0) {
       const resolved = await resolveAllLabels(unresolved);
+      if (!isLatest()) return;
       for (const [scientific, common] of Object.entries(resolved)) {
         if (common) commonNames.set(scientific, common);
       }
@@ -141,9 +150,9 @@ async function loadBoxes(): Promise<void> {
 
     annotationEditor.boxes = [...persisted, ...suggestions].sort((a, b) => a.start_time - b.start_time);
   } catch (err) {
-    annotationEditor.error = errorMessage(err);
+    if (isLatest()) annotationEditor.error = errorMessage(err);
   } finally {
-    annotationEditor.loading = false;
+    if (isLatest()) annotationEditor.loading = false;
   }
 }
 
@@ -185,6 +194,8 @@ async function persistBox(box: EditorBox): Promise<void> {
   const status: AnnotationInput['status'] = box.source === 'manual' ? 'manual' : 'accepted';
   try {
     const saved = await upsertAnnotation(inputFromBox(box, audioFileId, status));
+    // The editor moved to another file meanwhile; the saved row is not this file's box.
+    if (annotationEditor.audioFileId !== audioFileId) return;
     const newKey = `ann-${saved.id}`;
     annotationEditor.boxes = annotationEditor.boxes.map((b) =>
       b.key === box.key
@@ -194,6 +205,10 @@ async function persistBox(box: EditorBox): Promise<void> {
     if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = newKey;
     reconciledKey = newKey;
   } catch (err) {
+    if (annotationEditor.audioFileId !== audioFileId) {
+      showToast(errorMessage(err), { severity: 'error' });
+      return;
+    }
     if (prior !== null && (prior.annotationId !== null || prior.detectionId !== null)) {
       annotationEditor.boxes = annotationEditor.boxes.map((b) => (b.key === box.key ? prior : b));
     } else {
@@ -298,8 +313,11 @@ export async function removeBox(key: string): Promise<void> {
     }
     // Unsaved manual box with no id and no detection: nothing to persist.
   } catch (err) {
-    // Re-insert only the removed box so concurrent edits to other boxes survive.
-    annotationEditor.boxes = [...annotationEditor.boxes, removed].sort((a, b) => a.start_time - b.start_time);
+    // Re-insert only the removed box so concurrent edits to other boxes survive, and only
+    // into the file it came from and when a reload has not already brought it back.
+    if (annotationEditor.audioFileId === audioFileId && !annotationEditor.boxes.some((b) => b.key === removed.key)) {
+      annotationEditor.boxes = [...annotationEditor.boxes, removed].sort((a, b) => a.start_time - b.start_time);
+    }
     showToast(errorMessage(err), { severity: 'error' });
   }
 }

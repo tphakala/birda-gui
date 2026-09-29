@@ -149,7 +149,7 @@
         appState.selectedModel = status.settings.model;
         appState.analysisConfidence = status.settings.min_confidence;
         appState.joinedSettings = status.settings;
-        joinRunningAnalysis(status.progress);
+        joinRunningAnalysis(status.sourcePath, status.progress);
       }
     } else if (status.finished && analysisState.status !== 'idle') {
       showOutcome(status.finished);
@@ -185,7 +185,7 @@
     const sourcePath = appState.sourcePath;
     if (!sourcePath || appState.isAnalysisRunning) return;
 
-    resetAnalysis();
+    resetAnalysis(sourcePath);
     appState.isAnalysisRunning = true;
     startPending = true;
     shownOwnOutcome = false;

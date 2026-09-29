@@ -21,7 +21,6 @@
   import {
     getSettings,
     setSettings,
-    checkBirda,
     getBirdaConfig,
     openExecutableDialog,
     openFolderDialog,
@@ -43,11 +42,10 @@
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState, catalogChanged, speciesListsChanged } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, refreshBirdaStatus, speciesListsChanged } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
-    BirdaCheckResponse,
     CudaStatus,
     CudaDownloadProgress,
     DatabaseHealthResult,
@@ -110,7 +108,7 @@
   ];
 
   let settingsLoaded = $state(false);
-  let birdaStatus = $state<BirdaCheckResponse | null>(null);
+  const birdaStatus = $derived(appState.birdaStatus);
   let birdaConfig = $state<Record<string, unknown> | null>(null);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let savedSettings = $state<AppSettings | null>(null);
@@ -204,16 +202,27 @@
 
       dataPath = await getDataPath();
       await runHealthCheck();
-      birdaStatus = await checkBirda();
-      if (birdaStatus.available) {
-        birdaConfig = await getBirdaConfig();
-        availableLanguages = await getAvailableLanguages();
-        await refreshGpuCapabilities();
-      }
+      await loadBirdaDetails();
       // CUDA status is independent of birda CLI availability
       await refreshCudaStatus();
     } catch (e) {
       error = (e as Error).message;
+    }
+  }
+
+  /** Checks birda, then loads what depends on it (config, languages, GPU providers); with no usable birda they are cleared. */
+  async function loadBirdaDetails() {
+    await refreshBirdaStatus();
+    if (appState.birdaStatus?.available) {
+      await Promise.all([
+        getBirdaConfig().then((config) => (birdaConfig = config)),
+        getAvailableLanguages().then((languages) => (availableLanguages = languages)),
+        refreshGpuCapabilities(),
+      ]);
+    } else {
+      birdaConfig = null;
+      availableLanguages = [];
+      gpuCapabilities = null;
     }
   }
 
@@ -289,7 +298,8 @@
     try {
       // Compare against savedSettings (last saved state), not current settings
       // because the dropdown binding already changed settings.ui_language
-      const previousLang = savedSettings?.ui_language;
+      const previous = savedSettings;
+      const previousLang = previous?.ui_language;
       settings = await setSettings($state.snapshot(settings));
       savedSettings = structuredClone($state.snapshot(settings));
 
@@ -300,7 +310,13 @@
         console.error('Failed to save theme to localStorage:', e);
       }
 
-      birdaStatus = await checkBirda();
+      if (previous?.birda_path !== settings.birda_path) await loadBirdaDetails();
+      else await refreshBirdaStatus();
+
+      // The default confidence applies to the next analysis, not one that is running
+      if (previous?.default_confidence !== settings.default_confidence && !appState.isAnalysisRunning) {
+        appState.analysisConfidence = settings.default_confidence;
+      }
 
       // If UI language changed, apply new locale
       if (previousLang !== settings.ui_language && isLocale(settings.ui_language)) {

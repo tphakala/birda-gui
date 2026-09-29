@@ -17,6 +17,8 @@ interface FileProgress {
 }
 
 interface AnalysisProgress {
+  /** The source the panel describes, so revisiting the page does not dismiss it. */
+  source: string | null;
   totalFiles: number;
   filesProcessed: number;
   filesFailed: number;
@@ -33,6 +35,7 @@ interface AnalysisProgress {
 }
 
 export const analysisState = $state<AnalysisProgress>({
+  source: null,
   totalFiles: 0,
   filesProcessed: 0,
   filesFailed: 0,
@@ -51,7 +54,8 @@ export function dismissAnalysis(): void {
   }
 }
 
-export function resetAnalysis(): void {
+export function resetAnalysis(source: string | null): void {
+  analysisState.source = source;
   analysisState.totalFiles = 0;
   analysisState.filesProcessed = 0;
   analysisState.filesFailed = 0;
@@ -69,8 +73,8 @@ export function resetAnalysis(): void {
  * main process kept, including each finished file's status for the per-file
  * status list.
  */
-export function joinRunningAnalysis(progress: AnalysisProgressSnapshot): void {
-  resetAnalysis();
+export function joinRunningAnalysis(source: string, progress: AnalysisProgressSnapshot): void {
+  resetAnalysis(source);
   analysisState.status = 'running';
   analysisState.totalFiles = progress.totalFiles;
   analysisState.filesProcessed = progress.filesProcessed;

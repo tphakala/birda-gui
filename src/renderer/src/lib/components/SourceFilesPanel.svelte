@@ -50,7 +50,12 @@
     return 0;
   }
 
+  // Set while a file is being resolved, so a double click cannot open two editors at once.
+  let annotating = $state(false);
+
   async function annotate(filePath: string): Promise<void> {
+    if (annotating) return;
+    annotating = true;
     // The files listed are the source of the last analysis when the paths match, so its run is the one to look in;
     // the run selected on Detections may belong to another source.
     const runId =
@@ -68,6 +73,8 @@
     } catch (err) {
       console.error('Failed to resolve audio file for annotation:', err);
       showToast(m.sourceFiles_annotateNotAnalyzed(), { severity: 'warning' });
+    } finally {
+      annotating = false;
     }
   }
 </script>
@@ -249,7 +256,7 @@
                 <button
                   type="button"
                   class="btn btn-outline btn-primary btn-xs"
-                  disabled={analysisRunning}
+                  disabled={analysisRunning || annotating}
                   onclick={() => {
                     void annotate(file.path);
                   }}

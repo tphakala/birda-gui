@@ -1,34 +1,23 @@
 <script lang="ts">
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, refreshBirdaStatus } from '$lib/stores/app.svelte';
   import { formatNumber } from '$lib/utils/format';
-  import { checkBirda, getAppVersion } from '$lib/utils/ipc';
-  import type { BirdaCheckResponse } from '$shared/types';
+  import { getAppVersion } from '$lib/utils/ipc';
   import { BIRDA_RELEASES_URL } from '$shared/constants';
   import { TriangleAlert, ExternalLink } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import * as m from '$paraglide/messages';
   import Modal from './Modal.svelte';
 
-  let birdaStatus = $state<BirdaCheckResponse | null>(null);
   let showVersionModal = $state(false);
   let appVersion = $state('');
 
+  const birdaStatus = $derived(appState.birdaStatus);
   const isOutdated = $derived(birdaStatus && !birdaStatus.available && birdaStatus.version && birdaStatus.minVersion);
 
   onMount(() => {
     let mounted = true;
 
-    void (async () => {
-      try {
-        const result = await checkBirda();
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (mounted) {
-          birdaStatus = result;
-        }
-      } catch {
-        // Silent fail - status bar is not critical
-      }
-    })();
+    void refreshBirdaStatus();
 
     void (async () => {
       try {

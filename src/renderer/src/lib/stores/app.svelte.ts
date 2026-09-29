@@ -1,6 +1,7 @@
-import { getCatalogStats } from '$lib/utils/ipc';
+import { checkBirda, getCatalogStats } from '$lib/utils/ipc';
+import { latestRequest } from '$lib/utils/latest';
 import { tabSwitch, type Tab } from '$lib/utils/navigation';
-import type { CatalogStats, RunningAnalysisSettings } from '$shared/types';
+import type { BirdaCheckResponse, CatalogStats, RunningAnalysisSettings } from '$shared/types';
 
 export type { Tab };
 
@@ -15,7 +16,8 @@ interface AppState {
   minConfidence: number;
   analysisConfidence: number;
   catalogStats: CatalogStats;
-  birdaAvailable: boolean | null;
+  /** The last birda CLI check; null until the first one answers. */
+  birdaStatus: BirdaCheckResponse | null;
   showLogPanel: boolean;
   lastRunId: number | null;
   lastSourceFile: string | null;
@@ -49,7 +51,7 @@ export const appState = $state<AppState>({
     total_locations: 0,
     saved_locations: 0,
   },
-  birdaAvailable: null,
+  birdaStatus: null,
   showLogPanel: false,
   lastRunId: null,
   lastSourceFile: null,
@@ -88,4 +90,18 @@ export async function refreshCatalogStats(): Promise<void> {
   } catch {
     // Keep the last counts
   }
+}
+
+const birdaStatusRequest = latestRequest();
+
+/** Checks the birda CLI again and stores the result; the newest check wins. A check that cannot run is stored as unavailable. */
+export async function refreshBirdaStatus(): Promise<void> {
+  const isCurrent = birdaStatusRequest();
+  let status: BirdaCheckResponse;
+  try {
+    status = await checkBirda();
+  } catch (e) {
+    status = { available: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  if (isCurrent()) appState.birdaStatus = status;
 }

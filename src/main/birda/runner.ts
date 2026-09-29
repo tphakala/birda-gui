@@ -126,7 +126,8 @@ export interface AnalysisHandle {
 
 let configuredBirdaPath: string | null = null;
 
-export function setBirdaPath(p: string): void {
+/** Sets the user-configured birda path; null goes back to the bundled or PATH birda. */
+export function setBirdaPath(p: string | null): void {
   configuredBirdaPath = p;
 }
 

@@ -148,7 +148,7 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 State stores are in `src/renderer/src/lib/stores/`:
 
-- `app.svelte.ts`: Global UI state (active tab, settings, selections). `catalogChanged()` bumps `runsVersion`, which views that show runs watch to reload, and refreshes the status bar counts. `speciesListsChanged()` bumps `speciesListsVersion` the same way for species lists. `requestTab()` opens a tab, or sets `pendingTab` so the sidebar asks first when Settings has unsaved changes. `listFilterRequest` is the one-shot request from the Species page for Detections to filter by a list
+- `app.svelte.ts`: Global UI state (active tab, settings, selections). `catalogChanged()` bumps `runsVersion`, which views that show runs watch to reload, and refreshes the status bar counts. `birdaStatus` holds the last birda CLI check and `refreshBirdaStatus()` redoes it (the status bar and Settings both read it). `speciesListsChanged()` bumps `speciesListsVersion` the same way for species lists. `requestTab()` opens a tab, or sets `pendingTab` so the sidebar asks first when Settings has unsaved changes. `listFilterRequest` is the one-shot request from the Species page for Detections to filter by a list
 - `analysis.svelte.ts`: Analysis progress tracking
 - `log.svelte.ts`: Application log entries
 - `map.svelte.ts`: Map view state
