@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { invoke, resetIpc } from '../test-support/ipc-harness';
 
+const initialSettings = vi.hoisted(() => ({
+  birda_path: '/saved/birda',
+  species_language: 'en',
+  default_confidence: 0.1,
+}));
 const h = vi.hoisted(() => ({
-  settings: { birda_path: '/saved/birda', species_language: 'en', default_confidence: 0.1 },
+  settings: { ...initialSettings },
   setBirdaPath: vi.fn<(p: string | null) => void>(),
   findBirda: vi.fn(() => Promise.resolve('/bin/birda')),
   validateBirdaVersion: vi.fn(() => Promise.resolve({ version: '1.6.0', minVersion: '1.6.0', meetsMinimum: true })),
@@ -37,6 +42,7 @@ const check = () => invoke('app:check-birda') as Promise<{ available: boolean }>
 
 beforeEach(() => {
   resetIpc();
+  h.settings = { ...initialSettings };
 });
 
 describe('birda path settings', () => {

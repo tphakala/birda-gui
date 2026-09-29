@@ -95,6 +95,13 @@
   // True while this window's startAnalysis call is pending. That call owns the
   // running flags until it settles; status events only drive a window that did
   // not start the analysis, for example one reloaded mid-run.
+  // A default confidence saved during an analysis reaches the slider once it has ended
+  $effect(() => {
+    if (appState.isAnalysisRunning || appState.pendingConfidence === null) return;
+    appState.analysisConfidence = appState.pendingConfidence;
+    appState.pendingConfidence = null;
+  });
+
   let startPending = false;
   // Set once this window has shown the outcome of its own analysis, so the idle
   // status event for it (which may arrive after the start call settles) is not

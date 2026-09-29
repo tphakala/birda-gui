@@ -49,6 +49,9 @@ let manualBoxSeq = 0;
 /** Gates loadBoxes so a slow load for an earlier file cannot write into the current one. */
 const loadRequest = latestRequest();
 
+/** Bumped each time the editor opens or closes; an operation started in an earlier session drops its results. */
+let editorSession = 0;
+
 /** Keys with a persist in flight; blocks duplicate INSERTs from rapid repeat actions on the same box. */
 const persistInFlight = new SvelteSet<string>();
 /** Keys whose latest state still needs persisting once the in-flight call for that key finishes. */
@@ -58,7 +61,15 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Starts a new session: operations still in flight from the last one must not touch this one's state. */
+function startEditorSession(): void {
+  editorSession++;
+  persistInFlight.clear();
+  pendingPersistKeys.clear();
+}
+
 export function openAnnotationEditor(audioFileId: number, filePath: string): void {
+  startEditorSession();
   annotationEditor.open = true;
   annotationEditor.audioFileId = audioFileId;
   annotationEditor.filePath = filePath;
@@ -71,6 +82,7 @@ export function openAnnotationEditor(audioFileId: number, filePath: string): voi
 export function closeAnnotationEditor(): void {
   // A load still in flight must not write into the next file's state.
   loadRequest();
+  startEditorSession();
   annotationEditor.open = false;
   annotationEditor.audioFileId = null;
   annotationEditor.filePath = null;
@@ -176,12 +188,15 @@ function inputFromBox(box: EditorBox, audioFileId: number, status: AnnotationInp
  * Persist a box (insert or update). On success, reconcile the box with the saved row.
  * On failure, roll back only the affected box (concurrent edits to other boxes survive)
  * and toast. Status follows the box's source ('manual' -> manual, otherwise 'accepted').
- * Re-entrant calls for the same key are dropped while a persist is in flight, so a
- * not-yet-persisted box can never insert twice.
+ * Re-entrant calls for the same key are queued while a persist is in flight (the latest
+ * state is persisted when it finishes), so a not-yet-persisted box can never insert twice.
+ * If the editor is closed or reopened before the call returns, its result is dropped
+ * (a failure is still toasted), so it cannot touch the new session's boxes.
  */
 async function persistBox(box: EditorBox): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
+  const session = editorSession;
   if (persistInFlight.has(box.key)) {
     // Queue instead of dropping: the latest state is re-persisted when the in-flight call finishes.
     pendingPersistKeys.add(box.key);
@@ -194,8 +209,8 @@ async function persistBox(box: EditorBox): Promise<void> {
   const status: AnnotationInput['status'] = box.source === 'manual' ? 'manual' : 'accepted';
   try {
     const saved = await upsertAnnotation(inputFromBox(box, audioFileId, status));
-    // The editor moved to another file meanwhile; the saved row is not this file's box.
-    if (annotationEditor.audioFileId !== audioFileId) return;
+    // The editor was closed or reopened meanwhile; the saved row is not this session's box.
+    if (session !== editorSession) return;
     const newKey = `ann-${saved.id}`;
     annotationEditor.boxes = annotationEditor.boxes.map((b) =>
       b.key === box.key
@@ -205,7 +220,7 @@ async function persistBox(box: EditorBox): Promise<void> {
     if (annotationEditor.selectedKey === box.key) annotationEditor.selectedKey = newKey;
     reconciledKey = newKey;
   } catch (err) {
-    if (annotationEditor.audioFileId !== audioFileId) {
+    if (session !== editorSession) {
       showToast(errorMessage(err), { severity: 'error' });
       return;
     }
@@ -218,8 +233,9 @@ async function persistBox(box: EditorBox): Promise<void> {
     }
     showToast(errorMessage(err), { severity: 'error' });
   } finally {
-    persistInFlight.delete(box.key);
-    if (pendingPersistKeys.delete(box.key)) {
+    // A new session starts with its own in-flight bookkeeping, which this call must not touch.
+    if (session === editorSession) persistInFlight.delete(box.key);
+    if (session === editorSession && pendingPersistKeys.delete(box.key)) {
       // The boxes array already holds the latest local state (updates are applied
       // optimistically before persisting); re-persist it under the possibly rekeyed entry.
       const live = annotationEditor.boxes.find((b) => b.key === reconciledKey);
@@ -299,6 +315,7 @@ export async function createManualBox(bounds: {
 export async function removeBox(key: string): Promise<void> {
   const audioFileId = annotationEditor.audioFileId;
   if (audioFileId === null) return;
+  const session = editorSession;
   const box = annotationEditor.boxes.find((b) => b.key === key);
   if (!box) return;
   const removed = { ...box };
@@ -314,8 +331,8 @@ export async function removeBox(key: string): Promise<void> {
     // Unsaved manual box with no id and no detection: nothing to persist.
   } catch (err) {
     // Re-insert only the removed box so concurrent edits to other boxes survive, and only
-    // into the file it came from and when a reload has not already brought it back.
-    if (annotationEditor.audioFileId === audioFileId && !annotationEditor.boxes.some((b) => b.key === removed.key)) {
+    // into the session it came from and when a reload has not already brought it back.
+    if (session === editorSession && !annotationEditor.boxes.some((b) => b.key === removed.key)) {
       annotationEditor.boxes = [...annotationEditor.boxes, removed].sort((a, b) => a.start_time - b.start_time);
     }
     showToast(errorMessage(err), { severity: 'error' });

@@ -45,11 +45,18 @@
     active = -1;
   }
 
+  /** Close the list for good: a search still pending must not bring it back. */
+  function dismiss() {
+    invalidateSearch();
+    closeList();
+  }
+
   function handleInput() {
     invalidateSearch();
+    // Options of the previous query must not stay selectable while the next search runs
+    results = [];
+    closeList();
     if (!query.trim()) {
-      results = [];
-      closeList();
       onclear();
       return;
     }
@@ -101,7 +108,7 @@
     } else if (action.kind === 'select') {
       select(results[action.index]);
     } else {
-      closeList();
+      dismiss();
     }
   }
 </script>
@@ -119,7 +126,7 @@
       onfocus={() => {
         if (results.length) open = true;
       }}
-      onblur={closeList}
+      onblur={dismiss}
       {placeholder}
       aria-label={placeholder}
       role="combobox"

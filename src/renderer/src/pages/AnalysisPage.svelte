@@ -98,6 +98,8 @@
     if (!currentPath) {
       scanResult = null;
       scanning = false;
+      // Clearing the source ends what the panel described
+      if (!appState.isAnalysisRunning) dismissAnalysis();
       return;
     }
     // A finished or stopped analysis's per-file statuses belong to its source, not this one.

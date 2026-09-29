@@ -15,6 +15,8 @@ interface AppState {
   selectedModel: string;
   minConfidence: number;
   analysisConfidence: number;
+  /** A new default confidence saved while an analysis runs; applied to the slider once it ends. */
+  pendingConfidence: number | null;
   catalogStats: CatalogStats;
   /** The last birda CLI check; null until the first one answers. */
   birdaStatus: BirdaCheckResponse | null;
@@ -45,6 +47,7 @@ export const appState = $state<AppState>({
   selectedModel: 'birdnet-v24',
   minConfidence: 0.5,
   analysisConfidence: 0.1,
+  pendingConfidence: null,
   catalogStats: {
     total_detections: 0,
     total_species: 0,

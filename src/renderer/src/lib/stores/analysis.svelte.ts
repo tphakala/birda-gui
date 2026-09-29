@@ -51,6 +51,8 @@ export const analysisState = $state<AnalysisProgress>({
 export function dismissAnalysis(): void {
   if (analysisState.status !== 'idle' && analysisState.status !== 'running') {
     analysisState.status = 'idle';
+    // The panel no longer describes any source, so choosing the same one again starts fresh
+    analysisState.source = null;
   }
 }
 

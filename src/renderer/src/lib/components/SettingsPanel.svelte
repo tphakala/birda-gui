@@ -41,6 +41,7 @@
     onCudaDownloadFinished,
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
+  import { latestRequest } from '$lib/utils/latest';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
   import { appState, catalogChanged, refreshBirdaStatus, speciesListsChanged } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
@@ -211,25 +212,34 @@
     }
   }
 
+  /** Gates loadBirdaDetails so a load for an earlier birda path cannot overwrite a later one's. */
+  const detailsRequest = latestRequest();
+
   /**
    * Checks birda, then loads what depends on it (config, languages, GPU providers); with no usable birda they
    * are cleared. The pieces load independently, so one that fails leaves the others. Returns the first failure's
    * message, or null.
    */
   async function loadBirdaDetails(): Promise<string | null> {
+    const isLatest = detailsRequest();
     await refreshBirdaStatus();
+    if (!isLatest()) return null;
     if (!appState.birdaStatus?.available) {
       birdaConfig = null;
       availableLanguages = [];
       gpuCapabilities = null;
       return null;
     }
-    const [config, languages] = await Promise.allSettled([
+    const [config, languages, gpu] = await Promise.allSettled([
       getBirdaConfig(),
       getAvailableLanguages(),
-      refreshGpuCapabilities(),
+      detectGpuProviders(),
     ]);
-    birdaConfig = config.status === 'fulfilled' ? config.value : null;
+    // Config and providers belong to the birda that was checked; a newer load for another path replaces them
+    if (isLatest()) {
+      birdaConfig = config.status === 'fulfilled' ? config.value : null;
+      gpuCapabilities = gpu.status === 'fulfilled' ? gpu.value : null;
+    }
     availableLanguages = languages.status === 'fulfilled' ? languages.value : [];
     const failed = [config, languages].find((r) => r.status === 'rejected');
     if (!failed) return null;
@@ -237,12 +247,12 @@
     return (reason instanceof Error ? reason.message : String(reason)) || 'Unknown error';
   }
 
-  async function refreshGpuCapabilities() {
+  async function detectGpuProviders() {
     try {
-      gpuCapabilities = await detectGpuCapabilities();
+      return await detectGpuCapabilities();
     } catch (e) {
       console.error('GPU detection failed:', e);
-      gpuCapabilities = null;
+      return null;
     }
   }
 
@@ -327,9 +337,10 @@
         if (detailsError) console.error('Failed to load birda details:', detailsError);
       } else await refreshBirdaStatus();
 
-      // The default confidence applies to the next analysis, not one that is running
-      if (previous?.default_confidence !== settings.default_confidence && !appState.isAnalysisRunning) {
-        appState.analysisConfidence = settings.default_confidence;
+      // The default confidence applies to the next analysis, not one that is running: App applies it when that ends
+      if (previous?.default_confidence !== settings.default_confidence) {
+        if (appState.isAnalysisRunning) appState.pendingConfidence = settings.default_confidence;
+        else appState.analysisConfidence = settings.default_confidence;
       }
 
       // If UI language changed, apply new locale
