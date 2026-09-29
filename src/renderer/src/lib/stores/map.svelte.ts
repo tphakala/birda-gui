@@ -1,4 +1,4 @@
-import { SvelteSet } from 'svelte/reactivity';
+import { SvelteMap } from 'svelte/reactivity';
 
 export interface MapLocation {
   location_id: number;
@@ -12,6 +12,7 @@ export interface MapLocation {
 export const mapState = $state({
   locations: [] as MapLocation[],
   selectedSpecies: null as string | null,
-  highlightedLocationIds: new SvelteSet<number>(),
+  /** The selected species' detection count at each location that has it; the locations' own totals stay as loaded. */
+  speciesCounts: new SvelteMap<number, number>(),
   loading: false,
 });

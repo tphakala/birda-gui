@@ -51,7 +51,12 @@
   }
 
   async function annotate(filePath: string): Promise<void> {
-    const runId = appState.selectedRunId ?? appState.lastRunId ?? null;
+    // The files listed are the source of the last analysis when the paths match, so its run is the one to look in;
+    // the run selected on Detections may belong to another source.
+    const runId =
+      appState.lastSourceFile !== null && appState.lastSourceFile === appState.sourcePath
+        ? (appState.lastRunId ?? appState.selectedRunId)
+        : (appState.selectedRunId ?? appState.lastRunId ?? null);
     try {
       const id = await resolveAnnotationFile(filePath, runId);
       if (id !== null) {

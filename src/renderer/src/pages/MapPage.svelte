@@ -4,27 +4,28 @@
   import { mapState } from '$lib/stores/map.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import { getLocationsWithCounts, getSpeciesLocations } from '$lib/utils/ipc';
-  import { SvelteSet } from 'svelte/reactivity';
-  import { onMount } from 'svelte';
+  import { latestRequest } from '$lib/utils/latest';
+  import { SvelteMap } from 'svelte/reactivity';
+  import { untrack } from 'svelte';
   import type { EnrichedSpeciesSummary } from '$shared/types';
 
-  // Reload when the catalog's runs change; the page stays mounted while hidden.
-  let seenRunsVersion = appState.runsVersion;
+  // Load on mount and reload when the catalog's runs change; the page stays mounted while hidden.
   $effect(() => {
-    if (appState.runsVersion !== seenRunsVersion) {
-      seenRunsVersion = appState.runsVersion;
+    const _version = appState.runsVersion; // re-run when the runs change
+    untrack(() => {
       void loadLocations();
-    }
+    });
   });
 
-  onMount(() => {
-    void loadLocations();
-  });
+  // Only the newest location load applies its result.
+  const locationsRequest = latestRequest();
 
   async function loadLocations() {
+    const isLatest = locationsRequest();
     mapState.loading = true;
     try {
       const locations = await getLocationsWithCounts();
+      if (!isLatest()) return;
       mapState.locations = locations.map((l) => ({
         location_id: l.id,
         latitude: l.latitude,
@@ -36,7 +37,7 @@
     } catch {
       // No locations yet
     } finally {
-      mapState.loading = false;
+      if (isLatest()) mapState.loading = false;
     }
     // Keep a selected species' highlight and its per-location counts after a reload.
     if (mapState.selectedSpecies) await highlightSpecies(mapState.selectedSpecies);
@@ -47,25 +48,24 @@
     await highlightSpecies(species.scientific_name);
   }
 
+  // Only the newest species request applies; clearing the species drops one still loading.
+  const speciesRequest = latestRequest();
+
   async function highlightSpecies(scientificName: string) {
+    const isLatest = speciesRequest();
     try {
       const locs = await getSpeciesLocations(scientificName);
-      mapState.highlightedLocationIds = new SvelteSet(locs.map((l) => l.location_id));
-      // Update detection counts from the species-specific query
-      for (const loc of locs) {
-        const existing = mapState.locations.find((l) => l.location_id === loc.location_id);
-        if (existing) {
-          existing.detection_count = loc.detection_count;
-        }
-      }
+      if (!isLatest()) return;
+      mapState.speciesCounts = new SvelteMap(locs.map((l) => [l.location_id, l.detection_count]));
     } catch {
-      mapState.highlightedLocationIds = new SvelteSet();
+      if (isLatest()) mapState.speciesCounts = new SvelteMap();
     }
   }
 
   function handleSpeciesClear() {
+    speciesRequest();
     mapState.selectedSpecies = null;
-    mapState.highlightedLocationIds = new SvelteSet();
+    mapState.speciesCounts = new SvelteMap();
   }
 </script>
 

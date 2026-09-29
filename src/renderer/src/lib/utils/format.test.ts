@@ -11,4 +11,11 @@ describe('parseRecordingStart', () => {
     expect(parseRecordingStart('20240501_053000_A.wav')).toBeNull();
     expect(parseRecordingStart('20241345_053000.wav')).toBeNull();
   });
+
+  it('accepts a suffixed name when allowSuffix is set', () => {
+    expect(parseRecordingStart('/rec/20240501_053000_A.wav', { allowSuffix: true })).toEqual(
+      new Date(2024, 4, 1, 5, 30, 0),
+    );
+    expect(parseRecordingStart('/rec/20241345_053000_A.wav', { allowSuffix: true })).toBeNull();
+  });
 });

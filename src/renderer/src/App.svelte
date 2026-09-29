@@ -38,6 +38,7 @@
     onShowLicenses,
   } from '$lib/utils/ipc';
   import { setupMenuListeners, isTab } from '$lib/utils/shortcuts';
+  import { completedRunNavigation } from '$lib/utils/navigation';
   import { onMount } from 'svelte';
   import type { AnalysisResult, AnalysisStatus } from '$shared/types';
   import { COMPLETE_RUN_STATUSES } from '$shared/constants';
@@ -209,8 +210,12 @@
       if (result.runId !== null && (COMPLETE_RUN_STATUSES as readonly string[]).includes(result.status)) {
         appState.lastRunId = result.runId;
         appState.lastSourceFile = sourcePath;
-        appState.selectedRunId = result.runId;
-        appState.activeTab = 'detections';
+        // Only a user waiting on the Analysis tab is taken to the results; a Settings
+        // page may hold unsaved edits, and a dialog on another page would be closed.
+        const navigation = completedRunNavigation(appState.activeTab, appState.selectedRunId);
+        if (navigation.select) appState.selectedRunId = result.runId;
+        if (navigation.switchTab) appState.activeTab = 'detections';
+        else showToast(m.analysis_resultsReady());
       }
     } catch (err) {
       // A window that did not know about a running analysis (its status reply
@@ -261,7 +266,7 @@
         appState.analysisConfidence = settings.default_confidence;
         showWizard = !settings.setup_completed;
       } catch {
-        // Failed to load settings — show wizard as fallback
+        // Failed to load settings, show wizard as fallback
         showWizard = true;
       }
 
@@ -334,12 +339,12 @@
     <span class="loading loading-spinner loading-lg text-primary" role="status" aria-label={m.common_loading()}></span>
   </main>
 {:else if showWizard}
-  <main class="bg-base-100 text-base-content h-screen select-none">
+  <main class="bg-base-100 text-base-content h-screen">
     <SetupWizard oncomplete={handleWizardComplete} />
   </main>
 {:else}
   <!-- The annotation editor overlays the app; keep the page behind it out of reach. -->
-  <main class="bg-base-100 text-base-content flex h-screen select-none" inert={annotationEditor.open}>
+  <main class="bg-base-100 text-base-content flex h-screen" inert={annotationEditor.open}>
     <Sidebar />
 
     <div class="flex flex-1 flex-col overflow-hidden">

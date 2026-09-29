@@ -28,7 +28,7 @@
   } from '$lib/utils/ipc';
   import { parseLocalDate, parseRecordingStart } from '$lib/utils/format';
   import type { AvailableModel, InstalledModel, Location, SourceScanResult } from '$shared/types';
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import * as m from '$paraglide/messages';
 
   const {
@@ -85,55 +85,59 @@
     if (!missingRangeFilter) showNoFilterWarning = false;
   });
 
-  // Auto-detect coordinates and scan files when source path changes
-  let prevSourcePath: string | null = null;
+  // Auto-detect coordinates and scan files when the source path changes. The path
+  // is the only trigger; onSourceChanged reads other state that must not re-run it.
   $effect(() => {
     const currentPath = appState.sourcePath;
-    if (currentPath && currentPath !== prevSourcePath) {
-      prevSourcePath = currentPath;
-      // A finished or stopped analysis's per-file statuses belong to its source, not this one.
-      if (!appState.isAnalysisRunning) dismissAnalysis();
-      // Scan source files
-      scanning = true;
-      scanResult = null;
-      const pathAtStart = currentPath;
-      void (async () => {
-        try {
-          const res = await scanSource(pathAtStart);
-          if (appState.sourcePath === pathAtStart) {
-            scanResult = res;
-          }
-        } catch {
-          if (appState.sourcePath === pathAtStart) {
-            scanResult = null;
-          }
-        } finally {
-          if (appState.sourcePath === pathAtStart) {
-            scanning = false;
-          }
-        }
-      })();
-      // Auto-detect coordinates, except for a running analysis this window
-      // joined: the form shows that analysis's own coordinates.
-      void (async () => {
-        if (appState.isAnalysisRunning) return;
-        try {
-          const coords = await readCoordinates(pathAtStart);
-          if (coords && appState.sourcePath === pathAtStart) {
-            latitude = coords.latitude;
-            longitude = coords.longitude;
-            autoDetected = true;
-          }
-        } catch {
-          // No coordinates file found
-        }
-      })();
-    } else if (!currentPath) {
-      prevSourcePath = null;
+    untrack(() => {
+      onSourceChanged(currentPath);
+    });
+  });
+
+  function onSourceChanged(currentPath: string | null) {
+    if (!currentPath) {
       scanResult = null;
       scanning = false;
+      return;
     }
-  });
+    // A finished or stopped analysis's per-file statuses belong to its source, not this one.
+    if (!appState.isAnalysisRunning) dismissAnalysis();
+    // Scan source files
+    scanning = true;
+    scanResult = null;
+    const pathAtStart = currentPath;
+    void (async () => {
+      try {
+        const res = await scanSource(pathAtStart);
+        if (appState.sourcePath === pathAtStart) {
+          scanResult = res;
+        }
+      } catch {
+        if (appState.sourcePath === pathAtStart) {
+          scanResult = null;
+        }
+      } finally {
+        if (appState.sourcePath === pathAtStart) {
+          scanning = false;
+        }
+      }
+    })();
+    // Auto-detect coordinates, except for a running analysis this window
+    // joined: the form shows that analysis's own coordinates.
+    void (async () => {
+      if (appState.isAnalysisRunning) return;
+      try {
+        const coords = await readCoordinates(pathAtStart);
+        if (coords && appState.sourcePath === pathAtStart) {
+          latitude = coords.latitude;
+          longitude = coords.longitude;
+          autoDetected = true;
+        }
+      } catch {
+        // No coordinates file found
+      }
+    })();
+  }
 
   function selectLocation(loc: Location) {
     latitude = loc.latitude;

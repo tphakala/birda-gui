@@ -43,7 +43,7 @@
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState, catalogChanged } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, speciesListsChanged } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
@@ -343,6 +343,8 @@
       await tick();
       focusIfLost(dbContentHeading);
       catalogChanged();
+      // Clearing also deletes the species lists.
+      speciesListsChanged();
       // A finished analysis's panel may describe results that are gone now.
       dismissAnalysis();
       if (clearResultTimer) clearTimeout(clearResultTimer);
@@ -402,7 +404,7 @@
       try {
         dbHealth = await checkDatabaseHealth();
       } catch {
-        /* ignore — health refresh failure is non-critical */
+        /* ignore: health refresh failure is non-critical */
       }
     }
   }

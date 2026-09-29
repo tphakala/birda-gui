@@ -1,7 +1,8 @@
 import { getCatalogStats } from '$lib/utils/ipc';
+import { tabSwitch, type Tab } from '$lib/utils/navigation';
 import type { CatalogStats, RunningAnalysisSettings } from '$shared/types';
 
-export type Tab = 'analysis' | 'detections' | 'map' | 'species' | 'settings';
+export type { Tab };
 
 interface AppState {
   activeTab: Tab;
@@ -21,9 +22,14 @@ interface AppState {
   selectedRunId: number | null;
   theme: 'system' | 'light' | 'dark';
   settingsHasUnsavedChanges: boolean;
-  selectedSpeciesListId: number | null;
+  /** A tab the user asked for while Settings has unsaved changes; the sidebar asks before leaving. */
+  pendingTab: Tab | null;
+  /** A species list the Species page asked Detections to filter by; Detections takes it once and clears it. */
+  listFilterRequest: number | null;
   /** Bumped whenever the catalog's runs change (an analysis ends, a run is deleted, the catalog is cleared), so views that show runs reload them. */
   runsVersion: number;
+  /** Bumped whenever the species lists change (one is created, saved or deleted, or the catalog is cleared), so views that show lists reload them. */
+  speciesListsVersion: number;
   /** Settings of a running analysis this window joined; the analysis page takes them over once. */
   joinedSettings: RunningAnalysisSettings | null;
 }
@@ -50,8 +56,10 @@ export const appState = $state<AppState>({
   selectedRunId: null,
   theme: 'system',
   settingsHasUnsavedChanges: false,
-  selectedSpeciesListId: null,
+  pendingTab: null,
+  listFilterRequest: null,
   runsVersion: 0,
+  speciesListsVersion: 0,
   joinedSettings: null,
 });
 
@@ -59,6 +67,18 @@ export const appState = $state<AppState>({
 export function catalogChanged(): void {
   appState.runsVersion++;
   void refreshCatalogStats();
+}
+
+/** The species lists changed: views that show lists reload them, and drop a selection or filter that names a list that is gone. */
+export function speciesListsChanged(): void {
+  appState.speciesListsVersion++;
+}
+
+/** Opens a tab, or asks first when leaving Settings would discard unsaved changes. */
+export function requestTab(tab: Tab): void {
+  const action = tabSwitch(appState.activeTab, tab, appState.settingsHasUnsavedChanges);
+  if (action === 'switch') appState.activeTab = tab;
+  else if (action === 'confirm') appState.pendingTab = tab;
 }
 
 /** Reloads the status bar counts. A failure keeps the last counts; they refresh on the next change. */
