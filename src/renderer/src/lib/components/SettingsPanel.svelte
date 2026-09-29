@@ -202,7 +202,8 @@
 
       dataPath = await getDataPath();
       await runHealthCheck();
-      await loadBirdaDetails();
+      const detailsError = await loadBirdaDetails();
+      if (detailsError) error = detailsError;
       // CUDA status is independent of birda CLI availability
       await refreshCudaStatus();
     } catch (e) {
@@ -210,20 +211,28 @@
     }
   }
 
-  /** Checks birda, then loads what depends on it (config, languages, GPU providers); with no usable birda they are cleared. */
-  async function loadBirdaDetails() {
+  /**
+   * Checks birda, then loads what depends on it (config, languages, GPU providers); with no usable birda they
+   * are cleared. The pieces load independently, so one that fails leaves the others. Returns the first failure's
+   * message, or null.
+   */
+  async function loadBirdaDetails(): Promise<string | null> {
     await refreshBirdaStatus();
-    if (appState.birdaStatus?.available) {
-      await Promise.all([
-        getBirdaConfig().then((config) => (birdaConfig = config)),
-        getAvailableLanguages().then((languages) => (availableLanguages = languages)),
-        refreshGpuCapabilities(),
-      ]);
-    } else {
+    if (!appState.birdaStatus?.available) {
       birdaConfig = null;
       availableLanguages = [];
       gpuCapabilities = null;
+      return null;
     }
+    const [config, languages] = await Promise.allSettled([
+      getBirdaConfig(),
+      getAvailableLanguages(),
+      refreshGpuCapabilities(),
+    ]);
+    birdaConfig = config.status === 'fulfilled' ? config.value : null;
+    availableLanguages = languages.status === 'fulfilled' ? languages.value : [];
+    const failed = [config, languages].find((r) => r.status === 'rejected');
+    return failed ? (failed.reason as Error).message : null;
   }
 
   async function refreshGpuCapabilities() {
@@ -310,8 +319,11 @@
         console.error('Failed to save theme to localStorage:', e);
       }
 
-      if (previous?.birda_path !== settings.birda_path) await loadBirdaDetails();
-      else await refreshBirdaStatus();
+      // The settings are saved by now, so a birda that cannot list its config or languages is not a failed save
+      if (previous?.birda_path !== settings.birda_path) {
+        const detailsError = await loadBirdaDetails();
+        if (detailsError) console.error('Failed to load birda details:', detailsError);
+      } else await refreshBirdaStatus();
 
       // The default confidence applies to the next analysis, not one that is running
       if (previous?.default_confidence !== settings.default_confidence && !appState.isAnalysisRunning) {
