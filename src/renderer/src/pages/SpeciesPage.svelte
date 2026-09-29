@@ -2,7 +2,7 @@
   import { focusIfLost, showModal } from '$lib/utils/dialog';
   import { Bird, Download, Plus, Search, Trash, X, Funnel, MapPin } from '@lucide/svelte';
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
-  import { appState } from '$lib/stores/app.svelte';
+  import { appState, requestTab, speciesListsChanged } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
   import {
     fetchSpeciesList,
@@ -14,8 +14,10 @@
     searchByCommonName,
     resolveAllLabels,
   } from '$lib/utils/ipc';
+  import { latestRequest } from '$lib/utils/latest';
+  import { keepIfPresent } from '$lib/utils/selection';
   import type { SpeciesList, EnrichedSpeciesListEntry, BirdaSpeciesResponse } from '$shared/types';
-  import { onMount, tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import * as m from '$paraglide/messages';
   import { getLocale } from '$paraglide/runtime';
@@ -25,11 +27,13 @@
   let listsLoading = $state(true);
 
   // --- Selected list state ---
+  // The list shown on the right; a request to filter Detections by it is a separate, one-shot appState.listFilterRequest.
+  let selectedListId = $state<number | null>(null);
   let entries = $state<EnrichedSpeciesListEntry[]>([]);
   let entriesLoading = $state(false);
   let entryFilter = $state('');
 
-  const selectedList = $derived(lists.find((l) => l.id === appState.selectedSpeciesListId) ?? null);
+  const selectedList = $derived(lists.find((l) => l.id === selectedListId) ?? null);
   const filteredEntries = $derived.by(() => {
     if (!entryFilter) return entries;
     const q = entryFilter.toLowerCase();
@@ -61,31 +65,51 @@
   const customSelected = new SvelteMap<string, string>(); // scientific_name -> common_name
   let customSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  // Only the newest load of each kind applies its result.
+  const listsRequest = latestRequest();
+  const entriesRequest = latestRequest();
+
   async function refreshLists() {
+    const isLatest = listsRequest();
     try {
-      lists = await getSpeciesLists();
+      const loaded = await getSpeciesLists();
+      if (!isLatest()) return;
+      lists = loaded;
+      // The open list was deleted elsewhere, for example by Clear Database.
+      if (selectedListId !== null && keepIfPresent(selectedListId, loaded) === null) selectList(null);
     } catch {
-      lists = [];
+      // Keep the lists shown so far
     } finally {
-      listsLoading = false;
+      if (isLatest()) listsLoading = false;
     }
   }
 
   async function loadEntries(listId: number) {
+    const isLatest = entriesRequest();
     entriesLoading = true;
     try {
-      entries = await getSpeciesListEntries(listId);
+      const loaded = await getSpeciesListEntries(listId);
+      if (!isLatest()) return;
+      entries = loaded;
     } catch {
-      entries = [];
+      if (isLatest()) entries = [];
     } finally {
-      entriesLoading = false;
+      if (isLatest()) entriesLoading = false;
     }
   }
 
-  function handleListSelect(listId: number) {
-    appState.selectedSpeciesListId = listId;
+  /** Shows a list, or none. This is the only place that changes the selection, so its entries load exactly once. */
+  function selectList(listId: number | null) {
+    selectedListId = listId;
     entryFilter = '';
-    void loadEntries(listId);
+    if (listId === null) {
+      // A load still in flight was for the list that was open.
+      entriesRequest();
+      entries = [];
+      entriesLoading = false;
+    } else {
+      void loadEntries(listId);
+    }
   }
 
   let pendingDelete = $state<SpeciesList | null>(null);
@@ -97,10 +121,8 @@
     try {
       await deleteSpeciesListById(id);
       lists = lists.filter((l) => l.id !== id);
-      if (appState.selectedSpeciesListId === id) {
-        appState.selectedSpeciesListId = null;
-        entries = [];
-      }
+      if (selectedListId === id) selectList(null);
+      speciesListsChanged();
       // The delete button that opened the confirmation is gone with its row.
       await tick();
       focusIfLost(listsHeading);
@@ -112,10 +134,8 @@
 
   function handleUseAsFilter() {
     if (!selectedList) return;
-    // Reset to null first so re-setting the same id triggers the effect
-    appState.selectedSpeciesListId = null;
-    appState.selectedSpeciesListId = selectedList.id;
-    appState.activeTab = 'detections';
+    appState.listFilterRequest = selectedList.id;
+    requestTab('detections');
   }
 
   // --- Fetch modal ---
@@ -174,8 +194,8 @@
       const saved = await saveSpeciesList(fetchListName.trim(), $state.snapshot(fetchResult));
       lists = [saved, ...lists];
       showFetchModal = false;
-      appState.selectedSpeciesListId = saved.id;
-      void loadEntries(saved.id);
+      selectList(saved.id);
+      speciesListsChanged();
     } catch (err) {
       fetchError = (err as Error).message;
     }
@@ -243,8 +263,8 @@
       );
       lists = [saved, ...lists];
       showCustomModal = false;
-      appState.selectedSpeciesListId = saved.id;
-      void loadEntries(saved.id);
+      selectList(saved.id);
+      speciesListsChanged();
     } catch (err) {
       customError = (err as Error).message;
     }
@@ -256,19 +276,12 @@
     return new Intl.DateTimeFormat(getLocale(), { month: 'short' }).format(new Date(2000, idx, 1));
   }
 
-  onMount(() => {
-    void refreshLists();
-  });
-
-  // Load entries when selectedSpeciesListId changes externally
-  let prevListId: number | null = null;
+  // Load the lists on mount and whenever they change elsewhere (Clear Database).
   $effect(() => {
-    if (appState.selectedSpeciesListId !== prevListId) {
-      prevListId = appState.selectedSpeciesListId;
-      if (appState.selectedSpeciesListId) {
-        void loadEntries(appState.selectedSpeciesListId);
-      }
-    }
+    const _version = appState.speciesListsVersion; // re-run when the lists change
+    untrack(() => {
+      void refreshLists();
+    });
   });
 </script>
 
@@ -305,16 +318,14 @@
         {#each lists as list (list.id)}
           <div
             class="group border-base-300 flex w-full items-start gap-2 border-b pr-3 transition-colors
-              {appState.selectedSpeciesListId === list.id
-              ? 'bg-primary/10 border-l-primary border-l-2'
-              : 'hover:bg-base-200/50'}"
+              {selectedListId === list.id ? 'bg-primary/10 border-l-primary border-l-2' : 'hover:bg-base-200/50'}"
           >
             <button
               type="button"
               onclick={() => {
-                handleListSelect(list.id);
+                selectList(list.id);
               }}
-              aria-current={appState.selectedSpeciesListId === list.id ? 'true' : undefined}
+              aria-current={selectedListId === list.id ? 'true' : undefined}
               class="min-w-0 flex-1 cursor-pointer py-2.5 pl-3 text-left"
             >
               <span class="block truncate text-sm font-medium">{list.name}</span>
@@ -435,7 +446,7 @@
                         </span>
                       </div>
                     {:else}
-                      <span class="text-base-content/30 text-xs">—</span>
+                      <span class="text-base-content/30 text-xs">-</span>
                     {/if}
                   </td>
                 </tr>

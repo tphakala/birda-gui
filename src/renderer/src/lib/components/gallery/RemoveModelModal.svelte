@@ -5,9 +5,17 @@
   const {
     modelName,
     busy = false,
+    error = null,
     onConfirm,
     onCancel,
-  }: { modelName: string; busy?: boolean; onConfirm: () => void; onCancel: () => void } = $props();
+  }: {
+    modelName: string;
+    busy?: boolean;
+    /** Why the last removal failed; the dialog stays open, so it shows here. */
+    error?: string | null;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } = $props();
 
   let dialog = $state<HTMLDialogElement>();
 </script>
@@ -27,6 +35,9 @@
       {m.gallery_confirmRemove_title({ model: modelName })}
     </h3>
     <p id="remove-modal-body" class="text-base-content/70 mt-2 text-sm">{m.gallery_confirmRemove_body()}</p>
+    {#if error}
+      <p role="alert" class="text-error mt-3 text-sm">{error}</p>
+    {/if}
     <div class="modal-action">
       <button onclick={() => dialog?.close()} class="btn" disabled={busy}>{m.common_button_cancel()}</button>
       <button onclick={onConfirm} class="btn btn-error" disabled={busy}>{m.gallery_remove()}</button>

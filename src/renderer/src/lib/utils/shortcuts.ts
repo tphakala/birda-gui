@@ -1,4 +1,4 @@
-import { appState, type Tab } from '$lib/stores/app.svelte';
+import { appState, requestTab, type Tab } from '$lib/stores/app.svelte';
 import { openFileDialog, openFolderDialog } from '$lib/utils/ipc';
 
 const VALID_TABS = new Set<Tab>(['analysis', 'detections', 'map', 'species', 'settings']);
@@ -32,8 +32,7 @@ export function setupMenuListeners(callbacks: {
   const handleSwitchTab = (...args: unknown[]) => {
     const tab = args[0];
     if (!isTab(tab)) return;
-    if (appState.activeTab === 'settings' && appState.settingsHasUnsavedChanges) return;
-    appState.activeTab = tab;
+    requestTab(tab);
   };
 
   const handleFocusSearch = () => {

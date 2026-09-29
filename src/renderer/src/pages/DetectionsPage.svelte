@@ -15,7 +15,9 @@
     deleteRun,
     getSpeciesLists,
   } from '$lib/utils/ipc';
-  import { formatNumber } from '$lib/utils/format';
+  import { formatNumber, parseRecordingStart } from '$lib/utils/format';
+  import { latestRequest } from '$lib/utils/latest';
+  import { keepIfPresent, reconcileSelectedRun } from '$lib/utils/selection';
   import type {
     EnrichedDetection,
     RunWithStats,
@@ -23,7 +25,7 @@
     RunSpeciesAggregation,
     HourlyDetectionCell,
   } from '$shared/types';
-  import { onMount } from 'svelte';
+  import { untrack } from 'svelte';
   import * as m from '$paraglide/messages';
 
   // --- Run list state ---
@@ -63,6 +65,12 @@
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
   const sourceFileName = $derived(selectedRun ? (selectedRun.source_path.split(/[\\/]/).pop() ?? '') : '');
+  // The grid view is for a single file; its name gives the date, by the rule the grid's hours use.
+  const recordingDate = $derived(
+    selectedRun && !selectedRun.is_directory
+      ? parseRecordingStart(selectedRun.source_path, { allowSuffix: true })
+      : null,
+  );
 
   // --- Contextual header count ---
   const headerCount = $derived.by(() => {
@@ -117,44 +125,61 @@
     try {
       runs = await getRuns();
       // A selection made during the request is newer than this list; leave it.
-      if (
-        appState.selectedRunId === selectedAtStart &&
-        selectedAtStart !== null &&
-        !runs.some((r) => r.id === selectedAtStart)
-      ) {
-        // The selected run is gone, e.g. replaced by a newer analysis of the
-        // same source and model: select that one, or nothing.
-        const replacement = previous
-          ? runs
-              .filter((r) => r.source_path === previous.source_path && r.model === previous.model)
-              .sort((a, b) => b.id - a.id)[0]
-          : undefined;
-        appState.selectedRunId = replacement?.id ?? null;
+      // If the selected run is gone (e.g. replaced by a newer analysis of the
+      // same source and model), this selects that one, or nothing.
+      if (appState.selectedRunId === selectedAtStart) {
+        appState.selectedRunId = reconcileSelectedRun(selectedAtStart, previous, runs);
       }
     } catch {
       runs = [];
     } finally {
       runsLoading = false;
     }
+    // A run that just finished is only known now; a directory run has no grid.
+    if (fallBackFromGrid()) loadActiveView();
   }
+
+  // Counts selections, so a reload of the runs that a newer selection overtook does not load the old run again.
+  let selectionSeq = 0;
 
   // Reload the run list whenever the catalog's runs change, and the shown
   // detections when the selected run survives (a Stop can discard its rows).
-  let seenRunsVersion = appState.runsVersion;
+  // The first run of this effect is the initial load.
   $effect(() => {
-    if (appState.runsVersion !== seenRunsVersion) {
-      seenRunsVersion = appState.runsVersion;
-      const selected = appState.selectedRunId;
-      // A selection that changes in this same update is loaded by the selection effect.
-      const selectionChanging = selected !== prevSelectedRunId;
-      void refreshRuns().then(() => {
-        if (!selectionChanging && selected !== null && appState.selectedRunId === selected) loadActiveView();
-      });
-    }
+    const _version = appState.runsVersion; // re-run when the runs change
+    untrack(() => {
+      void onRunsChanged();
+    });
   });
 
+  async function onRunsChanged() {
+    const seq = selectionSeq;
+    const selected = appState.selectedRunId;
+    await refreshRuns();
+    // A selection made meanwhile is loaded by onRunSelected.
+    if (seq === selectionSeq && selected !== null && appState.selectedRunId === selected) loadActiveView();
+  }
+
+  /** A directory run has no grid view: show the table instead. Returns whether the view changed. */
+  function fallBackFromGrid(): boolean {
+    if (activeView === 'grid' && selectedRun?.is_directory) {
+      activeView = 'table';
+      return true;
+    }
+    return false;
+  }
+
+  // Loads overlap when filters change quickly or a run is replaced; only the newest of each kind applies its result.
+  const detectionsRequest = latestRequest();
+  const speciesRequest = latestRequest();
+  const gridRequest = latestRequest();
+
   async function loadRunDetections() {
-    if (!appState.selectedRunId) return;
+    const isLatest = detectionsRequest();
+    if (!appState.selectedRunId) {
+      loading = false;
+      return;
+    }
     loading = true;
     try {
       const result = await getDetections({
@@ -164,21 +189,27 @@
         limit,
         offset,
       });
+      if (!isLatest()) return;
       detections = result.detections;
       total = result.total;
     } catch {
+      if (!isLatest()) return;
       detections = [];
       total = 0;
     } finally {
-      loading = false;
+      if (isLatest()) loading = false;
     }
   }
 
   async function loadSpeciesView() {
-    if (!appState.selectedRunId) return;
+    const isLatest = speciesRequest();
+    if (!appState.selectedRunId) {
+      speciesLoading = false;
+      return;
+    }
     speciesLoading = true;
     try {
-      speciesData = await getRunSpecies({
+      const result = await getRunSpecies({
         ...buildBaseFilter(),
         sort_column:
           speciesSortBy === 'count'
@@ -188,22 +219,30 @@
               : 'avg_confidence',
         sort_dir: speciesSortBy === 'name' ? 'asc' : 'desc',
       });
+      if (!isLatest()) return;
+      speciesData = result;
     } catch {
-      speciesData = [];
+      if (isLatest()) speciesData = [];
     } finally {
-      speciesLoading = false;
+      if (isLatest()) speciesLoading = false;
     }
   }
 
   async function loadGridView() {
-    if (!appState.selectedRunId) return;
+    const isLatest = gridRequest();
+    if (!appState.selectedRunId) {
+      gridLoading = false;
+      return;
+    }
     gridLoading = true;
     try {
-      gridData = await getHourlyDetections(buildBaseFilter());
+      const result = await getHourlyDetections(buildBaseFilter());
+      if (!isLatest()) return;
+      gridData = result;
     } catch {
-      gridData = [];
+      if (isLatest()) gridData = [];
     } finally {
-      gridLoading = false;
+      if (isLatest()) gridLoading = false;
     }
   }
 
@@ -282,68 +321,79 @@
     void loadSpeciesView();
   }
 
-  // React to selectedRunId changes
-  let prevSelectedRunId: number | null = null;
+  // Reset the view and load the run whenever the selected run changes. The first
+  // run of this effect covers a run that was already selected when the page mounted.
   $effect(() => {
-    if (appState.selectedRunId !== prevSelectedRunId) {
-      prevSelectedRunId = appState.selectedRunId;
+    const id = appState.selectedRunId;
+    untrack(() => {
+      onRunSelected(id);
+    });
+  });
+
+  function onRunSelected(id: number | null) {
+    selectionSeq++;
+    offset = 0;
+    speciesQuery = '';
+    ignoreConfidence = false;
+    speciesData = [];
+    gridData = [];
+    fallBackFromGrid();
+    loadActiveView();
+    // Refresh runs list only if the selected run is not already in our list
+    if (id !== null && !runs.some((r) => r.id === id)) void refreshRuns();
+  }
+
+  // The slider is dragged, so the reload waits until it settles.
+  function handleConfidenceInput() {
+    if (!appState.selectedRunId) return;
+    if (confidenceTimeout) clearTimeout(confidenceTimeout);
+    confidenceTimeout = setTimeout(() => {
       offset = 0;
-      speciesQuery = '';
-      ignoreConfidence = false;
-      speciesData = [];
-      gridData = [];
-      // Fall back from grid view if the new run is a directory
-      if (activeView === 'grid' && selectedRun?.is_directory) {
-        activeView = 'table';
-      }
       loadActiveView();
-      // Refresh runs list only if the selected run is not already in our list
-      if (appState.selectedRunId && !runs.some((r) => r.id === appState.selectedRunId)) {
-        void refreshRuns();
-      }
+    }, 200);
+  }
+
+  const listsRequest = latestRequest();
+
+  /** Reloads the species lists for the dropdown, and drops a list filter whose list is gone. */
+  async function loadSpeciesLists() {
+    const isLatest = listsRequest();
+    let loaded: SpeciesList[];
+    try {
+      loaded = await getSpeciesLists();
+    } catch {
+      return; // Keep the lists shown so far
     }
-  });
-
-  // React to confidence changes (debounced for slider dragging)
-  let prevConfidence = appState.minConfidence;
-  $effect(() => {
-    if (appState.minConfidence !== prevConfidence) {
-      prevConfidence = appState.minConfidence;
-      if (appState.selectedRunId) {
-        if (confidenceTimeout) clearTimeout(confidenceTimeout);
-        confidenceTimeout = setTimeout(() => {
-          offset = 0;
-          loadActiveView();
-        }, 200);
-      }
-    }
-  });
-
-  onMount(() => {
-    void refreshRuns();
-    void (async () => {
-      try {
-        speciesLists = await getSpeciesLists();
-      } catch {
-        // no lists yet
-      }
-    })();
-  });
-
-  // React to species list from Species page (selectedSpeciesListId used as cross-tab intent)
-  $effect(() => {
-    if (appState.activeTab === 'detections' && appState.selectedSpeciesListId !== null) {
-      speciesListFilterId = appState.selectedSpeciesListId;
-      appState.selectedSpeciesListId = null;
+    if (!isLatest()) return;
+    speciesLists = loaded;
+    // A filter on a deleted list would match nothing: the list is an empty subquery.
+    if (speciesListFilterId !== 0 && keepIfPresent(speciesListFilterId, loaded) === null) {
+      speciesListFilterId = 0;
       offset = 0;
-      // Refresh lists so the dropdown includes any newly created list
-      getSpeciesLists()
-        .then((l) => (speciesLists = l))
-        .catch(() => {
-          /* ignore */
-        });
       loadActiveView();
     }
+  }
+
+  // Load the lists on mount and whenever they change (Species page, Clear Database).
+  $effect(() => {
+    const _version = appState.speciesListsVersion; // re-run when the lists change
+    untrack(() => {
+      void loadSpeciesLists();
+    });
+  });
+
+  // The Species page asks for a list to filter by; take the request once.
+  $effect(() => {
+    const id = appState.listFilterRequest;
+    if (id === null) return;
+    untrack(() => {
+      appState.listFilterRequest = null;
+      speciesListFilterId = id;
+      offset = 0;
+      // The list may be newer than the dropdown
+      void loadSpeciesLists();
+      loadActiveView();
+    });
   });
 </script>
 
@@ -487,6 +537,7 @@
             max="1"
             step="0.05"
             bind:value={appState.minConfidence}
+            oninput={handleConfidenceInput}
             class="range range-primary range-xs w-24"
           />
           <span class="w-10 text-xs tabular-nums">{(appState.minConfidence * 100).toFixed(0)}%</span>
@@ -520,7 +571,7 @@
           loading={gridLoading}
           latitude={selectedRun.latitude}
           longitude={selectedRun.longitude}
-          recordingDate={null}
+          {recordingDate}
           timezoneOffsetMin={selectedRun.timezone_offset_min}
         />
       {/if}

@@ -47,7 +47,7 @@ src/
         gallery/      # Framework-free model gallery logic (unit tested)
         i18n/         # UI language list and detection
         stores/       # State management (.svelte.ts files using $state runes)
-        utils/        # Helpers (ipc.ts wrappers, format.ts, shortcuts.ts)
+        utils/        # Helpers (ipc.ts wrappers, format.ts, shortcuts.ts) and framework-free UI logic (latest.ts, selection.ts, navigation.ts), unit tested
 shared/
   types.ts            # TypeScript interfaces shared between main and renderer
   constants.ts        # Constants shared between main and renderer, including the run status lists
@@ -142,13 +142,13 @@ Use daisyUI component classes + Tailwind utilities. Do not write custom CSS unle
 
 - **State**: `$state()` for reactive state (module-level singletons in `.svelte.ts` files)
 - **Derived**: `$derived()` for computed values
-- **Effects**: `$effect()` for side effects
+- **Effects**: `$effect()` for side effects. To react to one value changing, read it in the effect and run the work in `untrack()` (`$effect(() => { const _v = appState.runsVersion; untrack(() => reload()); })`); the effect's first run is the initial load. Guard overlapping async loads with `latestRequest()` so only the newest applies its result
 - **Props**: `let { prop1, prop2 } = $props()` destructuring
 - **Events**: event attributes (`onclick={...}`), not legacy `on:` directives
 
 State stores are in `src/renderer/src/lib/stores/`:
 
-- `app.svelte.ts`: Global UI state (active tab, settings, selections). `catalogChanged()` bumps `runsVersion`, which views that show runs watch to reload, and refreshes the status bar counts
+- `app.svelte.ts`: Global UI state (active tab, settings, selections). `catalogChanged()` bumps `runsVersion`, which views that show runs watch to reload, and refreshes the status bar counts. `speciesListsChanged()` bumps `speciesListsVersion` the same way for species lists. `requestTab()` opens a tab, or sets `pendingTab` so the sidebar asks first when Settings has unsaved changes. `listFilterRequest` is the one-shot request from the Species page for Detections to filter by a list
 - `analysis.svelte.ts`: Analysis progress tracking
 - `log.svelte.ts`: Application log entries
 - `map.svelte.ts`: Map view state

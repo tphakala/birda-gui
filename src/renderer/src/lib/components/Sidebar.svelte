@@ -1,7 +1,7 @@
 <script lang="ts">
   import { showModal } from '$lib/utils/dialog';
   import { AudioLines, Bird, List, Map, Settings, TriangleAlert } from '@lucide/svelte';
-  import { appState, type Tab } from '$lib/stores/app.svelte';
+  import { appState, requestTab, type Tab } from '$lib/stores/app.svelte';
   import * as m from '$paraglide/messages';
 
   const tabs: { id: Tab; label: string; icon: typeof List }[] = [
@@ -12,35 +12,24 @@
     { id: 'settings', label: m.sidebar_settings(), icon: Settings },
   ];
 
-  let pendingTab = $state<Tab | null>(null);
-
-  function handleTabClick(tabId: Tab) {
-    if (tabId === appState.activeTab) return;
-    if (appState.activeTab === 'settings' && appState.settingsHasUnsavedChanges) {
-      pendingTab = tabId;
-      return;
-    }
-    appState.activeTab = tabId;
-  }
-
   function confirmDiscard() {
-    if (pendingTab) {
-      appState.activeTab = pendingTab;
-      pendingTab = null;
+    if (appState.pendingTab) {
+      appState.activeTab = appState.pendingTab;
+      appState.pendingTab = null;
     }
   }
 
   function cancelDiscard() {
-    pendingTab = null;
+    appState.pendingTab = null;
   }
 </script>
 
-<nav class="border-base-300 bg-base-200 flex w-[72px] shrink-0 flex-col border-r">
+<nav class="border-base-300 bg-base-200 flex w-[72px] shrink-0 flex-col border-r select-none">
   <div class="flex flex-col gap-1 py-2">
     {#each tabs as tab (tab.id)}
       <button
         onclick={() => {
-          handleTabClick(tab.id);
+          requestTab(tab.id);
         }}
         class="relative mx-auto flex w-full flex-col items-center gap-0.5 px-1 py-2.5 transition-colors
           {appState.activeTab === tab.id
@@ -60,7 +49,7 @@
 </nav>
 
 <!-- Unsaved Settings Confirmation Modal -->
-{#if pendingTab}
+{#if appState.pendingTab}
   <dialog
     class="modal"
     {@attach showModal}

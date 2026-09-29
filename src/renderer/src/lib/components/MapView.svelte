@@ -3,11 +3,19 @@
   import { mapState, type MapLocation } from '$lib/stores/map.svelte';
   import * as m from '$paraglide/messages';
 
-  let selectedLocation = $state<MapLocation | null>(null);
+  // The popup follows the location list, so it shows current counts after a reload and closes when its location is gone.
+  let selectedLocationId = $state<number | null>(null);
+  const selectedLocation = $derived(mapState.locations.find((l) => l.location_id === selectedLocationId) ?? null);
+
+  /** The count shown for a location: the selected species' count there, otherwise all detections. */
+  function shownCount(loc: MapLocation): number {
+    const speciesCount = mapState.selectedSpecies ? mapState.speciesCounts.get(loc.location_id) : undefined;
+    return speciesCount ?? loc.detection_count;
+  }
 
   function markerColor(loc: MapLocation): string {
     if (mapState.selectedSpecies) {
-      return mapState.highlightedLocationIds.has(loc.location_id) ? '#2563eb' : '#d1d5db';
+      return mapState.speciesCounts.has(loc.location_id) ? '#2563eb' : '#d1d5db';
     }
     if (loc.detection_count > 100) return '#ef4444';
     if (loc.detection_count > 50) return '#f97316';
@@ -17,11 +25,11 @@
 
   function markerSize(loc: MapLocation): number {
     const base = 12;
-    return Math.min(base + Math.sqrt(loc.detection_count) * 2, 32);
+    return Math.min(base + Math.sqrt(shownCount(loc)) * 2, 32);
   }
 
   function toggleLocation(loc: MapLocation) {
-    selectedLocation = selectedLocation?.location_id === loc.location_id ? null : loc;
+    selectedLocationId = selectedLocationId === loc.location_id ? null : loc.location_id;
   }
 </script>
 
@@ -36,7 +44,7 @@
     {#each mapState.locations as loc (loc.location_id)}
       {@const size = markerSize(loc)}
       {@const color = markerColor(loc)}
-      {@const dimmed = mapState.selectedSpecies !== null && !mapState.highlightedLocationIds.has(loc.location_id)}
+      {@const dimmed = mapState.selectedSpecies !== null && !mapState.speciesCounts.has(loc.location_id)}
       <Marker lnglat={[loc.longitude, loc.latitude]}>
         {#snippet content()}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -49,7 +57,7 @@
             }}
           >
             {#if size >= 20}
-              {loc.detection_count}
+              {shownCount(loc)}
             {/if}
           </div>
         {/snippet}
@@ -58,13 +66,13 @@
 
     {#if selectedLocation}
       {@const loc = selectedLocation}
-      <Popup lnglat={[loc.longitude, loc.latitude]} onclose={() => (selectedLocation = null)}>
+      <Popup lnglat={[loc.longitude, loc.latitude]} onclose={() => (selectedLocationId = null)}>
         <div class="bg-base-100 text-base-content min-w-40 p-2">
           <h4 class="text-sm font-semibold">{loc.name ?? m.map_unknownLocation()}</h4>
           <p class="text-base-content/60 text-xs">
             {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
           </p>
-          <p class="mt-1 text-xs">{m.status_detections({ count: String(loc.detection_count) })}</p>
+          <p class="mt-1 text-xs">{m.status_detections({ count: String(shownCount(loc)) })}</p>
         </div>
       </Popup>
     {/if}

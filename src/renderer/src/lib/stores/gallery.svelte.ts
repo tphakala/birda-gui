@@ -12,6 +12,8 @@ export interface Download {
 
 interface GalleryState {
   tab: 'installed' | 'browse';
+  // Set once the tab was chosen, by the first load or by the user; later loads leave it alone.
+  tabChosen: boolean;
   family: string;
   manifests: Record<string, ModelManifest>;
   installed: InstalledModel[];
@@ -23,6 +25,7 @@ interface GalleryState {
 
 export const galleryStore: GalleryState = $state({
   tab: 'installed',
+  tabChosen: false,
   family: 'birdnet-v30',
   manifests: {},
   installed: [],

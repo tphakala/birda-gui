@@ -29,6 +29,8 @@
   let detailVariant = $state<ManifestVariant | null>(null);
   let licensePrompt = $state<{ family: string; variant: ManifestVariant; modelName: string } | null>(null);
   let removeTarget = $state<InstalledModel | null>(null);
+  // Why the removal failed, shown inside the dialog that stays open.
+  let removeError = $state<string | null>(null);
   let busyId = $state<string | null>(null);
   let announce = $state('');
 
@@ -92,7 +94,11 @@
       if (families.length && !families.some((f) => f.id === galleryStore.family)) {
         galleryStore.family = families[0].id;
       }
-      galleryStore.tab = galleryStore.installed.length > 0 ? 'installed' : 'browse';
+      // Start on Installed when there is something installed; a later load (remount, Refresh, Retry) keeps the tab.
+      if (!galleryStore.tabChosen) {
+        galleryStore.tab = galleryStore.installed.length > 0 ? 'installed' : 'browse';
+        galleryStore.tabChosen = true;
+      }
       // Manifests power the Browse tab only; degrade Browse (not the Installed
       // tab) to the legacy notice if this birda cannot produce them.
       try {
@@ -200,12 +206,36 @@
     }
   }
 
+  function showTab(tab: 'installed' | 'browse'): void {
+    galleryStore.tab = tab;
+    galleryStore.tabChosen = true;
+  }
+
+  function openRemove(mo: InstalledModel): void {
+    removeError = null;
+    removeTarget = mo;
+  }
+
+  function closeRemove(): void {
+    removeTarget = null;
+    removeError = null;
+  }
+
   async function confirmRemove(): Promise<void> {
-    if (!removeTarget) return;
-    busyId = removeTarget.id;
+    const target = removeTarget;
+    if (!target) return;
+    busyId = target.id;
+    removeError = null;
     try {
-      await removeModel(removeTarget.id);
-      removeTarget = null;
+      await removeModel(target.id);
+    } catch (e) {
+      // The dialog stays open, so the error shows inside it (the page behind is inert).
+      removeError = m.settings_models_failedRemove({ modelId: removeTitle, error: (e as Error).message });
+      busyId = null;
+      return;
+    }
+    closeRemove();
+    try {
       await refreshInstalled();
     } catch (e) {
       galleryStore.error = (e as Error).message;
@@ -231,7 +261,9 @@
         role="tab"
         aria-selected={galleryStore.tab === 'installed'}
         class="tab {galleryStore.tab === 'installed' ? 'tab-active' : ''}"
-        onclick={() => (galleryStore.tab = 'installed')}
+        onclick={() => {
+          showTab('installed');
+        }}
       >
         {m.gallery_tab_installed()}
         {#if galleryStore.installed.length > 0}
@@ -242,7 +274,9 @@
         role="tab"
         aria-selected={galleryStore.tab === 'browse'}
         class="tab {galleryStore.tab === 'browse' ? 'tab-active' : ''}"
-        onclick={() => (galleryStore.tab = 'browse')}
+        onclick={() => {
+          showTab('browse');
+        }}
       >
         {m.gallery_tab_browse()}
       </button>
@@ -284,9 +318,11 @@
       {loading}
       busy={busyId !== null || installing}
       onSetDefault={handleSetDefault}
-      onRemove={(mo: InstalledModel) => (removeTarget = mo)}
+      onRemove={openRemove}
       onUpdate={handleUpdate}
-      onBrowse={() => (galleryStore.tab = 'browse')}
+      onBrowse={() => {
+        showTab('browse');
+      }}
     />
   {:else if selectedManifest}
     <BrowseView
@@ -340,8 +376,9 @@
     <RemoveModelModal
       modelName={removeTitle}
       busy={busyId !== null}
+      error={removeError}
       onConfirm={confirmRemove}
-      onCancel={() => (removeTarget = null)}
+      onCancel={closeRemove}
     />
   {/if}
 </div>
