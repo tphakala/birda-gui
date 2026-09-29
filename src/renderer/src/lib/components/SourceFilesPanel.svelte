@@ -18,7 +18,8 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { analysisState } from '$lib/stores/analysis.svelte';
   import { formatDuration, formatFileSize, parseRecordingStart } from '$lib/utils/format';
-  import type { SourceScanResult, FileCompletedPayload } from '$shared/types';
+  import type { SourceScanResult } from '$shared/types';
+  import type { FileStatus } from '$shared/analysis-progress';
   import * as m from '$paraglide/messages';
   import { lockedTitle } from '$lib/utils/runLock';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
@@ -36,21 +37,12 @@
     analysisRunning: boolean;
   } = $props();
 
-  type FileStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
-
   const fileStatuses = $derived.by(() => {
     const statuses = new SvelteMap<string, FileStatus>();
     if (!analysisRunning && analysisState.status === 'idle') return statuses;
 
-    for (const evt of analysisState.events) {
-      if (evt.event === 'file_completed') {
-        const p = evt.payload as FileCompletedPayload;
-        // A 'locked' file was skipped because another worker held it; render it
-        // as a skip. 'processed' maps to the panel's 'completed' state.
-        const status: FileStatus =
-          p.status === 'processed' ? 'completed' : p.status === 'locked' ? 'skipped' : p.status;
-        statuses.set(p.file, status);
-      }
+    for (const [file, status] of Object.entries(analysisState.fileStatuses)) {
+      statuses.set(file, status);
     }
 
     if (analysisState.currentFile) {

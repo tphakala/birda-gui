@@ -10,6 +10,7 @@ import {
 } from 'electron';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { mediaUrlToPath } from '$shared/media-url';
 import { getCoveragePath } from './birda/coverageCache';
 import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
@@ -167,14 +168,8 @@ function createMenu() {
 
 function registerBirdaMediaProtocol() {
   protocol.handle('birda-media', async (request) => {
-    // birda-media:///D:/clips/file.wav → serve the local file
-    const url = new URL(request.url);
-    let filePath = decodeURIComponent(url.pathname);
-
-    // On Windows, pathname starts with /D:/... so strip the leading slash before the drive letter
-    if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(filePath)) {
-      filePath = filePath.slice(1);
-    }
+    // birda-media:///D%3A/clips/file.wav serves the local file
+    const filePath = mediaUrlToPath(request.url, process.platform);
 
     // Security: only allow audio file extensions
     const ext = path.extname(filePath).toLowerCase();
@@ -189,7 +184,7 @@ function registerBirdaMediaProtocol() {
       return new Response('Not Found', { status: 404 });
     }
 
-    const response = await net.fetch(`file:///${filePath.replace(/\\/g, '/')}`);
+    const response = await net.fetch(pathToFileURL(filePath).href);
     // With corsEnabled the renderer's cross-origin fetch performs a CORS check;
     // the response must carry an explicit allow-origin header.
     const headers = new Headers(response.headers);

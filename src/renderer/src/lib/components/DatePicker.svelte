@@ -4,6 +4,7 @@
   import * as m from '$paraglide/messages';
   import { getLocale } from '$paraglide/runtime';
   import { parseLocalDate } from '$lib/utils/format';
+  import { parseTypedDate } from '$lib/utils/date-input';
   import { tick } from 'svelte';
 
   const {
@@ -156,28 +157,13 @@
   }
 
   function applyDateInput() {
-    const trimmed = dateInput.trim();
-    let match = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(trimmed);
-    if (match) {
-      const [, dd, mm, yyyy] = match;
-      const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-      if (!isNaN(d.getTime()) && d.getDate() === Number(dd)) {
-        selectDate(d.getDate(), d.getMonth(), d.getFullYear());
-        dateInputError = false;
-        return;
-      }
+    const typed = parseTypedDate(dateInput);
+    if (typed) {
+      selectDate(typed.day, typed.month - 1, typed.year);
+      dateInputError = false;
+    } else {
+      dateInputError = true;
     }
-    match = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})$/.exec(trimmed);
-    if (match) {
-      const [, yyyy, mm, dd] = match;
-      const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-      if (!isNaN(d.getTime()) && d.getDate() === Number(dd)) {
-        selectDate(d.getDate(), d.getMonth(), d.getFullYear());
-        dateInputError = false;
-        return;
-      }
-    }
-    dateInputError = true;
   }
 
   function handleDateInputKeydown(e: KeyboardEvent) {

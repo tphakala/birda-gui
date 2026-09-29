@@ -7,7 +7,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { extractClip, getSettings, saveSpectrogram, exportRegionAsWav } from '$lib/utils/ipc';
   import { formatTime, formatConfidence } from '$lib/utils/format';
-  import { toBirdaMediaUrl } from '$lib/utils/media-url';
+  import { toBirdaMediaUrl } from '$shared/media-url';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
   import { lockedTitle } from '$lib/utils/runLock';
   import { appState } from '$lib/stores/app.svelte';

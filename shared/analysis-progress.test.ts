@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyProgressEvent, type ProgressCounts } from './analysis-progress';
+import { applyProgressEvent, fileStatusOf, type ProgressCounts } from './analysis-progress';
 import type { BirdaEventEnvelope } from './types';
 
 const event = (name: string, payload: unknown): BirdaEventEnvelope => ({
@@ -25,5 +25,16 @@ describe('applyProgressEvent', () => {
 
     applyProgressEvent(counts, event('pipeline_completed', { total_detections: 7 }));
     expect(counts.totalDetections).toBe(7);
+  });
+});
+
+describe('fileStatusOf', () => {
+  it.each([
+    ['processed', 'completed'],
+    ['failed', 'failed'],
+    ['skipped', 'skipped'],
+    ['locked', 'skipped'],
+  ] as const)('maps %s to %s', (status, expected) => {
+    expect(fileStatusOf(status)).toBe(expected);
   });
 });

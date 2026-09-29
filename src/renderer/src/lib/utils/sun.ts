@@ -34,7 +34,7 @@ function classifyAltitude(altDeg: number): SunPhase {
  * For hours where the sun phase changes (sunrise/sunset transitions), a `gradient`
  * field is included with the from/to phases and the fractional position of the transition.
  *
- * Hours match the heatmap columns produced by computeDetectionHour() in catalog.ts,
+ * Hours match the heatmap columns produced by detectionHourOf() in shared/recording-name.ts,
  * which are in the recording's timezone (whatever timezone the filename uses).
  *
  * @param date            Recording start Date (from parseRecordingStart — local JS Date).

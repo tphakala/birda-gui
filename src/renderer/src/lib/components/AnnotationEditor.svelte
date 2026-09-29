@@ -17,7 +17,7 @@
     removeBox,
   } from '$lib/stores/annotation.svelte';
   import { annotationToRect, xToTime, yToFreq, type SpectrogramViewport } from '$lib/utils/spectrogram-geometry';
-  import { toBirdaMediaUrl } from '$lib/utils/media-url';
+  import { toBirdaMediaUrl } from '$shared/media-url';
   import AnnotationBox from './AnnotationBox.svelte';
   import AnnotationSidePanel from './AnnotationSidePanel.svelte';
   import * as m from '$paraglide/messages';

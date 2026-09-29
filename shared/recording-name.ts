@@ -42,3 +42,18 @@ export function parseRecordingName(
 export function dayOfYearOf(month: number, day: number): number {
   return (Date.UTC(2024, month - 1, day) - Date.UTC(2024, 0, 1)) / 86_400_000 + 1;
 }
+
+/**
+ * Wall-clock hour (0-23) of a detection: the hour of the recording named
+ * YYYYMMDD_HHMMSS (a suffix is allowed) plus the detection's offset into the
+ * file, read as UTC. Without a valid name in the path it is the hour within
+ * the recording, counted from midnight.
+ */
+export function detectionHourOf(pathOrName: string, startTime: number): number {
+  const t = parseRecordingName(pathOrName, { allowSuffix: true });
+  if (t) {
+    const start = Date.UTC(t.year, t.month - 1, t.day, t.hour, t.minute, t.second);
+    return new Date(start + startTime * 1000).getUTCHours();
+  }
+  return Math.floor(startTime / 3600) % 24;
+}

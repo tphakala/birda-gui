@@ -30,3 +30,16 @@ export function applyProgressEvent(counts: ProgressCounts, envelope: BirdaEventE
     counts.totalDetections = (envelope.payload as PipelineCompletedPayload).total_detections;
   }
 }
+
+/** How the source files panel shows a file. */
+export type FileStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+
+/**
+ * The panel's status for a finished file: 'processed' reads as completed, and a
+ * 'locked' file was skipped because another worker held it.
+ */
+export function fileStatusOf(status: FileCompletedPayload['status']): FileStatus {
+  if (status === 'processed') return 'completed';
+  if (status === 'locked') return 'skipped';
+  return status;
+}
