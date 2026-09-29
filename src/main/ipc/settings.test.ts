@@ -39,7 +39,6 @@ beforeEach(() => {
   resetIpc();
 });
 
-// These run in order: the version check cache is module state.
 describe('birda path settings', () => {
   it('applies the saved birda path at startup', () => {
     expect(startupPaths).toEqual(['/saved/birda']);
@@ -47,22 +46,21 @@ describe('birda path settings', () => {
 
   it('a changed birda path is checked again', async () => {
     await check();
-    await check();
-    expect(h.validateBirdaVersion).toHaveBeenCalledTimes(1);
+    const before = h.validateBirdaVersion.mock.calls.length;
     await setSettings({ birda_path: '/other/birda' });
     expect(h.setBirdaPath).toHaveBeenLastCalledWith('/other/birda');
     await check();
-    expect(h.validateBirdaVersion).toHaveBeenCalledTimes(2);
+    await check();
+    expect(h.validateBirdaVersion.mock.calls.length - before).toBe(1);
   });
 
   it('saving other settings keeps the path and the cached check', async () => {
-    // The previous test left a good check cached
     await check();
-    expect(h.validateBirdaVersion).not.toHaveBeenCalled();
+    const before = h.validateBirdaVersion.mock.calls.length;
     await setSettings({ default_confidence: 0.3 });
     expect(h.setBirdaPath).not.toHaveBeenCalled();
     await check();
-    expect(h.validateBirdaVersion).not.toHaveBeenCalled();
+    expect(h.validateBirdaVersion.mock.calls.length).toBe(before);
   });
 
   it('clearing the birda path goes back to the bundled or PATH birda', async () => {
