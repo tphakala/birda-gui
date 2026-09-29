@@ -17,10 +17,15 @@
     });
   });
 
+  // Only the newest location load applies its result.
+  const locationsRequest = latestRequest();
+
   async function loadLocations() {
+    const isLatest = locationsRequest();
     mapState.loading = true;
     try {
       const locations = await getLocationsWithCounts();
+      if (!isLatest()) return;
       mapState.locations = locations.map((l) => ({
         location_id: l.id,
         latitude: l.latitude,
@@ -32,7 +37,7 @@
     } catch {
       // No locations yet
     } finally {
-      mapState.loading = false;
+      if (isLatest()) mapState.loading = false;
     }
     // Keep a selected species' highlight and its per-location counts after a reload.
     if (mapState.selectedSpecies) await highlightSpecies(mapState.selectedSpecies);

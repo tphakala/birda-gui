@@ -7,10 +7,10 @@
   let selectedLocationId = $state<number | null>(null);
   const selectedLocation = $derived(mapState.locations.find((l) => l.location_id === selectedLocationId) ?? null);
 
-  /** The count shown for a location: the selected species' count there, otherwise all detections. */
+  /** The count shown for a location: the selected species' count there (none where it was not detected), otherwise all detections. */
   function shownCount(loc: MapLocation): number {
-    const speciesCount = mapState.selectedSpecies ? mapState.speciesCounts.get(loc.location_id) : undefined;
-    return speciesCount ?? loc.detection_count;
+    if (!mapState.selectedSpecies) return loc.detection_count;
+    return mapState.speciesCounts.get(loc.location_id) ?? 0;
   }
 
   function markerColor(loc: MapLocation): string {
