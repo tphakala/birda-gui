@@ -49,9 +49,9 @@ export function formatNumber(n: number): string {
 
 /**
  * Local recording start from an AudioMoth-style name, YYYYMMDD_HHMMSS, or null.
- * Uses the same rule as the main process, so the date shown is the one birda gets.
+ * By default this is the rule the main process applies to a source, so the date shown is the one birda gets.
  * With allowSuffix a name such as 20240501_053000_A also counts, the rule the
- * per-file recording start and the detection hours use.
+ * per-file recording start and the detection hours use; birda is not given that date for the source.
  */
 export function parseRecordingStart(filename: string, options: { allowSuffix?: boolean } = {}): Date | null {
   const parsed = parseRecordingName(filename, options);

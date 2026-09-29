@@ -26,12 +26,17 @@ describe('reconcileSelectedRun', () => {
   });
 
   it('moves to the newest run of the same source and model when the selected run is gone', () => {
-    const runs = [run(5, '/a.wav'), run(7, '/a.wav'), run(6, '/b.wav'), run(9, '/a.wav', 'perch')];
+    const runs = [run(9, '/a.wav', 'perch'), run(7, '/a.wav'), run(6, '/b.wav'), run(5, '/a.wav')];
     expect(reconcileSelectedRun(2, run(2, '/a.wav'), runs)).toBe(7);
+    expect(reconcileSelectedRun(2, run(2, '/a.wav'), [...runs].reverse())).toBe(7);
   });
 
   it('clears the selection when no run of that source and model is left', () => {
     expect(reconcileSelectedRun(2, run(2, '/a.wav'), [run(6, '/b.wav')])).toBeNull();
+  });
+
+  it('keeps a listed run even when the previous list did not contain it', () => {
+    expect(reconcileSelectedRun(6, undefined, [run(6, '/b.wav')])).toBe(6);
   });
 
   it('clears the selection when the previous run is unknown', () => {
