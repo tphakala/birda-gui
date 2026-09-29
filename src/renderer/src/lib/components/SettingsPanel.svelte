@@ -232,7 +232,9 @@
     birdaConfig = config.status === 'fulfilled' ? config.value : null;
     availableLanguages = languages.status === 'fulfilled' ? languages.value : [];
     const failed = [config, languages].find((r) => r.status === 'rejected');
-    return failed ? (failed.reason as Error).message : null;
+    if (!failed) return null;
+    const reason: unknown = failed.reason;
+    return (reason instanceof Error ? reason.message : String(reason)) || 'Unknown error';
   }
 
   async function refreshGpuCapabilities() {
