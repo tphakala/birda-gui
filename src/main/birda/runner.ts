@@ -450,22 +450,22 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         if (!line.trim()) return;
         try {
           const envelope = JSON.parse(line) as BirdaEventEnvelope;
-          // Payloads can be large and progress events are frequent, so only the name is logged.
+          // Progress fires once per segment, so it is not logged; other events log only their name.
           if (envelope.event !== 'progress') emitLog('debug', `[event] ${envelope.event}`);
           dataCallback?.(envelope);
         } catch {
-          const msg = shortenLine(`[non-json stdout]: ${line}`);
+          const msg = `[non-json stdout]: ${line}`;
           pushStderr(msg);
-          emitLog('warn', msg);
+          emitLog('warn', shortenLine(msg));
         }
       });
 
       const stderrReader = createInterface({ input: child.stderr });
       stderrReader.on('line', (line) => {
-        const text = shortenLine(line).trimEnd();
+        const text = line.trimEnd();
         if (!text) return;
         pushStderr(text);
-        emitLog('warn', `[stderr] ${text}`);
+        emitLog('warn', shortenLine(`[stderr] ${text}`));
       });
 
       child.on('close', (code, signal) => {

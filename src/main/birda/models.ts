@@ -20,8 +20,14 @@ interface BirdaJsonEnvelope {
   payload: Record<string, unknown>;
 }
 
-async function runBirdaJson(args: string[]): Promise<BirdaJsonEnvelope> {
-  const stdout = await execBirda(args, { errorPrefix: 'birda command failed: ' });
+/** Removing with --purge and fetching a manifest can touch the disk or the network, so they get longer than the default. */
+const SLOW_COMMAND_TIMEOUT_MS = 120_000;
+
+async function runBirdaJson(args: string[], timeoutMs?: number): Promise<BirdaJsonEnvelope> {
+  const stdout = await execBirda(args, {
+    errorPrefix: 'birda command failed: ',
+    ...(timeoutMs !== undefined && { timeoutMs }),
+  });
   try {
     return JSON.parse(stdout) as BirdaJsonEnvelope;
   } catch {
@@ -196,7 +202,10 @@ export async function installModel(
 }
 
 export async function removeModel(name: string): Promise<ModelRemovedResult> {
-  const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'remove', name, '--purge']);
+  const envelope = await runBirdaJson(
+    ['--output-mode', 'json', 'models', 'remove', name, '--purge'],
+    SLOW_COMMAND_TIMEOUT_MS,
+  );
   return envelope.payload as unknown as ModelRemovedResult;
 }
 
@@ -206,7 +215,7 @@ export async function modelInfo(name: string): Promise<unknown> {
 }
 
 export async function getManifest(id: string): Promise<ModelManifest> {
-  const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'manifest', id]);
+  const envelope = await runBirdaJson(['--output-mode', 'json', 'models', 'manifest', id], SLOW_COMMAND_TIMEOUT_MS);
   const payload = envelope.payload as { manifest?: ModelManifest } | null | undefined;
   const manifest = payload?.manifest;
   // Guard against an older/other birda whose payload lacks a usable manifest, so

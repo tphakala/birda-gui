@@ -71,12 +71,19 @@ export function hardenWebContents(contents: WebContents, appUrl: string): void {
   });
 }
 
+/** The URL asking for a permission: the one Electron reports, else the page's own; an empty one falls through. */
+function requestingUrlOf(webContents: WebContents | null, details: { requestingUrl?: string }): string | undefined {
+  if (details.requestingUrl) return details.requestingUrl;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an empty URL must fall through
+  return webContents?.getURL() || undefined;
+}
+
 /** Denies every permission except the clipboard write from the app's own page. */
 export function applyPermissionPolicy(ses: Session, appUrl: string): void {
   ses.setPermissionCheckHandler((webContents, permission, _origin, details) =>
-    isPermissionAllowed(permission, details.requestingUrl ?? webContents?.getURL(), appUrl),
+    isPermissionAllowed(permission, requestingUrlOf(webContents, details), appUrl),
   );
   ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    callback(isPermissionAllowed(permission, details.requestingUrl || webContents.getURL(), appUrl));
+    callback(isPermissionAllowed(permission, requestingUrlOf(webContents, details), appUrl));
   });
 }

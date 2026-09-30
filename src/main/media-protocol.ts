@@ -6,9 +6,23 @@ import { mediaUrlToPath } from '$shared/media-url';
 import { getCoveragePath } from './birda/coverageCache';
 import { getAnalysisSourcePaths } from './db/runs';
 import { clipRoots, isInside } from './media-access';
+import { AUDIO_EXTENSIONS } from './ipc/files';
 import { settingsStore } from './settings/store';
 
-const ALLOWED_EXTS = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a', '.png']);
+const ALLOWED_EXTS = new Set([...AUDIO_EXTENSIONS, '.png']);
+
+/** Serves a local file, with extraHeaders set over the headers of the file response. */
+async function serveFile(file: string, extraHeaders: Record<string, string> = {}): Promise<Response> {
+  // pathToFileURL encodes special characters (#, ?) that manual file:/// string
+  // building would misparse as a fragment/query.
+  const response = await net.fetch(pathToFileURL(file).href);
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
+  // With corsEnabled the renderer's cross-origin fetch performs a CORS check;
+  // the response must carry an explicit allow-origin header.
+  headers.set('Access-Control-Allow-Origin', '*');
+  return new Response(response.body, { status: response.status, headers });
+}
 
 /**
  * True when resolved is inside a clip folder, or is (or is inside) a source the
@@ -55,12 +69,7 @@ export async function handleBirdaMediaRequest(request: { url: string }): Promise
     return new Response('Not Found', { status: 404 });
   }
 
-  const response = await net.fetch(pathToFileURL(resolved).href);
-  // With corsEnabled the renderer's cross-origin fetch performs a CORS check;
-  // the response must carry an explicit allow-origin header.
-  const headers = new Headers(response.headers);
-  headers.set('Access-Control-Allow-Origin', '*');
-  return new Response(response.body, { status: response.status, headers });
+  return serveFile(resolved);
 }
 
 export function registerBirdaMediaProtocol(): void {
@@ -83,12 +92,6 @@ export function registerBirdaMapProtocol(): void {
     if (!file) {
       return new Response('Not Found', { status: 404 });
     }
-    // pathToFileURL encodes special characters (#, ?) that manual file:/// string
-    // building would misparse as a fragment/query.
-    const response = await net.fetch(pathToFileURL(file).href);
-    const headers = new Headers(response.headers);
-    headers.set('content-type', 'image/svg+xml');
-    headers.set('Access-Control-Allow-Origin', '*');
-    return new Response(response.body, { status: response.status, headers });
+    return serveFile(file, { 'content-type': 'image/svg+xml' });
   });
 }

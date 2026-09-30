@@ -4,7 +4,7 @@ import path from 'path';
 import type { AudioFileInfo, AudioMothMeta, SourceScanResult } from '$shared/types';
 import { parseRecordingName } from '$shared/recording-name';
 
-const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a']);
+export const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a']);
 
 function isAudioFile(filePath: string): boolean {
   return AUDIO_EXTENSIONS.has(path.extname(filePath).toLowerCase());
