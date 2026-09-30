@@ -32,7 +32,7 @@ interface AppState {
   listFilterRequest: number | null;
   /** Bumped whenever the catalog's runs change (an analysis ends, a run is deleted, the catalog is cleared), so views that show runs reload them. */
   runsVersion: number;
-  /** Bumped whenever the species lists change (one is created, saved or deleted, or the catalog is cleared), so views that show lists reload them. */
+  /** Bumped whenever the species lists change (one is created, saved or deleted), so views that show lists reload them. */
   speciesListsVersion: number;
   /** Settings of a running analysis this window joined; the analysis page takes them over once. */
   joinedSettings: RunningAnalysisSettings | null;

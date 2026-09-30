@@ -378,7 +378,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
           if (payload.status === 'processed') {
             if (outputDir) {
               const jsonDir = outputDir;
-              // Started now, not after the semaphore, so the next file's output cannot replace this one first.
+              // Started now, not after the semaphore, to move the output before a later same-named file. birda checks the next file right after this event, so an adjacent same-named file can still be skipped and is then reported as failed.
               const claimed = claimOutput(jsonDir, payload.file, ++claimCount);
               track(async () => {
                 // Limit concurrent imports to prevent resource exhaustion
