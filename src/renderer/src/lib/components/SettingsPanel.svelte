@@ -375,6 +375,7 @@
   async function confirmClearDatabase() {
     clearing = true;
     clearError = null;
+    clearResult = null;
     try {
       const result = await clearDatabase();
       clearResult = result;
