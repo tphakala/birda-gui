@@ -53,19 +53,22 @@ function openExternally(url: string): void {
 
 /**
  * Keeps a window on the app's page: new windows are never opened (https links
- * go to the system browser instead), navigation away from the app is blocked
- * the same way, and webviews cannot be attached.
+ * go to the system browser instead), navigation and redirects away from the app are
+ * blocked the same way, and webviews cannot be attached.
  */
 export function hardenWebContents(contents: WebContents, appUrl: string): void {
   contents.setWindowOpenHandler(({ url }) => {
     openExternally(url);
     return { action: 'deny' };
   });
-  contents.on('will-navigate', (event, url) => {
+  // A redirect is a navigation the page did not ask for, so it gets the same policy.
+  const guardNavigation = (event: { preventDefault: () => void }, url: string) => {
     if (isAppUrl(url, appUrl)) return;
     event.preventDefault();
     openExternally(url);
-  });
+  };
+  contents.on('will-navigate', guardNavigation);
+  contents.on('will-redirect', guardNavigation);
   contents.on('will-attach-webview', (event) => {
     event.preventDefault();
   });

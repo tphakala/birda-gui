@@ -90,12 +90,10 @@ describe('startMainLog', () => {
     expect(fs.statSync(logFilePath()).size).toBe(size);
   });
 
-  it('logs an unhandled rejection', () => {
+  it('adds no unhandledRejection listener, so Node keeps its default of throwing', () => {
+    const rejections = process.listenerCount('unhandledRejection');
     startMainLog();
-    process.emit('unhandledRejection', new Error('late failure'), Promise.resolve());
-    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
-      '[main] Unhandled promise rejection: Error: late failure',
-    );
+    expect(process.listenerCount('unhandledRejection')).toBe(rejections);
   });
 
   /** The handler startMainLog registered with app.on for an event. */
@@ -124,19 +122,26 @@ describe('startMainLog', () => {
   it('logs an uncaught exception from the monitor', () => {
     startMainLog();
     (process as NodeJS.EventEmitter).emit('uncaughtExceptionMonitor', new Error('fatal'), 'uncaughtException');
-    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain('[error] [main] Uncaught exception: Error: fatal');
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
+      '[error] [main] Uncaught exception (uncaughtException): Error: fatal',
+    );
+  });
+
+  it('logs an unhandled rejection from the monitor with its origin', () => {
+    startMainLog();
+    (process as NodeJS.EventEmitter).emit('uncaughtExceptionMonitor', new Error('late failure'), 'unhandledRejection');
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
+      '[error] [main] Uncaught exception (unhandledRejection): Error: late failure',
+    );
   });
 
   it('removes its process and app listeners on stopMainLog', () => {
-    const rejections = process.listenerCount('unhandledRejection');
     const monitors = process.listenerCount('uncaughtExceptionMonitor');
     startMainLog();
-    expect(process.listenerCount('unhandledRejection')).toBe(rejections + 1);
     expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors + 1);
     const rendererHandler = appHandler('render-process-gone');
     const childHandler = appHandler('child-process-gone');
     stopMainLog();
-    expect(process.listenerCount('unhandledRejection')).toBe(rejections);
     expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors);
     expect(dirs.off).toHaveBeenCalledWith('render-process-gone', rendererHandler);
     expect(dirs.off).toHaveBeenCalledWith('child-process-gone', childHandler);

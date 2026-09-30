@@ -196,7 +196,7 @@ Security constraints:
 
 - Location: `{userData}/birda-catalog.db`
 - Schema: `src/main/db/schema.ts`
-- Migrations: `src/main/db/database.ts` (sequential version-based). Each runs in an `IMMEDIATE` transaction, so a catalog locked by another process fails or waits under the connection timeout at the start instead of partway through.
+- Migrations: `src/main/db/database.ts` (sequential version-based). Each migration that changes the schema runs in an `IMMEDIATE` transaction. The exceptions are migrations 5 and 6 on a catalog that already has the current `detections` layout, which only record their version with a single write and need no transaction. A catalog locked by another process then fails or waits under the connection timeout at the start instead of partway through.
 - `detection_hour(file_path, start_time)`: SQL function registered in `initializeCatalog` for the hourly detection grid (wall-clock hour from the recording name and offset, same as `detectionHourOf`). Use it in ad-hoc queries only, never in views or indexes, because a catalog that references it would not open without the function.
 - Tables: `locations`, `analysis_runs`, `detections`, `audio_files`, `annotations`, `species_lists`, `species_list_entries` (plus `schema_migrations` for migration tracking)
 - View: `species_summary`, which, like the other catalog-wide counts, counts finished runs only. The exceptions are `saved_locations` and `total_runs` in the catalog stats, which count every location row and every analysis run (any status) because Clear Database deletes them all. Clear Database keeps the species lists and first saves a full copy of the catalog to `{userData}/backups/` (`VACUUM INTO`); if that backup fails, nothing is deleted

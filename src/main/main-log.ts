@@ -46,7 +46,7 @@ function write(log: ActiveLog, level: string, args: unknown[]): void {
 }
 
 /**
- * Copies console output, unhandled rejections and process crashes of the main
+ * Copies console output, uncaught exceptions, unhandled rejections and process crashes of the main
  * process to {userData}/logs/main.log. A failure to set the file up leaves the
  * console as it was.
  */
@@ -87,15 +87,10 @@ export function startMainLog(): void {
       /* eslint-enable security/detect-object-injection */
     }
 
-    const onRejection = (reason: unknown) => {
-      console.error('[main] Unhandled promise rejection:', reason);
-    };
-    process.on('unhandledRejection', onRejection);
-    log.detach.push(() => process.off('unhandledRejection', onRejection));
-
     // The monitor does not change how Node handles the exception, so it is only written down.
-    const onUncaught = (err: Error) => {
-      write(log, 'error', ['[main] Uncaught exception:', err]);
+    // Node also calls it for an unhandled rejection that throws (its default), and origin says which one this is.
+    const onUncaught = (err: Error, origin: string) => {
+      write(log, 'error', [`[main] Uncaught exception (${origin}):`, err]);
     };
     process.on('uncaughtExceptionMonitor', onUncaught);
     log.detach.push(() => process.off('uncaughtExceptionMonitor', onUncaught));

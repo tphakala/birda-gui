@@ -141,6 +141,22 @@ describe('hardenWebContents', () => {
     expect(openExternal).not.toHaveBeenCalled();
   });
 
+  it('blocks a redirect away from the app the same way', () => {
+    const { contents } = fakeContents();
+    expect(navigate(contents, 'will-redirect', 'https://example.com/')).toHaveBeenCalled();
+    expect(openExternal).toHaveBeenCalledWith('https://example.com/');
+    openExternal.mockClear();
+    expect(navigate(contents, 'will-redirect', 'http://example.com/')).toHaveBeenCalled();
+    expect(navigate(contents, 'will-redirect', 'file:///etc/passwd')).toHaveBeenCalled();
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it('lets the app redirect within itself', () => {
+    const { contents } = fakeContents();
+    expect(navigate(contents, 'will-redirect', 'http://localhost:5173/#/map')).not.toHaveBeenCalled();
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
   it('lets the app navigate within itself', () => {
     const { contents } = fakeContents();
     expect(navigate(contents, 'will-navigate', 'http://localhost:5173/#/map')).not.toHaveBeenCalled();

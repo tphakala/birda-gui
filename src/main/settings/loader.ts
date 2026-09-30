@@ -10,6 +10,23 @@ function getSettingsPath(): string {
   return path.join(app.getPath('userData'), SETTINGS_FILE);
 }
 
+/** settings.json.corrupt-<UTC time>, with -1, -2, ... added when that name is taken, so no earlier backup is overwritten. */
+async function uniqueCorruptPath(settingsPath: string): Promise<string> {
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d+Z$/, 'Z');
+  const base = `${settingsPath}.corrupt-${stamp}`;
+  for (let n = 0; ; n++) {
+    const candidate = n === 0 ? base : `${base}-${n}`;
+    try {
+      await fs.promises.access(candidate);
+    } catch {
+      return candidate;
+    }
+  }
+}
+
 export async function loadSettings(): Promise<AppSettings> {
   const settingsPath = getSettingsPath();
   const defaults: AppSettings = {
@@ -48,8 +65,8 @@ export async function loadSettings(): Promise<AppSettings> {
     parsed = json as Record<string, unknown>;
   } catch (err) {
     // Move the broken file aside so the next save does not overwrite the only copy.
-    const corruptPath = settingsPath + '.corrupt';
     try {
+      const corruptPath = await uniqueCorruptPath(settingsPath);
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.promises.rename(settingsPath, corruptPath);
       console.error(`Settings file is not valid; moved it to ${corruptPath} and using defaults.`, err);
