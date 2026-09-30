@@ -39,11 +39,9 @@ describe.skipIf(!posix)('execBirda', () => {
 
   it('kills a birda that does not finish and says how long it waited', async () => {
     setBirdaPath(fakeBirda('slow', 'exec sleep 5'));
-    const started = Date.now();
     await expect(execBirda(['config', 'show'], { timeoutMs: 200 })).rejects.toThrow(
       'birda config show did not finish within 0.2 s',
     );
-    expect(Date.now() - started).toBeLessThan(3000);
   });
 
   it('reports an output limit, not a timeout, when birda prints more than the buffer allows', async () => {

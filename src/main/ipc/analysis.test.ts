@@ -780,6 +780,7 @@ describe('birda:analyze, what reaches birda and the catalog', () => {
     await run;
     expect(createAudioFile).not.toHaveBeenCalled();
   });
+  /* eslint-disable security/detect-non-literal-fs-filename -- paths under a temp dir the test created */
   describe('spectrogram cache', () => {
     let root = '';
     let clip = '';
@@ -821,4 +822,5 @@ describe('birda:analyze, what reaches birda and the catalog', () => {
       expect(await invoke('clip:get-spectrogram', clip, 15000, height)).toBeNull();
     });
   });
+  /* eslint-enable security/detect-non-literal-fs-filename */
 });

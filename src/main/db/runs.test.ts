@@ -413,16 +413,18 @@ describe('getAnalysisSourcePaths', () => {
 });
 
 describe('markStaleRunsAsFailed under a foreign write lock', () => {
+  const BUSY_TIMEOUT_MS = 20_000;
   let dir = '';
   afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('fails fast with SQLITE_BUSY instead of waiting for the 5 s busy timeout', () => {
+  it('fails with SQLITE_BUSY at once instead of waiting for the busy timeout', () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-stale-'));
     const file = path.join(dir, 'catalog.db');
     conn.db?.close();
-    conn.db = new Database(file);
+    // A busy timeout far longer than any fast failure, so waiting for the lock would show.
+    conn.db = new Database(file, { timeout: BUSY_TIMEOUT_MS });
     initializeCatalog(conn.db);
     createRun('/a', 'birdnet', 0.1);
 
@@ -440,6 +442,6 @@ describe('markStaleRunsAsFailed under a foreign write lock', () => {
     other.close();
 
     expect(code).toBe('SQLITE_BUSY');
-    expect(waited).toBeLessThan(1000);
+    expect(waited).toBeLessThan(BUSY_TIMEOUT_MS / 2);
   });
 });

@@ -4,9 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const dirs = vi.hoisted(() => ({ userData: '' }));
+const dirs = vi.hoisted(() => ({ userData: '', on: vi.fn(), off: vi.fn() }));
 vi.mock('electron', () => ({
-  app: { getPath: () => dirs.userData, getVersion: () => '0.0.0', on: vi.fn(), off: vi.fn() },
+  app: { getPath: () => dirs.userData, getVersion: () => '0.0.0', on: dirs.on, off: dirs.off },
 }));
 
 const { formatLogLine, logFilePath, startMainLog, stopMainLog } = await import('./main-log');
@@ -96,5 +96,49 @@ describe('startMainLog', () => {
     expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
       '[main] Unhandled promise rejection: Error: late failure',
     );
+  });
+
+  /** The handler startMainLog registered with app.on for an event. */
+  function appHandler(event: string): (...args: unknown[]) => void {
+    const call = dirs.on.mock.calls.findLast((c: unknown[]) => c[0] === event);
+    if (!call) throw new Error(`no ${event} handler`);
+    return call[1] as (...args: unknown[]) => void;
+  }
+
+  it('logs a renderer process that went away', () => {
+    startMainLog();
+    appHandler('render-process-gone')({}, {}, { reason: 'crashed', exitCode: 11 });
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
+      '[error] [main] Renderer process gone: reason=crashed exitCode=11',
+    );
+  });
+
+  it('logs a child process that went away', () => {
+    startMainLog();
+    appHandler('child-process-gone')({}, { type: 'GPU', reason: 'killed', exitCode: 9 });
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
+      '[error] [main] GPU process gone: reason=killed exitCode=9',
+    );
+  });
+
+  it('logs an uncaught exception from the monitor', () => {
+    startMainLog();
+    (process as NodeJS.EventEmitter).emit('uncaughtExceptionMonitor', new Error('fatal'), 'uncaughtException');
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain('[error] [main] Uncaught exception: Error: fatal');
+  });
+
+  it('removes its process and app listeners on stopMainLog', () => {
+    const rejections = process.listenerCount('unhandledRejection');
+    const monitors = process.listenerCount('uncaughtExceptionMonitor');
+    startMainLog();
+    expect(process.listenerCount('unhandledRejection')).toBe(rejections + 1);
+    expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors + 1);
+    const rendererHandler = appHandler('render-process-gone');
+    const childHandler = appHandler('child-process-gone');
+    stopMainLog();
+    expect(process.listenerCount('unhandledRejection')).toBe(rejections);
+    expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors);
+    expect(dirs.off).toHaveBeenCalledWith('render-process-gone', rendererHandler);
+    expect(dirs.off).toHaveBeenCalledWith('child-process-gone', childHandler);
   });
 });
