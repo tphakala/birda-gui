@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
+import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
@@ -502,7 +503,8 @@ function migrateToAudioFiles(db: Database.Database): void {
 function backupDatabase(d: Database.Database): string {
   const dir = path.join(path.dirname(getDbPath()), 'backups');
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupPath = path.join(dir, `birda-catalog-${stamp}.db`);
+  // The suffix keeps two clears in the same millisecond from sharing a name, so the failure cleanup below only ever removes this call's own file.
+  const backupPath = path.join(dir, `birda-catalog-${stamp}-${randomUUID().slice(0, 8)}.db`);
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     fs.mkdirSync(dir, { recursive: true });

@@ -490,6 +490,23 @@ describe('clearDatabase', () => {
     }
   });
 
+  it('keeps every earlier backup when the catalog is cleared again', () => {
+    seed();
+    // A frozen clock gives both clears the same timestamp.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-02T03:04:05.678Z'));
+    try {
+      const first = clearDatabase().backup_path;
+      const second = clearDatabase().backup_path;
+
+      expect(second).not.toBe(first);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- paths under the test's own userData
+      expect(fs.existsSync(first) && fs.existsSync(second)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('deletes nothing when the backup cannot be written', () => {
     const db = seed();
     const before = counts(db);
