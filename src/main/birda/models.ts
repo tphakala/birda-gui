@@ -1,4 +1,5 @@
-import { execFile, spawn } from 'child_process';
+import { spawn } from 'child_process';
+import { execBirda } from './exec';
 import { findBirda, superviseChild, type SupervisedChild } from './runner';
 import { classifyExit } from './process-exit';
 import { parseProgressLine } from './progress';
@@ -20,20 +21,12 @@ interface BirdaJsonEnvelope {
 }
 
 async function runBirdaJson(args: string[]): Promise<BirdaJsonEnvelope> {
-  const birdaPath = await findBirda();
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(`birda command failed: ${stderr || err.message}`));
-        return;
-      }
-      try {
-        resolve(JSON.parse(stdout) as BirdaJsonEnvelope);
-      } catch {
-        reject(new Error(`Failed to parse birda output as JSON: ${stdout.slice(0, 200)}`));
-      }
-    });
-  });
+  const stdout = await execBirda(args, { errorPrefix: 'birda command failed: ' });
+  try {
+    return JSON.parse(stdout) as BirdaJsonEnvelope;
+  } catch {
+    throw new Error(`Failed to parse birda output as JSON: ${stdout.slice(0, 200)}`);
+  }
 }
 
 export async function listModels(): Promise<InstalledModel[]> {

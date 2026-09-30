@@ -1,7 +1,6 @@
-import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { findBirda } from './runner';
+import { execBirda } from './exec';
 
 export interface RegistryLanguage {
   code: string;
@@ -41,47 +40,21 @@ export async function getRegistryLanguages(modelId: string): Promise<RegistryLan
 }
 
 export async function getConfig(): Promise<Record<string, unknown>> {
-  const birdaPath = await findBirda();
-
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, ['--output-mode', 'json', 'config', 'show'], (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Failed to get birda config: ${stderr || err.message}`));
-        return;
-      }
-      try {
-        resolve(JSON.parse(stdout) as Record<string, unknown>);
-      } catch {
-        reject(new Error(`Failed to parse birda config output: ${stdout.slice(0, 200)}`));
-      }
-    });
+  const stdout = await execBirda(['--output-mode', 'json', 'config', 'show'], {
+    errorPrefix: 'Failed to get birda config: ',
   });
+  try {
+    return JSON.parse(stdout) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Failed to parse birda config output: ${stdout.slice(0, 200)}`);
+  }
 }
 
 export async function setDefaultModel(modelId: string): Promise<void> {
-  const birdaPath = await findBirda();
-
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, ['config', 'set', 'defaults.model', modelId], (err, _stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Failed to set default model: ${stderr || err.message}`));
-        return;
-      }
-      resolve();
-    });
-  });
+  await execBirda(['config', 'set', 'defaults.model', modelId], { errorPrefix: 'Failed to set default model: ' });
 }
 
 export async function getConfigPath(): Promise<string> {
-  const birdaPath = await findBirda();
-
-  return new Promise((resolve, reject) => {
-    execFile(birdaPath, ['config', 'path'], (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Failed to get birda config path: ${stderr || err.message}`));
-        return;
-      }
-      resolve(stdout.trim());
-    });
-  });
+  const stdout = await execBirda(['config', 'path'], { errorPrefix: 'Failed to get birda config path: ' });
+  return stdout.trim();
 }

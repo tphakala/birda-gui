@@ -82,6 +82,47 @@ describe('runAnalysis', () => {
     await expect(handle.promise).rejects.toThrow('birda exited with code 2\nmodel file not found');
   });
 
+  it('keeps the last 500 stderr lines and counts the ones dropped', async () => {
+    const handle = runAnalysis('/rec.wav', options);
+    const child = await spawnedChild();
+    child.stderr.write(Array.from({ length: 600 }, (_, i) => `line ${i}`).join('\n') + '\n');
+    await new Promise((r) => setImmediate(r));
+    child.exit(2);
+    const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
+    expect(message).toContain('(100 earlier lines omitted)');
+    expect(message).toContain('line 599');
+    expect(message).toContain('line 100\n');
+    expect(message).not.toContain('line 99\n');
+    expect(message.split('\n')).toHaveLength(502);
+  });
+
+  it('shortens a very long stderr line', async () => {
+    const handle = runAnalysis('/rec.wav', options);
+    const child = await spawnedChild();
+    child.stderr.write('x'.repeat(5000) + '\n');
+    await new Promise((r) => setImmediate(r));
+    child.exit(2);
+    const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
+    expect(message.length).toBeLessThan(1100);
+    expect(message).not.toContain('earlier lines omitted');
+  });
+
+  it('logs an event by name only and skips progress events', async () => {
+    const handle = runAnalysis('/rec.wav', options);
+    const logs: string[] = [];
+    handle.on('log', (_level, message) => logs.push(message));
+    const child = await spawnedChild();
+    const envelope = (event: string) =>
+      JSON.stringify({ spec_version: '1', timestamp: 't', event, payload: { secret: 'payload-text' } }) + '\n';
+    child.stdout.write(envelope('progress') + envelope('file_started'));
+    await new Promise((r) => setImmediate(r));
+    child.exit(0);
+    await handle.promise;
+    expect(logs).toContain('[event] file_started');
+    expect(logs.join('\n')).not.toContain('payload-text');
+    expect(logs.join('\n')).not.toContain('[event] progress');
+  });
+
   it('rejects a signal exit without a cancel as a failure', async () => {
     const handle = runAnalysis('/rec.wav', options);
     (await spawnedChild()).exit(null, 'SIGKILL');

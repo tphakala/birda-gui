@@ -519,6 +519,50 @@ describe('clearDatabase', () => {
   });
 });
 
+describe('initializeCatalog locking', () => {
+  let dir = '';
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('registers detection_hour for ad-hoc queries', () => {
+    const db = memoryDb();
+    initializeCatalog(db);
+    const row = db
+      .prepare('SELECT detection_hour(?, ?) AS a, detection_hour(NULL, ?) AS b')
+      .get('/rec/20240501_053000_A.wav', 1800, 7300) as { a: number; b: number };
+    expect(row).toEqual({ a: 6, b: 2 });
+  });
+
+  it('waits for the lock under the connection timeout before a migration fails', () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-migrate-'));
+    const file = path.join(dir, 'catalog.db');
+    const first = new Database(file);
+    initializeCatalog(first);
+    // Forget migration 8 so the next open runs it again.
+    first.prepare('DELETE FROM schema_migrations WHERE version = 8').run();
+    first.close();
+
+    const writer = new Database(file);
+    writer.exec('BEGIN IMMEDIATE');
+    const blocked = new Database(file, { timeout: 300 });
+    const started = Date.now();
+    let code: unknown;
+    try {
+      initializeCatalog(blocked);
+    } catch (err) {
+      code = (err as { code?: string }).code;
+    }
+    const waited = Date.now() - started;
+    blocked.close();
+    writer.exec('ROLLBACK');
+    writer.close();
+
+    expect(code).toBe('SQLITE_BUSY');
+    expect(waited).toBeGreaterThanOrEqual(200);
+  });
+});
+
 describe('getDb', () => {
   afterEach(() => {
     closeDb();

@@ -4,6 +4,7 @@ import type {
   FileCompletedPayload,
   ProgressPayload,
 } from '$shared/types';
+import { SvelteMap } from 'svelte/reactivity';
 import { applyProgressEvent, fileStatusOf, type FileStatus } from '$shared/analysis-progress';
 
 // Re-export event types for renderer use
@@ -31,7 +32,7 @@ interface AnalysisProgress {
   discarded: boolean;
   error: string | null;
   /** Outcome per source file path, set as each file_completed event arrives. */
-  fileStatuses: Record<string, FileStatus>;
+  fileStatuses: SvelteMap<string, FileStatus>;
 }
 
 export const analysisState = $state<AnalysisProgress>({
@@ -45,7 +46,7 @@ export const analysisState = $state<AnalysisProgress>({
   hadErrors: false,
   discarded: false,
   error: null,
-  fileStatuses: {},
+  fileStatuses: new SvelteMap<string, FileStatus>(),
 });
 
 export function dismissAnalysis(): void {
@@ -67,7 +68,7 @@ export function resetAnalysis(source: string | null): void {
   analysisState.hadErrors = false;
   analysisState.discarded = false;
   analysisState.error = null;
-  analysisState.fileStatuses = {};
+  analysisState.fileStatuses = new SvelteMap<string, FileStatus>();
 }
 
 /**
@@ -82,7 +83,7 @@ export function joinRunningAnalysis(source: string, progress: AnalysisProgressSn
   analysisState.filesProcessed = progress.filesProcessed;
   analysisState.filesFailed = progress.filesFailed;
   analysisState.totalDetections = progress.totalDetections;
-  for (const f of progress.completedFiles) analysisState.fileStatuses[f.file] = fileStatusOf(f.status);
+  for (const f of progress.completedFiles) analysisState.fileStatuses.set(f.file, fileStatusOf(f.status));
 }
 
 export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
@@ -104,7 +105,7 @@ export function handleAnalysisEvent(envelope: BirdaEventEnvelope): void {
     }
     case 'file_completed': {
       const p = envelope.payload as FileCompletedPayload;
-      analysisState.fileStatuses[p.file] = fileStatusOf(p.status);
+      analysisState.fileStatuses.set(p.file, fileStatusOf(p.status));
       analysisState.currentFile = null;
       break;
     }

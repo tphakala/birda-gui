@@ -3,6 +3,7 @@ import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { detectionHourOf } from '$shared/recording-name';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
@@ -31,10 +32,21 @@ export function getDb(): Database.Database {
   return db;
 }
 
-/** Brings a catalog connection up to the current schema. */
+/**
+ * Brings a catalog connection up to the current schema. A file that already has
+ * a detections table is treated as an existing catalog and migrated before
+ * SCHEMA_SQL runs; any other file is treated as new.
+ */
 export function initializeCatalog(db: Database.Database): void {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+
+  // Hour of day of a detection, from the recording name and offset. Only for
+  // ad-hoc queries: it must not be used in views or indexes, because a catalog
+  // that references it would fail to open in a build without this function.
+  db.function('detection_hour', { deterministic: true }, (filePath, startTime) =>
+    detectionHourOf(typeof filePath === 'string' ? filePath : '', Number(startTime)),
+  );
 
   // SCHEMA_SQL indexes columns that older catalogs only gain through a migration
   // (detections.audio_file_id arrives in migration 5), so an existing catalog is
@@ -85,7 +97,7 @@ function runMigrations(db: Database.Database): void {
         `);
       }
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(1);
-    })();
+    }).immediate();
   }
 
   // Migration 2: Species lists
@@ -118,7 +130,7 @@ function runMigrations(db: Database.Database): void {
       db.exec('CREATE INDEX IF NOT EXISTS idx_sle_list ON species_list_entries(list_id)');
       db.exec('CREATE INDEX IF NOT EXISTS idx_sle_species ON species_list_entries(scientific_name)');
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(2);
-    })();
+    }).immediate();
   }
 
   // Migration 3: Add timezone_offset_min to analysis_runs
@@ -129,7 +141,7 @@ function runMigrations(db: Database.Database): void {
         db.exec('ALTER TABLE analysis_runs ADD COLUMN timezone_offset_min INTEGER');
       }
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(3);
-    })();
+    }).immediate();
   }
 
   // Migration 4: Add completed_with_errors status
@@ -211,7 +223,7 @@ function runMigrations(db: Database.Database): void {
           `);
 
           console.log('Detections table fixed');
-        })();
+        }).immediate();
       } finally {
         db.pragma('foreign_keys = ON');
       }
@@ -248,7 +260,7 @@ function runMigrations(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS idx_annotations_detection ON annotations(detection_id);
       `);
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(7);
-    })();
+    }).immediate();
   }
 
   // Migration 8: Add cancelled status. It runs for new catalogs too, since
@@ -265,13 +277,13 @@ function runMigrations(db: Database.Database): void {
       db.exec('DROP VIEW IF EXISTS species_summary');
       db.exec(SPECIES_SUMMARY_VIEW);
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(9);
-    })();
+    }).immediate();
   }
 }
 
 /**
  * Rebuilds analysis_runs with a new status CHECK, which SQLite cannot change
- * in place, and records the migration. Rows keep their ids, and the
+ * in place, and records the migration, in one IMMEDIATE transaction. Rows keep their ids, and the
  * AUTOINCREMENT sequence is restored so a deleted run's id is not reused.
  */
 function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version: number): void {
@@ -316,7 +328,7 @@ function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version
         db.prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('analysis_runs', ?)").run(seq.seq);
       }
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(version);
-    })();
+    }).immediate();
   } finally {
     db.pragma('foreign_keys = ON');
   }
@@ -492,7 +504,7 @@ function migrateToAudioFiles(db: Database.Database): void {
       db.exec('DROP TABLE audio_file_mapping');
 
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(5);
-    })();
+    }).immediate();
   } finally {
     // Re-enable foreign keys even if migration fails
     db.pragma('foreign_keys = ON');

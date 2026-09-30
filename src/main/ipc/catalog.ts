@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import {
   getDetections,
   getRunSpeciesAggregation,
-  getDetectionsForGrid,
+  getHourlyDetectionCounts,
   searchSpecies,
   getSpeciesSummary,
   getSpeciesLocations,
@@ -13,7 +13,6 @@ import { clearDatabase, checkDatabaseHealth, optimizeDatabase, vacuumDatabase } 
 import { getLocations, getLocationsWithCounts } from '../db/locations';
 import { getRunsWithStats, deleteRun } from '../db/runs';
 import { resolveAll, searchByCommonName } from '../labels/label-service';
-import { detectionHourOf } from '$shared/recording-name';
 import type {
   Detection,
   DetectionFilter,
@@ -88,30 +87,15 @@ export function registerCatalogHandlers(): void {
   ipcMain.handle('catalog:get-hourly-detections', (_event, filter: DetectionFilter): HourlyDetectionCell[] => {
     filter = resolveSpeciesFilter(filter);
 
-    // Fetch raw detections and compute actual wall-clock hour from filename + offset
-    const rows = getDetectionsForGrid(filter);
-    const counters = new Map<string, number>();
-    const speciesNames = new Set<string>();
-
-    for (const row of rows) {
-      const hour = detectionHourOf(row.file_path, row.start_time);
-      const key = `${row.scientific_name}\0${hour}`;
-      counters.set(key, (counters.get(key) ?? 0) + 1);
-      speciesNames.add(row.scientific_name);
-    }
-
-    const nameMap = resolveAll([...speciesNames]);
-    const result: HourlyDetectionCell[] = [];
-    for (const [key, count] of counters) {
-      const [sci, hourStr] = key.split('\0');
-      result.push({
-        scientific_name: sci,
-        common_name: nameMap.get(sci) ?? sci,
-        hour: parseInt(hourStr, 10),
-        detection_count: count,
-      });
-    }
-    return result;
+    // The hour is worked out in SQL (detection_hour) so the grid does not load every detection.
+    const rows = getHourlyDetectionCounts(filter);
+    const nameMap = resolveAll([...new Set(rows.map((r) => r.scientific_name))]);
+    return rows.map((r) => ({
+      scientific_name: r.scientific_name,
+      common_name: nameMap.get(r.scientific_name) ?? r.scientific_name,
+      hour: r.hour,
+      detection_count: r.detection_count,
+    }));
   });
 
   ipcMain.handle('catalog:search-species', (_event, query: string) => {

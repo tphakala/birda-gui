@@ -25,7 +25,12 @@ Development and CI need Node.js 22 (22.12 or later), 24, or 26 and newer, the ra
 ```text
 src/
   main/              # Electron main process (Node.js)
-    index.ts          # Entry point, window creation, menu, protocol registration
+    index.ts          # Entry point, window creation, menu, startup
+    main-log.ts       # Copies main-process console output and crashes to {userData}/logs/main.log
+    window-security.ts  # Window-open and navigation policy, permission policy
+    media-protocol.ts # birda-media:// and birda-map:// protocol handlers
+    media-access.ts   # Clip folder roots and the path-inside check shared by the IPC and protocol code
+    startup-dialog.ts # Dialog shown when the catalog cannot be opened
     birda/            # CLI integration (spawns birda process, parses NDJSON)
     db/               # SQLite database layer (schema, migrations, CRUD modules)
     ipc/              # IPC handler modules (one per domain)
@@ -177,9 +182,13 @@ When adding a new IPC channel:
 
 Security constraints:
 
-- `contextIsolation: true`, `nodeIntegration: false`
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
 - Content Security Policy in `src/renderer/index.html`
-- Custom `birda-media://` protocol for audio file access (restricted to audio extensions)
+- Window and navigation policy in `src/main/window-security.ts`: `window.open` never opens a window, and navigation away from the app page is blocked. Only `https:` links are opened, in the system browser (no host list); webviews cannot be attached.
+- The only permission granted is `clipboard-sanitized-write`, and only to the app page. Everything else is denied.
+- No DevTools, reload or toggle-DevTools menu items in packaged builds (`app.isPackaged`).
+- Electron fuses are set in `package.json` (`build.electronFuses`): `runAsNode`, NODE_OPTIONS and `--inspect` arguments are disabled, and the app loads only from the asar. Disabling the NODE_OPTIONS fuse also means `NODE_EXTRA_CA_CERTS` is ignored by packaged builds; this is accepted. The asar integrity fuse and `grantFileProtocolExtraPrivileges` are not changed.
+- Custom `birda-media://` protocol (`src/main/media-protocol.ts`) for audio and image files: restricted to audio and PNG extensions, and to files inside the clip folders (the configured absolute clip output folder and `{userData}/clips`) or inside something an analysis run was started on (`analysis_runs.source_path`). The same resolved path is checked, opened and served.
 
 ## Database
 
@@ -187,12 +196,17 @@ Security constraints:
 
 - Location: `{userData}/birda-catalog.db`
 - Schema: `src/main/db/schema.ts`
-- Migrations: `src/main/db/database.ts` (sequential version-based)
+- Migrations: `src/main/db/database.ts` (sequential version-based). Each runs in an `IMMEDIATE` transaction, so a catalog locked by another process fails or waits under the connection timeout at the start instead of partway through.
+- `detection_hour(file_path, start_time)`: SQL function registered in `initializeCatalog` for the hourly detection grid (wall-clock hour from the recording name and offset, same as `detectionHourOf`). Use it in ad-hoc queries only, never in views or indexes, because a catalog that references it would not open without the function.
 - Tables: `locations`, `analysis_runs`, `detections`, `audio_files`, `annotations`, `species_lists`, `species_list_entries` (plus `schema_migrations` for migration tracking)
 - View: `species_summary`, which, like the other catalog-wide counts, counts finished runs only. The exceptions are `saved_locations` and `total_runs` in the catalog stats, which count every location row and every analysis run (any status) because Clear Database deletes them all. Clear Database keeps the species lists and first saves a full copy of the catalog to `{userData}/backups/` (`VACUUM INTO`); if that backup fails, nothing is deleted
 - Runs: `finishRun` in `runs.ts` records how a run ended and keeps one result set per source and model
 - Locations: rows are kept as saved sites for the analysis form's location picker, including sites whose runs found nothing; the map and the status bar location count show only locations with detections from finished runs
 - Pragmas: `journal_mode = WAL`, `foreign_keys = ON`
+
+## Main process log
+
+`src/main/main-log.ts` copies `console.log/info/warn/error/debug`, unhandled rejections, uncaught exceptions and renderer and child process crashes to `{userData}/logs/main.log`. A log larger than 5 MB is moved to `main.old.log` at start, and a session stops writing after 10 MB. Help > Show Log File reveals it, and the catalog open failure dialog names it.
 
 CRUD modules in `src/main/db/`: `runs.ts`, `detections.ts`, `locations.ts`, `species-lists.ts`, `audio-files.ts`, `annotations.ts`.
 

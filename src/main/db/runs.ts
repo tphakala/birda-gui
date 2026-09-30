@@ -58,6 +58,13 @@ export function markStaleRunsAsFailed(): number {
   })();
 }
 
+/** Every distinct source path (file or folder) that an analysis run was started on. */
+export function getAnalysisSourcePaths(): string[] {
+  const db = getDb();
+  const rows = db.prepare('SELECT DISTINCT source_path FROM analysis_runs').all() as { source_path: string }[];
+  return rows.map((r) => r.source_path);
+}
+
 export function getRunsWithStats(): RunWithStats[] {
   const db = getDb();
   const rows = db

@@ -1,8 +1,18 @@
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinishedRunStatus, RunStatus } from '$shared/types';
 import { initializeCatalog } from './database';
-import { createRun, deleteRun, finishRun, getRunsWithStats, markStaleRunsAsFailed } from './runs';
+import {
+  createRun,
+  deleteRun,
+  finishRun,
+  getAnalysisSourcePaths,
+  getRunsWithStats,
+  markStaleRunsAsFailed,
+} from './runs';
 import {
   getCatalogStats,
   getDetections,
@@ -386,5 +396,50 @@ describe('locations', () => {
     expect(mapped()).toEqual([]);
     expect(getCatalogStats()).toMatchObject({ total_locations: 0, saved_locations: 1 });
     expect(getLocations().map((l) => l.id)).toEqual([here]);
+  });
+});
+
+describe('getAnalysisSourcePaths', () => {
+  it('returns each source path once', () => {
+    createRun('/a', 'birdnet', 0.1);
+    createRun('/a', 'perch', 0.1);
+    createRun('/b/file.wav', 'birdnet', 0.1);
+    expect(getAnalysisSourcePaths().sort()).toEqual(['/a', '/b/file.wav']);
+  });
+
+  it('returns nothing for an empty catalog', () => {
+    expect(getAnalysisSourcePaths()).toEqual([]);
+  });
+});
+
+describe('markStaleRunsAsFailed under a foreign write lock', () => {
+  let dir = '';
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('fails fast with SQLITE_BUSY instead of waiting for the 5 s busy timeout', () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-stale-'));
+    const file = path.join(dir, 'catalog.db');
+    conn.db?.close();
+    conn.db = new Database(file);
+    initializeCatalog(conn.db);
+    createRun('/a', 'birdnet', 0.1);
+
+    const other = new Database(file);
+    other.exec('BEGIN IMMEDIATE');
+    const started = Date.now();
+    let code: unknown;
+    try {
+      markStaleRunsAsFailed();
+    } catch (err) {
+      code = (err as { code?: string }).code;
+    }
+    const waited = Date.now() - started;
+    other.exec('ROLLBACK');
+    other.close();
+
+    expect(code).toBe('SQLITE_BUSY');
+    expect(waited).toBeLessThan(1000);
   });
 });

@@ -12,6 +12,14 @@ import { classifyExit } from './process-exit';
 import { BIRDA_CLI_VERSION, BIRDA_GITHUB_URL, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
+/** A longer stderr line is cut to this many characters before it is kept or logged. */
+const MAX_STDERR_LINE_CHARS = 1000;
+/** How long the PATH lookup for birda may take. */
+const WHICH_TIMEOUT_MS = 5000;
+
+function shortenLine(line: string): string {
+  return line.length > MAX_STDERR_LINE_CHARS ? `${line.slice(0, MAX_STDERR_LINE_CHARS)}...` : line;
+}
 /** How long a cancelled birda gets to exit after SIGTERM before it is sent SIGKILL. */
 export const CANCEL_KILL_TIMEOUT_MS = 10_000;
 
@@ -237,7 +245,7 @@ export async function findBirda(): Promise<string> {
     await fs.promises.access(bundledPath, fs.constants.X_OK);
     return bundledPath;
   } catch {
-    // Not found — fall through to PATH lookup
+    // Not found, fall through to PATH lookup
   }
 
   // 3. System PATH fallback
@@ -245,7 +253,7 @@ export async function findBirda(): Promise<string> {
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
 
   return new Promise((resolve, reject) => {
-    execFileCallback(whichCmd, [binaryName], (err, stdout) => {
+    execFileCallback(whichCmd, [binaryName], { timeout: WHICH_TIMEOUT_MS }, (err, stdout) => {
       if (err || !stdout.trim()) {
         reject(
           new Error(
@@ -321,9 +329,14 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   const cancelState = { requested: false };
   let supervised: SupervisedChild | null = null;
 
+  // Only the last MAX_STDERR_LINES lines are kept: a failure is explained by
+  // what birda printed last, and an unbounded list would grow with a noisy run.
+  let droppedStderrLines = 0;
   function pushStderr(text: string) {
-    if (stderrLines.length < MAX_STDERR_LINES) {
-      stderrLines.push(text);
+    stderrLines.push(shortenLine(text));
+    if (stderrLines.length > MAX_STDERR_LINES) {
+      stderrLines.shift();
+      droppedStderrLines++;
     }
   }
 
@@ -437,17 +450,20 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         if (!line.trim()) return;
         try {
           const envelope = JSON.parse(line) as BirdaEventEnvelope;
-          emitLog('debug', `[event] ${envelope.event}: ${JSON.stringify(envelope.payload)}`);
+          // Payloads can be large and progress events are frequent, so only the name is logged.
+          if (envelope.event !== 'progress') emitLog('debug', `[event] ${envelope.event}`);
           dataCallback?.(envelope);
         } catch {
-          const msg = `[non-json stdout]: ${line}`;
+          const msg = shortenLine(`[non-json stdout]: ${line}`);
           pushStderr(msg);
           emitLog('warn', msg);
         }
       });
 
-      child.stderr.on('data', (chunk: Buffer) => {
-        const text = chunk.toString().trimEnd();
+      const stderrReader = createInterface({ input: child.stderr });
+      stderrReader.on('line', (line) => {
+        const text = shortenLine(line).trimEnd();
+        if (!text) return;
         pushStderr(text);
         emitLog('warn', `[stderr] ${text}`);
       });
@@ -462,7 +478,8 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         } else if (outcome === 'cancelled') {
           reject(new AnalysisCancelledError());
         } else {
-          reject(new Error(`birda ${how}\n${stderrLines.join('\n')}`));
+          const omitted = droppedStderrLines > 0 ? `(${droppedStderrLines} earlier lines omitted)\n` : '';
+          reject(new Error(`birda ${how}\n${omitted}${stderrLines.join('\n')}`));
         }
       });
     })();

@@ -17,10 +17,10 @@ interface RawRunSpeciesAggregation {
   last_detected: string;
 }
 
-interface RawGridDetection {
+interface RawHourlyCount {
   scientific_name: string;
-  start_time: number;
-  file_path: string;
+  hour: number;
+  detection_count: number;
 }
 
 function escapeLike(str: string): string {
@@ -241,20 +241,23 @@ export function getRunSpeciesAggregation(filter: DetectionFilter): RawRunSpecies
     .all(...params) as RawRunSpeciesAggregation[];
 }
 
-export function getDetectionsForGrid(filter: DetectionFilter): RawGridDetection[] {
+export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCount[] {
   const db = getDb();
   const { where, params } = buildWhereClause(filter, 'd');
 
   return db
     .prepare(
       `
-      SELECT d.scientific_name, d.start_time, af.file_path
+      SELECT d.scientific_name,
+             detection_hour(af.file_path, d.start_time) AS hour,
+             COUNT(*) AS detection_count
       FROM detections d
       LEFT JOIN audio_files af ON d.audio_file_id = af.id
       ${where}
+      GROUP BY d.scientific_name, hour
     `,
     )
-    .all(...params) as RawGridDetection[];
+    .all(...params) as RawHourlyCount[];
 }
 
 export function searchSpecies(query: string, scientificNames?: string[]): SpeciesSummary[] {

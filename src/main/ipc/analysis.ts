@@ -13,6 +13,7 @@ import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './fil
 import { createAudioFile, deleteAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
 import { sendToWindows } from './broadcast';
+import { clipRoots, isInside } from '../media-access';
 import type {
   AnalysisResult,
   AudioFileMetadata,
@@ -675,11 +676,9 @@ export function registerAnalysisHandlers(): void {
   // (configured or default); blocks arbitrary filesystem writes from a compromised renderer.
   async function isClipPathAllowed(normalizedClipPath: string): Promise<boolean> {
     const settings = await settingsStore.get();
-    const allowedRoots = [path.resolve(settings.clip_output_dir), path.join(app.getPath('userData'), 'clips')];
-    return allowedRoots.some((root) => {
-      const rel = path.relative(root, normalizedClipPath);
-      return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
-    });
+    return clipRoots(settings, app.getPath('userData')).some((root) =>
+      isInside(root, normalizedClipPath, { allowEqual: false }),
+    );
   }
 
   // Spectrogram cache: save PNG next to clip

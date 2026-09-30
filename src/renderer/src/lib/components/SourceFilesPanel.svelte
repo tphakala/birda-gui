@@ -40,7 +40,7 @@
   function getStatus(filePath: string): FileStatus | null {
     if (!analysisRunning && analysisState.status === 'idle') return null;
     if (analysisState.currentFile?.path === filePath) return 'processing';
-    return analysisState.fileStatuses[filePath] ?? 'pending';
+    return analysisState.fileStatuses.get(filePath) ?? 'pending';
   }
 
   function getPercent(filePath: string): number {
