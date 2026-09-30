@@ -780,4 +780,45 @@ describe('birda:analyze, what reaches birda and the catalog', () => {
     await run;
     expect(createAudioFile).not.toHaveBeenCalled();
   });
+  describe('spectrogram cache', () => {
+    let root = '';
+    let clip = '';
+
+    beforeEach(() => {
+      const base = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-spec-test-'));
+      leftovers.push(base);
+      root = path.join(base, 'clips');
+      fs.mkdirSync(root);
+      clip = path.join(root, 'bird.wav');
+      h.settings.get.mockResolvedValue({ clip_output_dir: root });
+    });
+
+    const png = 'data:image/png;base64,AAAA';
+    const filesUnder = (dir: string) => fs.readdirSync(dir);
+
+    it('writes the cache PNG next to the clip for ordinary numbers', async () => {
+      const out = (await invoke('clip:save-spectrogram', clip, 15000, 160, png)) as string;
+      expect(out).toBe(path.join(root, 'bird_spec_15000_160.png'));
+      expect(fs.existsSync(out)).toBe(true);
+      expect(await invoke('clip:get-spectrogram', clip, 15000, 160)).toBe(out);
+    });
+
+    it.each(['1/../../../x', '../x', 1.5, NaN, Infinity, -1, 0, 1e9, '15000'])(
+      'refuses freqMax %j without writing outside the clip root',
+      async (freqMax) => {
+        const parent = path.dirname(root);
+        await expect(invoke('clip:save-spectrogram', clip, freqMax, 160, png)).rejects.toThrow();
+        expect(filesUnder(parent)).toEqual(['clips']);
+        expect(filesUnder(root)).toEqual([]);
+        expect(await invoke('clip:get-spectrogram', clip, freqMax, 160)).toBeNull();
+      },
+    );
+
+    it.each(['160/../../x', -5, 2.5, NaN, 1e9])('refuses height %j', async (height) => {
+      await expect(invoke('clip:save-spectrogram', clip, 15000, height, png)).rejects.toThrow();
+      expect(filesUnder(path.dirname(root))).toEqual(['clips']);
+      expect(filesUnder(root)).toEqual([]);
+      expect(await invoke('clip:get-spectrogram', clip, 15000, height)).toBeNull();
+    });
+  });
 });
