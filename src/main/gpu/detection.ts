@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 async function checkNvidiaSmi(): Promise<boolean> {
   try {
     const cmd = process.platform === 'win32' ? 'where nvidia-smi' : 'which nvidia-smi';
-    await execAsync(cmd);
+    await execAsync(cmd, { timeout: 5000 });
     return true;
   } catch {
     return false;

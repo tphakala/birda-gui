@@ -8,7 +8,7 @@ const root = resolve(import.meta.dirname, '../..');
 
 export default defineConfig(({ command }) => ({
   root: resolve(root, 'src/renderer'),
-  // Relative base so built assets resolve under file:// (loadFile). The dev
+  // Relative base so built assets resolve under file:// (the packaged window loads index.html by file URL). The dev
   // server serves from '/'.
   base: command === 'build' ? './' : '/',
   build: {

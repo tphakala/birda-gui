@@ -4,22 +4,24 @@ import {
   Menu,
   type MenuItemConstructorOptions,
   dialog as electronDialog,
-  net,
   protocol,
   session,
+  shell,
 } from 'electron';
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { mediaUrlToPath } from '$shared/media-url';
-import { getCoveragePath } from './birda/coverageCache';
-import fs from 'fs';
 import { registerHandlers } from './ipc/handlers';
-import { closeDbForShutdown, getDb, getDbPath } from './db/database';
+import { closeDbForShutdown, getDb } from './db/database';
 import { markStaleRunsAsFailed } from './db/runs';
 import { buildLabelsPath, reloadLabels } from './labels/label-service';
 import { listModels } from './birda/models';
 import { killAll as killAllBirdaProcesses } from './birda/runner';
 import { stopAnalysisForQuit } from './ipc/analysis';
+import { settingsStore } from './settings/store';
+import { logFilePath, startMainLog } from './main-log';
+import { registerBirdaMapProtocol, registerBirdaMediaProtocol } from './media-protocol';
+import { reportCatalogOpenFailure } from './startup-dialog';
+import { applyPermissionPolicy, hardenWebContents } from './window-security';
 
 // Must be called before app.whenReady(); tells Chromium the scheme supports fetch().
 // secure + corsEnabled are required for cross-origin fetch from the dev server origin
@@ -28,6 +30,10 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'birda-media', privileges: { secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
   { scheme: 'birda-map', privileges: { secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
 ]);
+
+// The page the main window loads: the dev server, or the packaged index.html.
+// window-security treats only this page as the app.
+const APP_URL = process.env.ELECTRON_RENDERER_URL ?? pathToFileURL(path.join(__dirname, '../renderer/index.html')).href;
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -41,6 +47,8 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      devTools: !app.isPackaged,
     },
   });
 
@@ -48,11 +56,7 @@ function createWindow() {
     mainWindow = null;
   });
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  }
+  void mainWindow.loadURL(APP_URL);
 }
 
 function createMenu() {
@@ -129,9 +133,10 @@ function createMenu() {
           accelerator: 'CmdOrCtrl+`',
           click: () => mainWindow?.webContents.send('menu:toggle-log'),
         },
-        { type: 'separator' },
-        { role: 'reload' },
-        { role: 'toggleDevTools' },
+        // Reload and DevTools are for development; a packaged build has neither.
+        ...(app.isPackaged
+          ? []
+          : ([{ type: 'separator' }, { role: 'reload' }, { role: 'toggleDevTools' }] as MenuItemConstructorOptions[])),
       ],
     },
     {
@@ -145,6 +150,12 @@ function createMenu() {
         {
           label: 'Third Party Licenses',
           click: () => mainWindow?.webContents.send('menu:show-licenses'),
+        },
+        {
+          label: 'Show Log File',
+          click: () => {
+            shell.showItemInFolder(logFilePath());
+          },
         },
         { type: 'separator' },
         {
@@ -166,65 +177,17 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
-function registerBirdaMediaProtocol() {
-  protocol.handle('birda-media', async (request) => {
-    // birda-media:///D%3A/clips/file.wav serves the local file
-    const filePath = mediaUrlToPath(request.url, process.platform);
-
-    // Security: only allow audio file extensions
-    const ext = path.extname(filePath).toLowerCase();
-    const allowedExts = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a', '.png']);
-    if (!allowedExts.has(ext)) {
-      return new Response('Forbidden', { status: 403 });
-    }
-
-    try {
-      await fs.promises.access(filePath, fs.constants.R_OK);
-    } catch {
-      return new Response('Not Found', { status: 404 });
-    }
-
-    const response = await net.fetch(pathToFileURL(filePath).href);
-    // With corsEnabled the renderer's cross-origin fetch performs a CORS check;
-    // the response must carry an explicit allow-origin header.
-    const headers = new Headers(response.headers);
-    headers.set('Access-Control-Allow-Origin', '*');
-    return new Response(response.body, { status: response.status, headers });
-  });
-}
-
-function registerBirdaMapProtocol() {
-  protocol.handle('birda-map', async (request) => {
-    // birda-map://<family>/<region> -> the cached region coverage map (SVG).
-    // The URL comes from the renderer, but only family/region pairs that birda
-    // reported a coverage_url for are fetchable (see coverageCache), so this
-    // never fetches an arbitrary URL.
-    const url = new URL(request.url);
-    const family = url.hostname;
-    const region = decodeURIComponent(url.pathname.replace(/^\//, ''));
-    if (!family || !region) {
-      return new Response('Not Found', { status: 404 });
-    }
-    const file = await getCoveragePath(family, region);
-    if (!file) {
-      return new Response('Not Found', { status: 404 });
-    }
-    // pathToFileURL encodes special characters (#, ?) that manual file:/// string
-    // building would misparse as a fragment/query.
-    const response = await net.fetch(pathToFileURL(file).href);
-    const headers = new Headers(response.headers);
-    headers.set('content-type', 'image/svg+xml');
-    headers.set('Access-Control-Allow-Origin', '*');
-    return new Response(response.body, { status: response.status, headers });
-  });
-}
-
 // One instance per user: a second one would share the catalog and finish the
 // first instance's running analysis as stale at its startup.
 const hasInstanceLock = app.requestSingleInstanceLock();
 if (!hasInstanceLock) {
   app.quit();
 } else {
+  startMainLog();
+  // Every window, including ones opened by a page, gets the navigation policy.
+  app.on('web-contents-created', (_event, contents) => {
+    hardenWebContents(contents, APP_URL);
+  });
   app.on('second-instance', () => {
     if (!app.isReady()) return;
     if (!mainWindow) {
@@ -240,22 +203,7 @@ if (!hasInstanceLock) {
 void app.whenReady().then(async () => {
   // A second instance quits without touching the catalog.
   if (!hasInstanceLock) return;
-  // Security: allow permissions the app needs, deny everything else
-  const ALLOWED_PERMISSIONS = new Set([
-    'clipboard-read',
-    'clipboard-sanitized-write',
-    'fileSystem',
-    'fullscreen',
-    'media',
-    'speaker-selection',
-  ]);
-
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(ALLOWED_PERMISSIONS.has(permission));
-  });
-  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-    return ALLOWED_PERMISSIONS.has(permission);
-  });
+  applyPermissionPolicy(session.defaultSession, APP_URL);
 
   registerBirdaMediaProtocol();
   registerBirdaMapProtocol();
@@ -267,16 +215,7 @@ void app.whenReady().then(async () => {
     getDb();
   } catch (err) {
     console.error('[catalog] Failed to open the catalog:', err);
-    electronDialog.showErrorBox(
-      'Cannot open the Birda database',
-      'The database could not be opened or upgraded, so Birda GUI will close.\n\n' +
-        'Make sure no other copy of Birda GUI is running and that the database file and its folder can be written, then start Birda GUI again. ' +
-        'If the file is damaged, move it and any .db-wal and .db-shm files next to it to another folder; Birda GUI then starts with a new, empty database. ' +
-        'Please report the problem with the details below at https://github.com/tphakala/birda-gui/issues\n\n' +
-        `Database file: ${getDbPath()}\n` +
-        `Error: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    app.quit();
+    reportCatalogOpenFailure(err);
     return;
   }
 
@@ -297,19 +236,7 @@ void app.whenReady().then(async () => {
     const models = await listModels();
     const defaultModel = models.find((m) => m.is_default) ?? models[0];
     if (defaultModel.labels_path) {
-      // Read saved language preference
-      let language = 'en';
-      try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const settingsRaw = await fs.promises.readFile(
-          path.join(app.getPath('userData'), 'birda-gui-settings.json'),
-          'utf-8',
-        );
-        const saved = JSON.parse(settingsRaw) as Partial<{ species_language: string }>;
-        if (saved.species_language) language = saved.species_language;
-      } catch {
-        // No settings file yet, use default
-      }
+      const language = (await settingsStore.get()).species_language || 'en';
       const labelsPath = buildLabelsPath(defaultModel.labels_path, language);
       await reloadLabels(labelsPath);
     }

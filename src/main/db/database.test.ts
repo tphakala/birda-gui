@@ -519,6 +519,91 @@ describe('clearDatabase', () => {
   });
 });
 
+describe('initializeCatalog locking', () => {
+  let dir = '';
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('registers detection_hour for ad-hoc queries', () => {
+    const db = memoryDb();
+    initializeCatalog(db);
+    const row = db
+      .prepare('SELECT detection_hour(?, ?) AS a, detection_hour(NULL, ?) AS b')
+      .get('/rec/20240501_053000_A.wav', 1800, 7300) as { a: number; b: number };
+    expect(row).toEqual({ a: 6, b: 2 });
+  });
+
+  // Each migration that opens an IMMEDIATE transaction is replayed against a current
+  // catalog by forgetting its schema_migrations row. A migration that still began a
+  // deferred transaction would read first and then fail at once on the writer's lock,
+  // instead of waiting for it under the connection timeout.
+  // Migration 5 only opens its transaction for a catalog that still has the old
+  // detections.source_file column, so the replay adds that column first.
+  // Migrations 6 and 9 are not listed: their transaction starts with a write, which
+  // waits for the lock whether it is deferred or immediate, so a lock held by another
+  // connection cannot tell the two apart.
+  const legacySourceFile = (db: Database.Database) => db.exec('ALTER TABLE detections ADD COLUMN source_file TEXT');
+  const hasSourceFile = (db: Database.Database) =>
+    (db.prepare('PRAGMA table_info(detections)').all() as { name: string }[]).some((c) => c.name === 'source_file');
+  const replays: {
+    version: number;
+    prepare?: (db: Database.Database) => void;
+    ran?: (db: Database.Database) => boolean;
+  }[] = [
+    { version: 1 },
+    { version: 2 },
+    { version: 3 },
+    { version: 4 },
+    { version: 5, prepare: legacySourceFile, ran: (db) => !hasSourceFile(db) },
+    { version: 7 },
+    { version: 8 },
+  ];
+
+  it.each(replays)(
+    'waits for the lock under the connection timeout before migration $version fails',
+    ({ version, prepare, ran }) => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-migrate-'));
+      const file = path.join(dir, 'catalog.db');
+      const first = new Database(file);
+      initializeCatalog(first);
+      prepare?.(first);
+      first.prepare('DELETE FROM schema_migrations WHERE version = ?').run(version);
+      first.close();
+
+      if (ran) {
+        // Without the lock the replay runs the migration's transaction.
+        const free = new Database(file);
+        initializeCatalog(free);
+        expect(ran(free)).toBe(true);
+        free.close();
+        const reset = new Database(file);
+        prepare?.(reset);
+        reset.prepare('DELETE FROM schema_migrations WHERE version = ?').run(version);
+        reset.close();
+      }
+
+      const writer = new Database(file);
+      writer.exec('BEGIN IMMEDIATE');
+      const blocked = new Database(file, { timeout: 300 });
+      const started = Date.now();
+      let code: unknown;
+      try {
+        initializeCatalog(blocked);
+      } catch (err) {
+        code = (err as { code?: string }).code;
+      }
+      const waited = Date.now() - started;
+      blocked.close();
+      writer.exec('ROLLBACK');
+      writer.close();
+
+      expect(code).toBe('SQLITE_BUSY');
+      expect(waited).toBeGreaterThanOrEqual(200);
+    },
+  );
+});
+
 describe('getDb', () => {
   afterEach(() => {
     closeDb();

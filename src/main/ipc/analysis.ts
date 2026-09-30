@@ -13,6 +13,7 @@ import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './fil
 import { createAudioFile, deleteAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
 import { sendToWindows } from './broadcast';
+import { clipRoots, isInside } from '../media-access';
 import type {
   AnalysisResult,
   AudioFileMetadata,
@@ -671,29 +672,47 @@ export function registerAnalysisHandlers(): void {
     },
   );
 
-  // Renderer-supplied clip paths may only point inside the clip output directory
-  // (configured or default); blocks arbitrary filesystem writes from a compromised renderer.
+  // Renderer-supplied clip paths must be inside the clip output directory (configured
+  // or default). The configured directory is itself a renderer-settable value, so this
+  // keeps writes within whichever clip folder is set; it does not pin them to a fixed location.
   async function isClipPathAllowed(normalizedClipPath: string): Promise<boolean> {
     const settings = await settingsStore.get();
-    const allowedRoots = [path.resolve(settings.clip_output_dir), path.join(app.getPath('userData'), 'clips')];
-    return allowedRoots.some((root) => {
-      const rel = path.relative(root, normalizedClipPath);
-      return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
-    });
+    return clipRoots(settings, app.getPath('userData')).some((root) =>
+      isInside(root, normalizedClipPath, { allowEqual: false }),
+    );
+  }
+
+  // Largest frequency ceiling (Hz) and image height (px) accepted for a cached spectrogram.
+  const SPECTROGRAM_MAX_FREQ_HZ = 192_000;
+  const SPECTROGRAM_MAX_HEIGHT_PX = 4096;
+
+  function isBoundedInteger(value: unknown, max: number): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= max;
+  }
+
+  /**
+   * The cache PNG path for a clip, or null when the clip path, the numbers or the
+   * resulting path fall outside the clip folders.
+   */
+  async function spectrogramCachePath(clipPath: string, freqMax: unknown, height: unknown): Promise<string | null> {
+    if (typeof clipPath !== 'string' || !path.isAbsolute(clipPath)) return null;
+    if (!isBoundedInteger(freqMax, SPECTROGRAM_MAX_FREQ_HZ) || !isBoundedInteger(height, SPECTROGRAM_MAX_HEIGHT_PX)) {
+      return null;
+    }
+    const normalizedClipPath = path.normalize(clipPath);
+    if (!(await isClipPathAllowed(normalizedClipPath))) return null;
+    const dir = path.dirname(normalizedClipPath);
+    const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
+    const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
+    return (await isClipPathAllowed(cachePath)) ? cachePath : null;
   }
 
   // Spectrogram cache: save PNG next to clip
   ipcMain.handle(
     'clip:save-spectrogram',
     async (_event, clipPath: string, freqMax: number, height: number, dataUrl: string) => {
-      if (!path.isAbsolute(clipPath)) throw new Error('clipPath must be absolute');
-      const normalizedClipPath = path.normalize(clipPath);
-      if (!(await isClipPathAllowed(normalizedClipPath))) {
-        throw new Error('clipPath must be inside the clip output directory');
-      }
-      const dir = path.dirname(normalizedClipPath);
-      const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
-      const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
+      const cachePath = await spectrogramCachePath(clipPath, freqMax, height);
+      if (!cachePath) throw new Error('Invalid spectrogram cache request');
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
       // eslint-disable-next-line security/detect-non-literal-fs-filename
       await fs.promises.writeFile(cachePath, Buffer.from(base64, 'base64'));
@@ -703,12 +722,8 @@ export function registerAnalysisHandlers(): void {
 
   // Spectrogram cache: check if cached PNG exists, return path or null
   ipcMain.handle('clip:get-spectrogram', async (_event, clipPath: string, freqMax: number, height: number) => {
-    if (!path.isAbsolute(clipPath)) return null;
-    const normalizedClipPath = path.normalize(clipPath);
-    if (!(await isClipPathAllowed(normalizedClipPath))) return null;
-    const dir = path.dirname(normalizedClipPath);
-    const base = path.basename(normalizedClipPath, path.extname(normalizedClipPath));
-    const cachePath = path.join(dir, `${base}_spec_${freqMax}_${height}.png`);
+    const cachePath = await spectrogramCachePath(clipPath, freqMax, height);
+    if (!cachePath) return null;
     try {
       await fs.promises.access(cachePath);
       return cachePath;
