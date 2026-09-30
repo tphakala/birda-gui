@@ -314,6 +314,66 @@ describe('birda:analyze same-named files in a directory run', () => {
     fs.rmSync(dirB, { recursive: true, force: true });
   });
 
+  describe('when moving the output aside fails', () => {
+    /** Runs one processed file and returns the JSON path the import was given. */
+    async function importedPath(): Promise<string> {
+      const imported: string[] = [];
+      vi.mocked(importDetectionsFromJson).mockImplementationOnce((_r, _l, _a, p) => {
+        imported.push(p);
+        return Promise.resolve({ detections: 0, sourceFile: 'x' });
+      });
+      const run = analyze(tmp);
+      const handle = await started();
+      handle.emit(envelope('pipeline_started', { total_files: 1 }));
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- under the handler's temp dir
+      fs.writeFileSync(path.join(outputDirOf(), 'rec.BirdNET.json'), 'x');
+      handle.emit(
+        envelope('file_completed', { file: path.join(tmp, 'a', 'rec.wav'), status: 'processed', detections: 0 }),
+      );
+      handle.resolve();
+      await run;
+      return imported[0];
+    }
+
+    it('retries a locked file and imports the moved copy', async () => {
+      const realRename = fs.promises.rename;
+      const rename = vi.spyOn(fs.promises, 'rename').mockImplementationOnce(() => {
+        return Promise.reject(Object.assign(new Error('locked'), { code: 'EBUSY' }));
+      });
+      try {
+        expect(path.basename(await importedPath())).toBe('claimed-1.json');
+        expect(rename).toHaveBeenCalledTimes(2);
+      } finally {
+        rename.mockRestore();
+        expect(fs.promises.rename).toBe(realRename);
+      }
+    });
+
+    it("gives up on a file that stays locked and imports birda's own path", async () => {
+      const rename = vi.spyOn(fs.promises, 'rename').mockImplementation(() => {
+        return Promise.reject(Object.assign(new Error('locked'), { code: 'EBUSY' }));
+      });
+      try {
+        expect(path.basename(await importedPath())).toBe('rec.BirdNET.json');
+        expect(rename).toHaveBeenCalledTimes(3);
+      } finally {
+        rename.mockRestore();
+      }
+    });
+
+    it('does not retry a missing file', async () => {
+      const rename = vi.spyOn(fs.promises, 'rename').mockImplementation(() => {
+        return Promise.reject(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+      });
+      try {
+        expect(path.basename(await importedPath())).toBe('rec.BirdNET.json');
+        expect(rename).toHaveBeenCalledTimes(1);
+      } finally {
+        rename.mockRestore();
+      }
+    });
+  });
+
   it('reports a skipped file of a directory run as failed', async () => {
     const run = analyze(tmp);
     const handle = await started();
