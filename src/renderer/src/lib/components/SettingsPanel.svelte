@@ -133,7 +133,6 @@
   let clearing = $state(false);
   let clearResult = $state<ClearDatabaseResult | null>(null);
   let dbContentHeading = $state<HTMLHeadingElement>();
-  let clearResultTimer: ReturnType<typeof setTimeout> | null = null;
 
   // --- GPU state ---
   let gpuCapabilities = $state<{
@@ -386,8 +385,6 @@
       catalogChanged();
       // A finished analysis's panel may describe results that are gone now.
       dismissAnalysis();
-      if (clearResultTimer) clearTimeout(clearResultTimer);
-      clearResultTimer = setTimeout(() => (clearResult = null), 5000);
     } catch (e) {
       clearError = (e as Error).message;
     } finally {
@@ -451,7 +448,6 @@
   onMount(load);
   onDestroy(() => {
     if (savedTimer) clearTimeout(savedTimer);
-    if (clearResultTimer) clearTimeout(clearResultTimer);
     if (optimizeTimer) clearTimeout(optimizeTimer);
     if (vacuumTimer) clearTimeout(vacuumTimer);
     for (const off of offCudaListeners) off();
@@ -965,7 +961,7 @@
               <Trash size={14} />
               {m.settings_data_clearAll()}
             </button>
-            <span role="status" class="text-success text-sm">
+            <span role="status" class="text-success min-w-0 text-sm">
               {#if clearResult}
                 {m.settings_data_cleared({
                   detections: clearResult.detections,
@@ -973,7 +969,8 @@
                   locations: clearResult.locations,
                   annotations: clearResult.annotations,
                 })}
-                {m.settings_data_clearedBackup({ path: clearResult.backup_path })}
+                <span class="block break-words">{m.settings_data_clearedBackup({ path: clearResult.backup_path })}</span
+                >
               {/if}
             </span>
           </div>
