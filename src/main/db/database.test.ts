@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { closeDb, closeDbForShutdown, getDb, getDbPath, initializeCatalog } from './database';
+import { clearDatabase, closeDb, closeDbForShutdown, getDb, getDbPath, initializeCatalog } from './database';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
 
 // A default no catalog can be created in: better-sqlite3 refuses a path whose
@@ -409,6 +409,113 @@ describe('initializeCatalog', () => {
     expect(db.prepare('SELECT scientific_name, audio_file_id FROM detections').all()).toEqual([
       { scientific_name: 'Turdus merula', audio_file_id: 1 },
     ]);
+  });
+});
+
+describe('clearDatabase', () => {
+  const COUNT_TABLES = [
+    'locations',
+    'analysis_runs',
+    'audio_files',
+    'detections',
+    'annotations',
+    'species_lists',
+    'species_list_entries',
+  ];
+
+  function counts(db: Database.Database): Record<string, number> {
+    return Object.fromEntries(
+      COUNT_TABLES.map((t) => [t, (db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).get() as { c: number }).c]),
+    );
+  }
+
+  function seed(): Database.Database {
+    dirs.userData = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-catalog-'));
+    const db = getDb();
+    db.exec(`
+      INSERT INTO locations (id, name, latitude, longitude) VALUES (1, 'Yard', 60, 25);
+      INSERT INTO analysis_runs (id, location_id, source_path, model, status)
+        VALUES (1, 1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (id, run_id, file_path, file_name) VALUES (1, 1, '/rec/a.wav', 'a.wav');
+      INSERT INTO detections (id, run_id, audio_file_id, start_time, end_time, scientific_name, confidence)
+        VALUES (1, 1, 1, 0, 3, 'Turdus merula', 0.9);
+      INSERT INTO annotations (audio_file_id, detection_id, start_time, end_time, scientific_name, source, status)
+        VALUES (1, 1, 0, 3, 'Turdus merula', 'birda', 'accepted');
+      INSERT INTO species_lists (id, name, source, species_count) VALUES (1, 'Mine', 'custom', 2), (2, 'Local', 'fetched', 1);
+      INSERT INTO species_list_entries (list_id, scientific_name) VALUES (1, 'Turdus merula'), (1, 'Parus major'), (2, 'Parus major');
+    `);
+    return db;
+  }
+
+  afterEach(() => {
+    closeDb();
+    fs.rmSync(dirs.userData, { recursive: true, force: true });
+    dirs.userData = NO_USER_DATA;
+  });
+
+  it('keeps species lists and deletes results', () => {
+    const db = seed();
+    const result = clearDatabase();
+
+    expect(result).toMatchObject({ detections: 1, runs: 1, locations: 1, annotations: 1 });
+    expect(counts(db)).toEqual({
+      locations: 0,
+      analysis_runs: 0,
+      audio_files: 0,
+      detections: 0,
+      annotations: 0,
+      species_lists: 2,
+      species_list_entries: 3,
+    });
+  });
+
+  it('saves a backup under the userData backups folder holding the catalog as it was', () => {
+    seed();
+    const { backup_path } = clearDatabase();
+
+    expect(path.dirname(backup_path)).toBe(path.join(dirs.userData, 'backups'));
+    const backup = new Database(backup_path, { readonly: true });
+    try {
+      expect(counts(backup)).toEqual({
+        locations: 1,
+        analysis_runs: 1,
+        audio_files: 1,
+        detections: 1,
+        annotations: 1,
+        species_lists: 2,
+        species_list_entries: 3,
+      });
+    } finally {
+      backup.close();
+    }
+  });
+
+  it('keeps every earlier backup when the catalog is cleared again', () => {
+    seed();
+    // A frozen clock gives both clears the same timestamp.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-02T03:04:05.678Z'));
+    try {
+      const first = clearDatabase().backup_path;
+      const second = clearDatabase().backup_path;
+
+      expect(second).not.toBe(first);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- paths under the test's own userData
+      expect(fs.existsSync(first) && fs.existsSync(second)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('deletes nothing when the backup cannot be written', () => {
+    const db = seed();
+    const before = counts(db);
+    // A regular file where the backups folder should be.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    fs.writeFileSync(path.join(dirs.userData, 'backups'), 'in the way');
+
+    expect(() => clearDatabase()).toThrow('Could not back up the database, so nothing was deleted');
+    expect(counts(db)).toEqual(before);
   });
 });
 

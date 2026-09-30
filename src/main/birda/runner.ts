@@ -359,10 +359,16 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
         args.push('--format', 'json'); // Write JSON files to disk (not CSV)
       } else {
         args.push('--stdout');
+        // birda writes no files in stdout mode, so --force changes nothing here.
+        // It is deliberately left out of directory mode: outputs are named by
+        // file stem alone, so with --force a same-named file from another
+        // folder would overwrite the earlier one; without it birda reports the
+        // later file as skipped and the caller can tell.
+        args.push('--force');
       }
 
       // Existing args
-      args.push('--force', '--model', options.model, '-c', String(options.minConfidence));
+      args.push('--model', options.model, '-c', String(options.minConfidence));
 
       // Execution provider
       const epFlag = getExecutionProviderFlag(options.executionProvider);

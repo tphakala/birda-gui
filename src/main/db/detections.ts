@@ -344,7 +344,8 @@ export function getCatalogStats(): CatalogStats {
       COUNT(*) as total_detections,
       COUNT(DISTINCT scientific_name) as total_species,
       COUNT(DISTINCT location_id) as total_locations,
-      (SELECT COUNT(*) FROM locations) as saved_locations
+      (SELECT COUNT(*) FROM locations) as saved_locations,
+      (SELECT COUNT(*) FROM analysis_runs) as total_runs
     FROM detections
     WHERE run_id IN (${FINISHED_RUN_IDS})
   `,

@@ -337,6 +337,17 @@ describe('catalog-wide counts', () => {
   });
 });
 
+describe('total_runs', () => {
+  it('counts every run, including failed and cancelled ones without detections', () => {
+    expect(getCatalogStats().total_runs).toBe(0);
+    finishRun(createRun('/a', 'birdnet', 0.1, null).id, 'failed');
+    finishRun(createRun('/b', 'birdnet', 0.1, null).id, 'cancelled');
+    createRun('/c', 'birdnet', 0.1, null);
+
+    expect(getCatalogStats()).toMatchObject({ total_runs: 3, total_detections: 0 });
+  });
+});
+
 describe('locations', () => {
   function mapped(): number[] {
     return getLocationsWithCounts().map((l) => l.id);

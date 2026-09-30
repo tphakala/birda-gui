@@ -1,5 +1,7 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
+import { randomUUID } from 'crypto';
+import fs from 'fs';
 import path from 'path';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
@@ -497,23 +499,45 @@ function migrateToAudioFiles(db: Database.Database): void {
   }
 }
 
+/** Saves a full copy of the catalog next to the database; throws without touching anything else on failure. */
+function backupDatabase(d: Database.Database): string {
+  const dir = path.join(path.dirname(getDbPath()), 'backups');
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  // The suffix keeps two clears in the same millisecond from sharing a name, so the failure cleanup below only ever removes this call's own file.
+  const backupPath = path.join(dir, `birda-catalog-${stamp}-${randomUUID().slice(0, 8)}.db`);
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    fs.mkdirSync(dir, { recursive: true });
+    d.prepare('VACUUM INTO ?').run(backupPath);
+  } catch (err) {
+    try {
+      fs.rmSync(backupPath, { force: true });
+    } catch {
+      // Nothing was written, or the partial file cannot be removed; the backup error is the one to report.
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Could not back up the database, so nothing was deleted: ${msg}`, { cause: err });
+  }
+  return backupPath;
+}
+
 export function clearDatabase(): ClearDatabaseResult {
   const d = getDb();
+  const backupPath = backupDatabase(d);
+  console.log(`Database backed up to ${backupPath}`);
   const counts = d.transaction(() => {
     const detections = (d.prepare('SELECT COUNT(*) as c FROM detections').get() as { c: number }).c;
     const runs = (d.prepare('SELECT COUNT(*) as c FROM analysis_runs').get() as { c: number }).c;
     const locations = (d.prepare('SELECT COUNT(*) as c FROM locations').get() as { c: number }).c;
     // Annotations cascade-delete via audio_files when analysis_runs are removed; count them for the report.
     const annotations = (d.prepare('SELECT COUNT(*) as c FROM annotations').get() as { c: number }).c;
-    d.exec('DELETE FROM species_list_entries');
-    d.exec('DELETE FROM species_lists');
     d.exec('DELETE FROM detections');
     d.exec('DELETE FROM analysis_runs');
     d.exec('DELETE FROM locations');
     return { detections, runs, locations, annotations };
   })();
   d.exec('VACUUM');
-  return counts;
+  return { ...counts, backup_path: backupPath };
 }
 
 export function checkDatabaseHealth(): DatabaseHealthResult {
