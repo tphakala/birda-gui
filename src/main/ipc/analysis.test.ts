@@ -274,6 +274,64 @@ describe('birda:analyze', () => {
   });
 });
 
+describe('birda:analyze same-named files in a directory run', () => {
+  it('gives each file its own output even when a later file reuses the name', async () => {
+    const dirA = path.join(tmp, 'a');
+    const dirB = path.join(tmp, 'b');
+    for (const d of [dirA, dirB]) fs.mkdirSync(d, { recursive: true });
+    const fileA = path.join(dirA, 'rec.wav');
+    const fileB = path.join(dirB, 'rec.wav');
+    const reads: string[] = [];
+    const readInto = (jsonPath: string) => {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- a file this test wrote
+      reads.push(fs.readFileSync(jsonPath, 'utf-8'));
+      return Promise.resolve({ detections: 0, sourceFile: 'x' });
+    };
+    vi.mocked(importDetectionsFromJson).mockImplementationOnce((_r, _l, _a, p) => readInto(p));
+    vi.mocked(importDetectionsFromJson).mockImplementationOnce((_r, _l, _a, p) => readInto(p));
+
+    const run = analyze(tmp);
+    const handle = await started();
+    const out = outputDirOf();
+    const birdaOutput = path.join(out, 'rec.BirdNET.json');
+    handle.emit(envelope('pipeline_started', { total_files: 2 }));
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- under the handler's temp dir
+    fs.writeFileSync(birdaOutput, 'first');
+    handle.emit(envelope('file_completed', { file: fileA, status: 'processed', detections: 0 }));
+    // birda's next same-named file writes over the same path once the first was claimed.
+    await vi.waitFor(() => {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- under the handler's temp dir
+      expect(fs.existsSync(birdaOutput)).toBe(false);
+    });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- under the handler's temp dir
+    fs.writeFileSync(birdaOutput, 'second');
+    handle.emit(envelope('file_completed', { file: fileB, status: 'processed', detections: 0 }));
+    handle.resolve();
+
+    await run;
+    expect(reads).toEqual(['first', 'second']);
+    fs.rmSync(dirA, { recursive: true, force: true });
+    fs.rmSync(dirB, { recursive: true, force: true });
+  });
+
+  it('reports a skipped file of a directory run as failed', async () => {
+    const run = analyze(tmp);
+    const handle = await started();
+    handle.emit(envelope('pipeline_started', { total_files: 2 }));
+    handle.emit(envelope('file_completed', { file: 'a.wav', status: 'processed', detections: 0 }));
+    handle.emit(envelope('file_completed', { file: 'b.wav', status: 'skipped' }));
+    expect(status()).toMatchObject({ progress: { filesFailed: 1 } });
+    expect(sentOn('birda:analysis-progress').at(-1)).toMatchObject({
+      event: 'file_completed',
+      payload: { file: 'b.wav', status: 'failed' },
+    });
+    handle.resolve();
+
+    await expect(run).resolves.toMatchObject({ status: 'completed_with_errors' });
+    expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed_with_errors', true);
+  });
+});
+
 describe('birda:analyze outcomes', () => {
   it('records a single file birda could not analyse as failed without replacing earlier results', async () => {
     const run = analyze();

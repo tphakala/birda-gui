@@ -94,9 +94,40 @@ async function cleanupTempDir(tempDir: string): Promise<void> {
   }
 }
 
-function deriveJsonPath(outputDir: string, audioFile: string): string {
-  const basename = path.basename(audioFile, path.extname(audioFile));
-  return path.join(outputDir, `${basename}.BirdNET.json`);
+/** Where birda writes a file's JSON in directory mode: its name without the extension, separators as _. */
+function birdaJsonPath(outputDir: string, audioFile: string): string {
+  const stem = path.basename(audioFile, path.extname(audioFile)).replace(/[/\\]/g, '_');
+  return path.join(outputDir, `${stem}.BirdNET.json`);
+}
+
+const CLAIM_RETRIES = 3;
+const CLAIM_BASE_DELAY_MS = 100;
+
+/**
+ * Moves a file's JSON to a name of its own right after birda reports the file,
+ * so a later same-named file cannot overwrite it before it is imported. The
+ * new name cannot end in .BirdNET.json, so birda never writes to it. Never
+ * rejects: when the move fails the birda path is returned and the import
+ * reports whatever is wrong with it.
+ */
+async function claimOutput(outputDir: string, audioFile: string, n: number): Promise<string> {
+  const from = birdaJsonPath(outputDir, audioFile);
+  const to = path.join(outputDir, `claimed-${n}.json`);
+  for (let i = 0; i < CLAIM_RETRIES; i++) {
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      await fs.promises.rename(from, to);
+      return to;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      // Windows can hold the file briefly after birda closes it.
+      if (code !== 'EBUSY' && code !== 'EPERM' && code !== 'EACCES') break;
+      if (i < CLAIM_RETRIES - 1) {
+        await new Promise((resolve) => setTimeout(resolve, CLAIM_BASE_DELAY_MS * Math.pow(2, i)));
+      }
+    }
+  }
+  return from;
 }
 
 const AnalysisRequestSchema = z.object({
@@ -290,6 +321,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       let totalDetections = 0;
       let failedFileCount = 0;
       let skippedFileCount = 0;
+      let claimCount = 0;
       // A property, not a let: TypeScript would treat a let set only in the event callback as always false.
       const pipeline = { started: false };
       const pendingImports = new Set<Promise<void>>();
@@ -309,7 +341,21 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       });
 
       // Forward NDJSON events to renderer and capture detections
-      handle.on('data', (envelope: BirdaEventEnvelope) => {
+      handle.on('data', (received: BirdaEventEnvelope) => {
+        let envelope = received;
+        if (outputDir && envelope.event === 'file_completed') {
+          const skipped = envelope.payload as FileCompletedPayload;
+          if (skipped.status === 'skipped') {
+            // birda skips a file only when its output name is taken, and here
+            // that means a same-named file was analysed earlier in this run.
+            sendLog(
+              'warn',
+              'analysis',
+              `Skipped ${skipped.file}: a file with the same name was analysed earlier in this run; analyse its folder separately`,
+            );
+            envelope = { ...envelope, payload: { ...skipped, status: 'failed' } };
+          }
+        }
         trackProgress(session, envelope);
         sendToWindows('birda:analysis-progress', envelope);
         // After a quit the run is recorded and the catalog is closing.
@@ -332,6 +378,8 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
           if (payload.status === 'processed') {
             if (outputDir) {
               const jsonDir = outputDir;
+              // Started now, not after the semaphore, so the next file's output cannot replace this one first.
+              const claimed = claimOutput(jsonDir, payload.file, ++claimCount);
               track(async () => {
                 // Limit concurrent imports to prevent resource exhaustion
                 await importSemaphore.acquire();
@@ -344,7 +392,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
                     run.id,
                     locationId,
                     audioFileId,
-                    deriveJsonPath(jsonDir, payload.file),
+                    await claimed,
                     () => session.quitting,
                   );
                   totalDetections += result.detections;

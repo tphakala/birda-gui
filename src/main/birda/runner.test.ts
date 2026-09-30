@@ -50,6 +50,23 @@ describe('runAnalysis', () => {
     await expect(handle.promise).rejects.toBeInstanceOf(AnalysisCancelledError);
   });
 
+  it('passes --force for a single-file run but not for a directory run', async () => {
+    const { spawn } = await import('child_process');
+    const argsOfLastSpawn = () => vi.mocked(spawn).mock.calls.at(-1)?.[1] as string[];
+
+    const single = runAnalysis('/rec.wav', options);
+    (await spawnedChild()).exit(0);
+    await single.promise;
+    expect(argsOfLastSpawn()).toContain('--force');
+
+    spawned.children = [];
+    const directory = runAnalysis('/recordings', { ...options, outputDir: '/out' });
+    (await spawnedChild()).exit(0);
+    await directory.promise;
+    expect(argsOfLastSpawn()).toContain('--output-dir');
+    expect(argsOfLastSpawn()).not.toContain('--force');
+  });
+
   it('resolves when birda exits with code 0', async () => {
     const handle = runAnalysis('/rec.wav', options);
     (await spawnedChild()).exit(0);
