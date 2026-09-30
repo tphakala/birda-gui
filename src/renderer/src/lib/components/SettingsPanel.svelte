@@ -43,7 +43,7 @@
   import { formatFileSize } from '$lib/utils/format';
   import { latestRequest } from '$lib/utils/latest';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
-  import { appState, catalogChanged, refreshBirdaStatus, speciesListsChanged } from '$lib/stores/app.svelte';
+  import { appState, catalogChanged, refreshBirdaStatus } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
   import type {
     AppSettings,
@@ -384,8 +384,6 @@
       await tick();
       focusIfLost(dbContentHeading);
       catalogChanged();
-      // Clearing also deletes the species lists.
-      speciesListsChanged();
       // A finished analysis's panel may describe results that are gone now.
       dismissAnalysis();
       if (clearResultTimer) clearTimeout(clearResultTimer);
@@ -959,7 +957,7 @@
                 showClearConfirm = true;
               }}
               disabled={clearing ||
-                (appState.catalogStats.total_detections === 0 && appState.catalogStats.saved_locations === 0) ||
+                (appState.catalogStats.total_runs === 0 && appState.catalogStats.saved_locations === 0) ||
                 appState.isAnalysisRunning}
               title={appState.isAnalysisRunning ? m.analysis_lockedDuringRun() : undefined}
               class="btn btn-error btn-sm gap-1.5"
@@ -975,6 +973,7 @@
                   locations: clearResult.locations,
                   annotations: clearResult.annotations,
                 })}
+                {m.settings_data_clearedBackup({ path: clearResult.backup_path })}
               {/if}
             </span>
           </div>
@@ -1023,6 +1022,7 @@
       <div class="border-base-300 bg-base-200 mt-2 rounded-lg border p-3 text-sm">
         <p>{m.settings_clearModal_detectionsRemoved({ count: appState.catalogStats.total_detections })}</p>
         <p>{m.settings_clearModal_locationsRemoved({ count: appState.catalogStats.saved_locations })}</p>
+        <p>{m.settings_clearModal_runsRemoved({ count: appState.catalogStats.total_runs })}</p>
       </div>
       {#if clearError}
         <p role="alert" class="text-error mt-3 text-sm">{clearError}</p>

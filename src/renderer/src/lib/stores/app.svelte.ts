@@ -53,6 +53,7 @@ export const appState = $state<AppState>({
     total_species: 0,
     total_locations: 0,
     saved_locations: 0,
+    total_runs: 0,
   },
   birdaStatus: null,
   showLogPanel: false,

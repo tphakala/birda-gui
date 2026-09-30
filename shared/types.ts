@@ -475,6 +475,8 @@ export interface CatalogStats {
   total_locations: number;
   /** Every saved location, including those without detections, as Clear Database deletes them. */
   saved_locations: number;
+  /** Every analysis run, whatever its status. */
+  total_runs: number;
 }
 
 export interface ClearDatabaseResult {
@@ -482,6 +484,8 @@ export interface ClearDatabaseResult {
   runs: number;
   locations: number;
   annotations: number;
+  /** Where the pre-clear copy of the catalog was saved. */
+  backup_path: string;
 }
 
 export interface DatabaseHealthResult {
