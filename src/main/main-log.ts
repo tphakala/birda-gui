@@ -87,8 +87,15 @@ export function startMainLog(): void {
       /* eslint-enable security/detect-object-injection */
     }
 
+    // Electron's main process warns about an unhandled rejection instead of throwing, and the monitor below is
+    // never called for it, so the rejection is written down here. Listening does not change what happens next.
+    const onRejection = (reason: unknown) => {
+      write(log, 'error', ['[main] Unhandled rejection:', reason]);
+    };
+    process.on('unhandledRejection', onRejection);
+    log.detach.push(() => process.off('unhandledRejection', onRejection));
+
     // The monitor does not change how Node handles the exception, so it is only written down.
-    // Node also calls it for an unhandled rejection that throws (its default), and origin says which one this is.
     const onUncaught = (err: Error, origin: string) => {
       write(log, 'error', [`[main] Uncaught exception (${origin}):`, err]);
     };

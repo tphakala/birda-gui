@@ -90,10 +90,12 @@ describe('startMainLog', () => {
     expect(fs.statSync(logFilePath()).size).toBe(size);
   });
 
-  it('adds no unhandledRejection listener, so Node keeps its default of throwing', () => {
-    const rejections = process.listenerCount('unhandledRejection');
+  it('logs an unhandled rejection', () => {
     startMainLog();
-    expect(process.listenerCount('unhandledRejection')).toBe(rejections);
+    (process as NodeJS.EventEmitter).emit('unhandledRejection', new Error('late failure'), Promise.resolve());
+    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
+      '[error] [main] Unhandled rejection: Error: late failure',
+    );
   });
 
   /** The handler startMainLog registered with app.on for an event. */
@@ -127,22 +129,17 @@ describe('startMainLog', () => {
     );
   });
 
-  it('logs an unhandled rejection from the monitor with its origin', () => {
-    startMainLog();
-    (process as NodeJS.EventEmitter).emit('uncaughtExceptionMonitor', new Error('late failure'), 'unhandledRejection');
-    expect(fs.readFileSync(logFilePath(), 'utf-8')).toContain(
-      '[error] [main] Uncaught exception (unhandledRejection): Error: late failure',
-    );
-  });
-
   it('removes its process and app listeners on stopMainLog', () => {
     const monitors = process.listenerCount('uncaughtExceptionMonitor');
+    const rejections = process.listenerCount('unhandledRejection');
     startMainLog();
     expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors + 1);
+    expect(process.listenerCount('unhandledRejection')).toBe(rejections + 1);
     const rendererHandler = appHandler('render-process-gone');
     const childHandler = appHandler('child-process-gone');
     stopMainLog();
     expect(process.listenerCount('uncaughtExceptionMonitor')).toBe(monitors);
+    expect(process.listenerCount('unhandledRejection')).toBe(rejections);
     expect(dirs.off).toHaveBeenCalledWith('render-process-gone', rendererHandler);
     expect(dirs.off).toHaveBeenCalledWith('child-process-gone', childHandler);
   });
