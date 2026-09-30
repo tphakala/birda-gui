@@ -46,6 +46,16 @@ describe.skipIf(!posix)('execBirda', () => {
     expect(Date.now() - started).toBeLessThan(3000);
   });
 
+  it('reports an output limit, not a timeout, when birda prints more than the buffer allows', async () => {
+    setBirdaPath(fakeBirda('chatty', 'head -c 11000000 /dev/zero'));
+    const failure = await execBirda(['models', 'list'], { errorPrefix: 'Failed: ' }).then(
+      () => new Error('resolved'),
+      (e: unknown) => e as Error,
+    );
+    expect(failure.message).toBe('Failed: birda models list output exceeded the 10 MB limit');
+    expect(failure.message).not.toContain('did not finish');
+  });
+
   it('rejects with stderr and the prefix when birda fails', async () => {
     setBirdaPath(fakeBirda('fail', 'echo bad config >&2; exit 3'));
     await expect(execBirda([], { errorPrefix: 'Failed: ' })).rejects.toThrow('Failed: bad config');
