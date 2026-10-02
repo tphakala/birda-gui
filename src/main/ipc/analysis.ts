@@ -4,18 +4,26 @@ import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
 import { z } from 'zod';
-import { runAnalysis, findBirda, registerProcess, unregisterProcess, type LogLevel } from '../birda/runner';
+import {
+  birdaChildEnv,
+  runAnalysis,
+  findBirda,
+  registerProcess,
+  unregisterProcess,
+  type LogLevel,
+} from '../birda/runner';
 import { AnalysisCancelledError, AnalysisLock, type AnalysisSession } from '../birda/analysis-session';
-import { createRun, finishRun } from '../db/runs';
+import { createRun, finishRun, setRunRangeFilterNote } from '../db/runs';
 import { createLocation, findLocationByCoords } from '../db/locations';
 import { insertDetections, updateDetectionClipPath, importDetectionsFromJson } from '../db/detections';
-import { getAudioMetadata, parseRecordingStart, formatIsoTimestamp } from './files';
+import { getAudioMetadata } from './files';
 import { createAudioFile, deleteAudioFile } from '../db/audio-files';
 import { settingsStore } from '../settings/store';
 import { sendToWindows } from './broadcast';
 import { clipRoots, isInside } from '../media-access';
 import type {
   AnalysisResult,
+  AnalysisRun,
   AudioFileMetadata,
   BirdaEventEnvelope,
   DetectionsPayload,
@@ -26,6 +34,8 @@ import type {
 } from '$shared/types';
 import { applyProgressEvent } from '$shared/analysis-progress';
 import { dayOfYearOf, parseRecordingName } from '$shared/recording-name';
+import { rangeFilterDisabledReason } from '$shared/birda-error';
+import { formatIsoWithOffset, isValidTimeZone, zonedWallToUtc } from '$shared/time-zone';
 
 const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
 
@@ -141,39 +151,48 @@ const AnalysisRequestSchema = z.object({
   day: z.number().int().min(1).max(31).optional(),
   location_name: z.string().optional(),
   timezone_offset_min: z.number().int().optional(),
+  timezone: z.string().refine(isValidTimeZone, 'Unknown time zone').optional(),
 });
 
 type AnalysisRequestInput = z.infer<typeof AnalysisRequestSchema>;
 
 /**
  * Parse audio file metadata for storage in audio_files table
- * Priority: AudioMoth metadata > filename parsing (defaults to UTC if no timezone set)
+ * Priority: AudioMoth metadata > filename parsing. A name is read in the run's
+ * zone when it has one (the offset at that file's date), else with the run's
+ * offset, else as UTC.
  */
-async function parseFileMetadata(filePath: string, runTimezoneOffset: number | null): Promise<AudioFileMetadata> {
+async function parseFileMetadata(
+  filePath: string,
+  run: Pick<AnalysisRun, 'timezone' | 'timezone_offset_min'>,
+): Promise<AudioFileMetadata> {
   const meta = await getAudioMetadata(filePath);
 
   let recordingStart: string | null = null;
-  let timezoneOffset: number | null = runTimezoneOffset;
+  let timezoneOffset: number | null = run.timezone_offset_min;
+  let timestampSource: AudioFileMetadata['timestamp_source'] = null;
 
   // Priority 1: AudioMoth metadata (has timezone)
   if (meta.audiomoth?.recordedAt) {
     recordingStart = meta.audiomoth.recordedAt;
     timezoneOffset = meta.audiomoth.timezoneOffsetMin;
+    timestampSource = 'header';
   }
-  // Priority 2: Filename parsing (default to UTC if no timezone set)
+  // Priority 2: Filename parsing
   else {
-    const parsed = parseRecordingStart(filePath);
-    if (parsed) {
-      // Default to UTC (offset 0) if no timezone specified
-      const offset = timezoneOffset ?? 0;
-      recordingStart = formatIsoTimestamp(parsed, offset);
-      timezoneOffset ??= 0;
+    const wall = parseRecordingName(filePath, { allowSuffix: true });
+    if (wall) {
+      const { instantMs, offsetMin } = zonedWallToUtc(wall, run.timezone ?? { offsetMin: timezoneOffset ?? 0 });
+      recordingStart = formatIsoWithOffset(instantMs, offsetMin);
+      timezoneOffset = offsetMin;
+      timestampSource = 'filename';
     }
   }
 
   return {
     recording_start: recordingStart,
     timezone_offset_min: timezoneOffset,
+    timestamp_source: timestampSource,
     duration_sec: meta.durationSec,
     sample_rate: meta.sampleRate,
     channels: meta.channels,
@@ -288,6 +307,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       locationId,
       undefined,
       request.timezone_offset_min,
+      request.timezone,
     );
     session.runId = run.id;
     sendLog('info', 'analysis', `Created analysis run: id=${run.id}`);
@@ -318,6 +338,22 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
         outputDir,
       });
       session.attach(handle);
+
+      // birda warns on stderr when it runs without the range filter (the model
+      // has no meta model); the run keeps the reason so the results can say so.
+      let rangeFilterNote: string | undefined;
+      handle.on('stderr', (line) => {
+        if (rangeFilterNote !== undefined || session.quitting) return;
+        const reason = rangeFilterDisabledReason(line);
+        if (reason === null) return;
+        rangeFilterNote = reason;
+        sendLog('warn', 'analysis', `Range filtering is off: ${reason}`);
+        try {
+          setRunRangeFilterNote(run.id, reason);
+        } catch (err) {
+          sendLog('error', 'analysis', `Could not record the range filter note: ${(err as Error).message}`);
+        }
+      });
 
       let totalDetections = 0;
       let failedFileCount = 0;
@@ -386,7 +422,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
                 await importSemaphore.acquire();
                 let audioFileId: number | null = null;
                 try {
-                  const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                  const fileMetadata = await parseFileMetadata(payload.file, run);
                   if (session.quitting) return;
                   audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
                   const result = await importDetectionsFromJson(
@@ -426,7 +462,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
             track(async () => {
               let audioFileId: number | null = null;
               try {
-                const fileMetadata = await parseFileMetadata(payload.file, run.timezone_offset_min);
+                const fileMetadata = await parseFileMetadata(payload.file, run);
                 if (session.quitting) return;
                 audioFileId = createAudioFile(run.id, payload.file, fileMetadata);
                 insertDetections(run.id, locationId, audioFileId, payload.detections);
@@ -467,7 +503,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
             ? `Analysis cancelled: its partial results were discarded; the earlier complete results for this source and model are kept`
             : `Analysis cancelled: ${totalDetections} detection(s) kept in run ${run.id}`,
         );
-        return { runId: run.id, status: 'cancelled', discardedPartial };
+        return { runId: run.id, status: 'cancelled', discardedPartial, rangeFilterNote };
       }
 
       if (runError !== null) {
@@ -505,7 +541,7 @@ async function analyze(session: AnalysisSession, request: AnalysisRequestInput):
       if (replaced > 0) {
         sendLog('info', 'analysis', `Replaced ${replaced} previous run(s) (same source + model)`);
       }
-      return { runId: run.id, status: finalStatus, discardedPartial };
+      return { runId: run.id, status: finalStatus, discardedPartial, rangeFilterNote };
     } catch (err) {
       // Anything that failed after the run was created, before its status was recorded.
       if (session.runPending && !session.quitting) recordFailedRun();
@@ -576,6 +612,7 @@ export function registerAnalysisHandlers(): void {
       location_name: request.location_name,
       month: request.month,
       day: request.day,
+      timezone: request.timezone,
     });
     let finished: (AnalysisResult & { error?: string }) | undefined;
     try {
@@ -643,7 +680,7 @@ export function registerAnalysisHandlers(): void {
         const child = execFile(
           birdaPath,
           args,
-          { maxBuffer: 10 * 1024 * 1024, timeout: 30000 },
+          { maxBuffer: 10 * 1024 * 1024, timeout: 30000, env: birdaChildEnv() },
           (err, stdout, stderr) => {
             unregisterProcess(child);
             if (err) {

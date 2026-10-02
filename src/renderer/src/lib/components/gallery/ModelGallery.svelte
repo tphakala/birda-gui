@@ -5,6 +5,7 @@
   import RegionDetailModal from './RegionDetailModal.svelte';
   import LicenseModal from './LicenseModal.svelte';
   import RemoveModelModal from './RemoveModelModal.svelte';
+  import ClassicCatalog from '../ClassicCatalog.svelte';
   import { RefreshCw } from '@lucide/svelte';
   import * as m from '$paraglide/messages';
   import { listModels, listAvailableModels, getModelManifest, setDefaultModel, removeModel } from '$lib/utils/ipc';
@@ -18,13 +19,21 @@
   import DownloadProgress from './DownloadProgress.svelte';
   import { hasUpdate, installedTitle } from '$lib/gallery/logic';
   import { appState } from '$lib/stores/app.svelte';
-  import type { InstalledModel, ManifestVariant, ModelInstallRequest, ModelManifest } from '$shared/types';
+  import type {
+    AvailableModel,
+    InstalledModel,
+    ManifestVariant,
+    ModelInstallRequest,
+    ModelManifest,
+  } from '$shared/types';
 
   const FAMILY_IDS = ['birdnet-v30', 'perch-v2'];
   const LS_KEY = 'gallery.acceptedLicenses';
   const MIN_BIRDA = '1.10';
 
   let loading = $state(false);
+  // Every model birda offers, for the classic list shown when there are no regional manifests.
+  let classicModels = $state<AvailableModel[]>([]);
   let families = $state<{ id: string; name: string; vendor: string; recommended: boolean }[]>([]);
   let detailVariant = $state<ManifestVariant | null>(null);
   let licensePrompt = $state<{ family: string; variant: ManifestVariant; modelName: string } | null>(null);
@@ -96,6 +105,7 @@
       // `models manifest` subcommand, so fetch the installed list independently
       // (and concurrently) and never let a manifest failure blank it.
       const [available] = await Promise.all([listAvailableModels(), refreshInstalled()]);
+      classicModels = available;
       families = available
         .filter((a) => FAMILY_IDS.includes(a.id))
         .map((a) => ({ id: a.id, name: a.name, vendor: a.vendor, recommended: a.recommended }));
@@ -108,7 +118,7 @@
         galleryStore.tabChosen = true;
       }
       // Manifests power the Browse tab only; degrade Browse (not the Installed
-      // tab) to the legacy notice if this birda cannot produce them.
+      // tab) to the legacy notice and the classic list if this birda cannot produce them.
       try {
         const manifests = await Promise.all(families.map((f) => getModelManifest(f.id)));
         for (const man of manifests) galleryStore.manifests[man.id] = man;
@@ -361,6 +371,13 @@
     <div role="alert" class="alert alert-info">
       <span>{m.gallery_legacyBirda({ minVersion: MIN_BIRDA })}</span>
     </div>
+    <ClassicCatalog
+      installed={galleryStore.installed}
+      available={classicModels}
+      onstart={() => {
+        galleryStore.error = null;
+      }}
+    />
   {/if}
 
   {#if detailVariant && selectedManifest}

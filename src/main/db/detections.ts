@@ -136,7 +136,7 @@ export function getDetections(filter: DetectionFilter): {
         d.id, d.run_id, d.location_id, d.audio_file_id, d.start_time, d.end_time,
         d.scientific_name, d.confidence, d.clip_path, d.detected_at,
         af.id as af_id, af.file_path as af_file_path, af.file_name as af_file_name,
-        af.recording_start as af_recording_start, af.timezone_offset_min as af_timezone_offset_min,
+        af.recording_start as af_recording_start, af.timezone_offset_min as af_timezone_offset_min, af.timestamp_source as af_timestamp_source,
         af.duration_sec as af_duration_sec, af.sample_rate as af_sample_rate, af.channels as af_channels,
         af.audiomoth_device_id as af_audiomoth_device_id, af.audiomoth_gain as af_audiomoth_gain,
         af.audiomoth_battery_v as af_audiomoth_battery_v, af.audiomoth_temperature_c as af_audiomoth_temperature_c,
@@ -164,6 +164,7 @@ export function getDetections(filter: DetectionFilter): {
     af_file_name: string | null;
     af_recording_start: string | null;
     af_timezone_offset_min: number | null;
+    af_timestamp_source: AudioFile['timestamp_source'];
     af_duration_sec: number | null;
     af_sample_rate: number | null;
     af_channels: number | null;
@@ -195,6 +196,7 @@ export function getDetections(filter: DetectionFilter): {
             file_name: row.af_file_name ?? '',
             recording_start: row.af_recording_start,
             timezone_offset_min: row.af_timezone_offset_min,
+            timestamp_source: row.af_timestamp_source,
             duration_sec: row.af_duration_sec,
             sample_rate: row.af_sample_rate,
             channels: row.af_channels,
@@ -244,17 +246,21 @@ export function getRunSpeciesAggregation(filter: DetectionFilter): RawRunSpecies
 export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCount[] {
   const db = getDb();
   const { where, params } = buildWhereClause(filter, 'd');
+  // Files without a usable recording start have no clock to bucket by, so they are left out.
+  const timed = `${where ? `${where} AND` : 'WHERE'} af.recording_start IS NOT NULL`;
 
   return db
     .prepare(
       `
       SELECT d.scientific_name,
-             detection_hour(af.file_path, d.start_time) AS hour,
+             detection_hour(af.recording_start, d.start_time, ar.timezone, af.timezone_offset_min, af.timestamp_source) AS hour,
              COUNT(*) AS detection_count
       FROM detections d
-      LEFT JOIN audio_files af ON d.audio_file_id = af.id
-      ${where}
+      JOIN audio_files af ON d.audio_file_id = af.id
+      LEFT JOIN analysis_runs ar ON ar.id = d.run_id
+      ${timed}
       GROUP BY d.scientific_name, hour
+      HAVING hour IS NOT NULL
     `,
     )
     .all(...params) as RawHourlyCount[];

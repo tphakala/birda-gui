@@ -2,6 +2,8 @@ import { getDb } from './database';
 import type { AnalysisRun, FinishedRunStatus, RunWithStats } from '$shared/types';
 import { COMPLETE_RUN_STATUSES, PARTIAL_RUN_STATUSES } from '$shared/constants';
 import { sqlList } from './schema';
+import { parseRecordingName } from '$shared/recording-name';
+import { formatIsoWithOffset, zonedWallToUtc } from '$shared/time-zone';
 
 export function createRun(
   sourcePath: string,
@@ -10,11 +12,12 @@ export function createRun(
   locationId?: number | null,
   settingsJson?: string | null,
   timezoneOffsetMin?: number | null,
+  timezone?: string | null,
 ): AnalysisRun {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO analysis_runs (location_id, source_path, model, min_confidence, settings_json, timezone_offset_min, status, started_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'running', datetime('now'))
+    INSERT INTO analysis_runs (location_id, source_path, model, min_confidence, settings_json, timezone_offset_min, timezone, status, started_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'running', datetime('now'))
   `);
   const result = stmt.run(
     locationId ?? null,
@@ -23,6 +26,7 @@ export function createRun(
     minConfidence,
     settingsJson ?? null,
     timezoneOffsetMin ?? null,
+    timezone ?? null,
   );
   const run = getRunById(result.lastInsertRowid as number);
   if (!run) throw new Error('Failed to create run');
@@ -32,6 +36,36 @@ export function createRun(
 function getRunById(id: number): AnalysisRun | undefined {
   const db = getDb();
   return db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(id) as AnalysisRun | undefined;
+}
+
+/** Records why birda ran without the range filter. */
+export function setRunRangeFilterNote(id: number, note: string): void {
+  getDb().prepare('UPDATE analysis_runs SET range_filter_note = ? WHERE id = ?').run(note, id);
+}
+
+/**
+ * Sets the zone a run's file name timestamps are read in and recomputes the
+ * recording start and offset of each file whose start came from its name.
+ * Header and untimed files are left alone. Returns how many files changed.
+ */
+export function setRunTimezone(runId: number, timezone: string): number {
+  const db = getDb();
+  return db.transaction(() => {
+    db.prepare('UPDATE analysis_runs SET timezone = ? WHERE id = ?').run(timezone, runId);
+    const files = db
+      .prepare("SELECT id, file_name FROM audio_files WHERE run_id = ? AND timestamp_source = 'filename'")
+      .all(runId) as { id: number; file_name: string }[];
+    const update = db.prepare('UPDATE audio_files SET recording_start = ?, timezone_offset_min = ? WHERE id = ?');
+    let changed = 0;
+    for (const file of files) {
+      const wall = parseRecordingName(file.file_name, { allowSuffix: true });
+      if (!wall) continue;
+      const { instantMs, offsetMin } = zonedWallToUtc(wall, timezone);
+      update.run(formatIsoWithOffset(instantMs, offsetMin), offsetMin, file.id);
+      changed++;
+    }
+    return changed;
+  })();
 }
 
 export function deleteRun(id: number): void {
@@ -74,6 +108,10 @@ export function getRunsWithStats(): RunWithStats[] {
       ar.*,
       (SELECT COUNT(*) FROM detections d WHERE d.run_id = ar.id) as detection_count,
       (SELECT COUNT(*) FROM audio_files af WHERE af.run_id = ar.id) as file_count,
+      (SELECT COUNT(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as timed_file_count,
+      (SELECT COALESCE(SUM(timestamp_source = 'filename'), 0) FROM audio_files af WHERE af.run_id = ar.id) as filename_file_count,
+      (SELECT MIN(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as first_recording_start,
+      (SELECT MAX(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as last_recording_start,
       l.name as location_name,
       l.latitude,
       l.longitude

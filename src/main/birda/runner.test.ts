@@ -1,10 +1,16 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- tests work on temp paths they create */
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from './analysis-session';
 import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
+import { BIRDA_CLI_VERSION, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
-vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
+const dirs = vi.hoisted(() => ({ userData: '' }));
+dirs.userData = NO_USER_DATA;
+vi.mock('electron', () => ({ app: { getPath: () => dirs.userData } }));
 
 const spawned = vi.hoisted(() => ({ children: [] as unknown[] }));
 vi.mock('child_process', async (importOriginal) => ({
@@ -16,7 +22,7 @@ vi.mock('child_process', async (importOriginal) => ({
   }),
 }));
 
-const { CANCEL_KILL_TIMEOUT_MS, killAll, runAnalysis, setBirdaPath } = await import('./runner');
+const { CANCEL_KILL_TIMEOUT_MS, birdaChildEnv, killAll, runAnalysis, setBirdaPath } = await import('./runner');
 
 const fakeBirda = createFakeBirda();
 const options = { model: 'birdnet', minConfidence: 0.1 };
@@ -105,6 +111,34 @@ describe('runAnalysis', () => {
     const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
     expect(message.length).toBeLessThan(1100);
     expect(message).not.toContain('earlier lines omitted');
+  });
+
+  it('starts birda with NO_COLOR set and the rest of the environment kept', async () => {
+    const { spawn } = await import('child_process');
+    const handle = runAnalysis('/rec.wav', options);
+    (await spawnedChild()).exit(0);
+    await handle.promise;
+    const env = (vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv }).env;
+    expect(env?.NO_COLOR).toBe('1');
+    expect(env?.PATH).toBe(process.env.PATH);
+  });
+
+  it('removes colour codes from stderr in the error, the log and the stderr callback', async () => {
+    const esc = String.fromCharCode(27);
+    const handle = runAnalysis('/rec.wav', options);
+    const logs: string[] = [];
+    const lines: string[] = [];
+    handle.on('log', (_level, message) => logs.push(message));
+    handle.on('stderr', (line) => lines.push(line));
+    const child = await spawnedChild();
+    child.stderr.write(`${esc}[31merror:${esc}[0m model missing\n`);
+    await new Promise((r) => setImmediate(r));
+    child.exit(1);
+    const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
+    expect(message).toContain('error: model missing');
+    expect(message).not.toContain(esc);
+    expect(lines).toEqual(['error: model missing']);
+    expect(logs.join('\n')).not.toContain(esc);
   });
 
   it('logs an event by name only and skips progress events', async () => {
@@ -251,5 +285,48 @@ describe('killAll', () => {
     expect(child.killCalls).toEqual([]);
     child.exit(0);
     await handle.promise;
+  });
+});
+
+describe('birdaChildEnv', () => {
+  it('sets NO_COLOR and keeps the rest of the environment', () => {
+    const env = birdaChildEnv();
+    expect(env.NO_COLOR).toBe('1');
+    expect(env.PATH).toBe(process.env.PATH);
+  });
+
+  it('lets extra values override a variable the environment already has', () => {
+    const before = process.env.BIRDA_TEST_VAR;
+    process.env.BIRDA_TEST_VAR = 'from-environment';
+    try {
+      expect(birdaChildEnv({ BIRDA_TEST_VAR: 'extra' }).BIRDA_TEST_VAR).toBe('extra');
+    } finally {
+      if (before === undefined) delete process.env.BIRDA_TEST_VAR;
+      else process.env.BIRDA_TEST_VAR = before;
+    }
+  });
+});
+
+describe('runAnalysis CUDA libraries', () => {
+  it('puts the downloaded CUDA libraries on the library path of the child', async () => {
+    const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-cuda-env-'));
+    const libs = path.join(userData, CUDA_LIBS_DIR_NAME);
+    fs.mkdirSync(libs);
+    fs.writeFileSync(path.join(libs, CUDA_VERSION_FILE), BIRDA_CLI_VERSION);
+    const previous = dirs.userData;
+    dirs.userData = userData;
+    try {
+      const { spawn } = await import('child_process');
+      const handle = runAnalysis('/rec.wav', options);
+      (await spawnedChild()).exit(0);
+      await handle.promise;
+      const env = (vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env: NodeJS.ProcessEnv }).env;
+      const searchPath = process.platform === 'win32' ? env.PATH : env.LD_LIBRARY_PATH;
+      expect(searchPath?.startsWith(libs)).toBe(true);
+      expect(env.NO_COLOR).toBe('1');
+    } finally {
+      dirs.userData = previous;
+      fs.rmSync(userData, { recursive: true, force: true });
+    }
   });
 });

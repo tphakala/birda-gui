@@ -28,6 +28,7 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   'clip:export-region',
   'catalog:get-runs',
   'catalog:delete-run',
+  'catalog:set-run-timezone',
   'catalog:get-detections',
   'catalog:get-run-species',
   'catalog:get-hourly-detections',
@@ -91,7 +92,14 @@ contextBridge.exposeInMainWorld('birda', {
     if (!ALLOWED_INVOKE_CHANNELS.has(channel)) {
       return Promise.reject(new Error(`IPC channel not allowed: ${channel}`));
     }
-    return ipcRenderer.invoke(channel, ...args);
+    // Electron prefixes a handler's error with "Error invoking remote method '...': Error: ";
+    // strip it so the renderer shows the handler's own message.
+    return ipcRenderer.invoke(channel, ...args).catch((err: unknown) => {
+      if (err instanceof Error) {
+        err.message = err.message.replace(/^Error invoking remote method '[^']*': (?:\w*Error: )?/, '');
+      }
+      throw err;
+    });
   },
   on: (channel: string, callback: (...args: unknown[]) => void) => {
     if (!ALLOWED_RECEIVE_CHANNELS.has(channel)) {

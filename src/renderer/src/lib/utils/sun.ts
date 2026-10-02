@@ -1,11 +1,12 @@
 import { getPosition } from 'suncalc';
+import { zonedWallToUtc, type ClockZone } from '$shared/time-zone';
 
 export type SunPhase = 'night' | 'twilight' | 'daylight';
 
 export interface SunPhaseGradient {
   fromPhase: SunPhase;
   toPhase: SunPhase;
-  /** 0–1 fraction of the hour where transition occurs (0 = start, 1 = end) */
+  /** 0-1 fraction of the hour where transition occurs (0 = start, 1 = end) */
   at: number;
 }
 
@@ -34,42 +35,35 @@ function classifyAltitude(altDeg: number): SunPhase {
  * For hours where the sun phase changes (sunrise/sunset transitions), a `gradient`
  * field is included with the from/to phases and the fractional position of the transition.
  *
- * Hours match the heatmap columns produced by detectionHourOf() in shared/recording-name.ts,
- * which are in the recording's timezone (whatever timezone the filename uses).
+ * Hours match the heatmap columns, which come from detection_hour() in the
+ * catalog (src/main/db/database.ts). They are in the run's clock, the zone given
+ * here, except for files whose start came from an AudioMoth header: those are
+ * in their own offset.
  *
- * @param date            Recording start Date (from parseRecordingStart — local JS Date).
- * @param latitude        Recording location latitude.
- * @param longitude       Recording location longitude.
- * @param timezoneOffsetMin  UTC offset in minutes of the recording's timezone (e.g., 180 for UTC+3).
- *                           Defaults to 0 (UTC) when unknown. This converts heatmap "filename hours"
- *                           to real UTC times for accurate sun position calculation.
+ * @param day        Calendar day in the zone's clock.
+ * @param latitude   Recording location latitude.
+ * @param longitude  Recording location longitude.
+ * @param zone       The zone the hours are in (IANA name or fixed offset). Each hour is
+ *                   converted to UTC at that day's offset, so a DST change is followed.
  */
 export function computeHourlySunPhases(
-  date: Date,
+  day: { year: number; month: number; day: number },
   latitude: number,
   longitude: number,
-  timezoneOffsetMin = 0,
+  zone: ClockZone,
 ): HourlySunPhase[] {
-  // Use local accessors to extract the date components that match the original filename,
-  // since parseRecordingStart() creates dates via `new Date(y, m, d, h, mi, s)` (local time).
-  const y = date.getFullYear();
-  const m = date.getMonth();
-  const d = date.getDate();
-
-  // Offset in milliseconds: subtract from Date.UTC values to convert
-  // "recording timezone time" → "actual UTC time" for suncalc.
-  const offsetMs = timezoneOffsetMin * 60_000;
+  const at = (hour: number, minute: number, second: number): number =>
+    zonedWallToUtc({ ...day, hour, minute, second }, zone).instantMs;
 
   const result: HourlySunPhase[] = [];
   for (let h = 0; h < 24; h++) {
-    // Midpoint of the hour in the recording's timezone, converted to UTC for suncalc
-    const midpointUtc = Date.UTC(y, m, d, h, 30, 0) - offsetMs;
-    const midAlt = altitudeDeg(new Date(midpointUtc), latitude, longitude);
+    // Midpoint of the hour in the run's clock, converted to UTC for suncalc
+    const midAlt = altitudeDeg(new Date(at(h, 30, 0)), latitude, longitude);
     const phase = classifyAltitude(midAlt);
 
     // Check start and end of hour to detect transitions
-    const startUtc = Date.UTC(y, m, d, h, 0, 0) - offsetMs;
-    const endUtc = Date.UTC(y, m, d, h, 59, 59) - offsetMs;
+    const startUtc = at(h, 0, 0);
+    const endUtc = at(h, 59, 59);
     const startPhase = classifyAltitude(altitudeDeg(new Date(startUtc), latitude, longitude));
     const endPhase = classifyAltitude(altitudeDeg(new Date(endUtc), latitude, longitude));
 
@@ -92,7 +86,7 @@ export function computeHourlySunPhases(
       gradient = {
         fromPhase: startPhase,
         toPhase: endPhase,
-        at: hi / 60, // fraction of hour (0–1)
+        at: hi / 60, // fraction of hour (0-1)
       };
     }
 

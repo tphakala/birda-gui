@@ -268,6 +268,58 @@ describe('initializeCatalog', () => {
     expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
+  it('migration 10 sets the timestamp source of existing audio files and adds the run columns', () => {
+    const db = v121Catalog([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    db.exec(`
+      INSERT INTO analysis_runs (id, source_path, model, status) VALUES (1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (run_id, file_path, file_name, recording_start, audiomoth_device_id)
+      VALUES (1, '/rec/a.wav', 'a.wav', '2024-05-01T05:30:00+03:00', 'AM1'),
+             (1, '/rec/20240501_053000.wav', '20240501_053000.wav', '2024-05-01 05:30:00', NULL),
+             (1, '/rec/c.wav', 'c.wav', NULL, NULL);
+    `);
+
+    initializeCatalog(db);
+
+    const sources = db.prepare('SELECT file_name, timestamp_source AS s FROM audio_files ORDER BY id').all();
+    expect(sources).toEqual([
+      { file_name: 'a.wav', s: 'header' },
+      { file_name: '20240501_053000.wav', s: 'filename' },
+      { file_name: 'c.wav', s: null },
+    ]);
+    expect(db.prepare('SELECT timezone, range_filter_note FROM analysis_runs').get()).toEqual({
+      timezone: null,
+      range_filter_note: null,
+    });
+  });
+
+  it('migration 10 pins zone-less starts from migration 5 to the wall clock in the file offset', () => {
+    const db = v121Catalog([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    db.exec(`
+      INSERT INTO analysis_runs (id, source_path, model, status) VALUES (1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min)
+      VALUES (1, '/rec/20240501_053000.wav', '20240501_053000.wav', '2024-05-01 05:30:00', 180),
+             (1, '/rec/20240501_063000.wav', '20240501_063000.wav', '2024-05-01 06:30:00', NULL),
+             (1, '/rec/20240501_073000.wav', '20240501_073000.wav', '2024-05-01T07:30:00-05:00', -300),
+             (1, '/rec/20240501_083000.wav', '20240501_083000.wav', '2024-05-01T08:30:00Z', 0);
+    `);
+
+    initializeCatalog(db);
+
+    expect(db.prepare('SELECT recording_start AS r FROM audio_files ORDER BY id').all()).toEqual([
+      { r: '2024-05-01T05:30:00+03:00' },
+      { r: '2024-05-01T06:30:00Z' },
+      { r: '2024-05-01T07:30:00-05:00' },
+      { r: '2024-05-01T08:30:00Z' },
+    ]);
+    // The grid reads the pinned start back as the filename's hour.
+    const hour = db
+      .prepare("SELECT detection_hour(?, 0, NULL, 180, 'filename') AS h")
+      .get('2024-05-01T05:30:00+03:00') as {
+      h: number;
+    };
+    expect(hour.h).toBe(5);
+  });
+
   it.each([
     ['migration 8', [1, 2, 3, 4, 5, 6]],
     ['migrations 4 and 8', [1, 2, 3]],
@@ -282,7 +334,11 @@ describe('initializeCatalog', () => {
         (3, NULL, '/rec/c', 'birdnet', 0.1, NULL, 'failed', '2024-05-03 12:00:00', NULL, NULL);
       DELETE FROM analysis_runs WHERE id = 3;
     `);
-    const before = db.prepare('SELECT * FROM analysis_runs ORDER BY id').all();
+    const before = (db.prepare('SELECT * FROM analysis_runs ORDER BY id').all() as object[]).map((row) => ({
+      ...row,
+      timezone: null,
+      range_filter_note: null,
+    }));
 
     initializeCatalog(db);
 
@@ -319,14 +375,15 @@ describe('initializeCatalog', () => {
         run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
-        recording_start: '2024-05-01 05:30:00',
+        // Migration 5 writes the filename wall clock; migration 10 pins it (no run offset: UTC).
+        recording_start: '2024-05-01T05:30:00Z',
       },
       {
         id: 2,
         run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
-        recording_start: '2024-05-01 05:30:00',
+        recording_start: '2024-05-01T05:30:00Z',
       },
       { id: 3, run_id: 1, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
       { id: 4, run_id: 2, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
@@ -529,9 +586,28 @@ describe('initializeCatalog locking', () => {
     const db = memoryDb();
     initializeCatalog(db);
     const row = db
-      .prepare('SELECT detection_hour(?, ?) AS a, detection_hour(NULL, ?) AS b')
-      .get('/rec/20240501_053000_A.wav', 1800, 7300) as { a: number; b: number };
-    expect(row).toEqual({ a: 6, b: 2 });
+      .prepare(
+        `SELECT detection_hour(?, ?, NULL, 0, 'filename') AS a,
+                detection_hour(NULL, ?, NULL, 0, NULL) AS b,
+                detection_hour(?, ?, 'Europe/Helsinki', 180, 'filename') AS c,
+                detection_hour(?, ?, NULL, 180, 'filename') AS d,
+                detection_hour('garbage', 0, NULL, NULL, NULL) AS e,
+                detection_hour(?, 0, 'UTC', 180, 'header') AS f,
+                detection_hour(?, 0, 'UTC', 180, 'filename') AS g`,
+      )
+      .get(
+        '2024-05-01T05:30:00Z',
+        1800,
+        7300,
+        '2024-05-01T05:30:00+03:00',
+        1800,
+        '2024-05-01T02:30:00Z',
+        1800,
+        '2024-05-01T05:30:00+03:00',
+        '2024-05-01T05:30:00+03:00',
+      ) as Record<string, number | null>;
+    // A header file keeps its own offset (+03:00) in a run that has a zone; a name-timed file follows the run zone.
+    expect(row).toEqual({ a: 6, b: null, c: 6, d: 6, e: null, f: 5, g: 2 });
   });
 
   // Each migration that opens an IMMEDIATE transaction is replayed against a current
@@ -558,6 +634,7 @@ describe('initializeCatalog locking', () => {
     { version: 5, prepare: legacySourceFile, ran: (db) => !hasSourceFile(db) },
     { version: 7 },
     { version: 8 },
+    { version: 10 },
   ];
 
   it.each(replays)(

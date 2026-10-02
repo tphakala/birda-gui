@@ -42,6 +42,7 @@
   } from '$lib/utils/ipc';
   import { formatFileSize } from '$lib/utils/format';
   import { latestRequest } from '$lib/utils/latest';
+  import { flattenConfig } from '$lib/utils/config-view';
   import ModelGallery from '$lib/components/gallery/ModelGallery.svelte';
   import { appState, catalogChanged, refreshBirdaStatus } from '$lib/stores/app.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
@@ -51,6 +52,7 @@
     CudaDownloadProgress,
     DatabaseHealthResult,
     ClearDatabaseResult,
+    BirdaConfigPayload,
   } from '$shared/types';
   import { BIRDA_RELEASES_URL, BIRDA_CLI_VERSION } from '$shared/constants';
   import { onDestroy, onMount, tick } from 'svelte';
@@ -82,6 +84,7 @@
     default_spectrogram_height: 160,
     species_language: 'en',
     ui_language: 'en',
+    filename_timezone: '',
     theme: 'system',
     setup_completed: true,
   });
@@ -110,7 +113,8 @@
 
   let settingsLoaded = $state(false);
   const birdaStatus = $derived(appState.birdaStatus);
-  let birdaConfig = $state<Record<string, unknown> | null>(null);
+  let birdaConfig = $state<BirdaConfigPayload | null>(null);
+  const configEntries = $derived(birdaConfig ? flattenConfig(birdaConfig.config) : []);
   let availableLanguages = $state<{ code: string; name: string }[]>([]);
   let savedSettings = $state<AppSettings | null>(null);
   let saving = $state(false);
@@ -320,7 +324,10 @@
       // because the dropdown binding already changed settings.ui_language
       const previous = savedSettings;
       const previousLang = previous?.ui_language;
-      settings = await setSettings($state.snapshot(settings));
+      // The file name time zone is chosen on the Analysis page; this panel's copy may be older, so it is not sent back.
+      const toSave: Partial<AppSettings> = $state.snapshot(settings);
+      delete toSave.filename_timezone;
+      settings = await setSettings(toSave);
       savedSettings = structuredClone($state.snapshot(settings));
 
       // Sync theme to localStorage for instant application on next startup
@@ -985,12 +992,21 @@
               <FileCode size={16} class="text-base-content/50" />
               <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_birdaConfig()}</h3>
             </div>
-            <pre
-              class="border-base-300 bg-base-300/50 text-base-content/50 max-h-64 overflow-auto rounded-lg border p-3 text-xs">{JSON.stringify(
-                birdaConfig,
-                null,
-                2,
-              )}</pre>
+            {#if birdaConfig.config_path}
+              <p class="text-base-content/50 text-xs break-all">
+                {m.settings_data_configFile()}: <span class="font-mono">{birdaConfig.config_path}</span>
+              </p>
+            {/if}
+            <dl
+              class="border-base-300 bg-base-300/50 grid max-h-64 grid-cols-[max-content_1fr] gap-x-4 gap-y-1 overflow-auto rounded-lg border p-3 text-xs"
+            >
+              {#each configEntries as entry (entry.key)}
+                <dt class="text-base-content/50 font-mono">{entry.key}</dt>
+                <dd class="break-all {entry.value === null ? 'text-base-content/30 italic' : 'text-base-content/70'}">
+                  {entry.value ?? m.settings_data_configNotSet()}
+                </dd>
+              {/each}
+            </dl>
           </div>
         </div>
       {/if}

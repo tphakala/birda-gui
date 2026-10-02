@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Search, X, AudioLines, List, Table2, LayoutGrid, Grid3x3 } from '@lucide/svelte';
+  import { Search, X, AudioLines, List, Table2, LayoutGrid, Grid3x3, Clock, TriangleAlert } from '@lucide/svelte';
   import RunList from '$lib/components/RunList.svelte';
   import AnalysisTable from '$lib/components/AnalysisTable.svelte';
   import SpeciesCards from '$lib/components/SpeciesCards.svelte';
   import DetectionHeatmap from '$lib/components/DetectionHeatmap.svelte';
+  import Modal from '$lib/components/Modal.svelte';
+  import TimeZoneSelect from '$lib/components/TimeZoneSelect.svelte';
   import { appState, catalogChanged } from '$lib/stores/app.svelte';
   import { showToast } from '$lib/stores/toast.svelte';
   import { dismissAnalysis } from '$lib/stores/analysis.svelte';
@@ -14,8 +16,10 @@
     getHourlyDetections,
     deleteRun,
     getSpeciesLists,
+    setRunTimezone,
   } from '$lib/utils/ipc';
-  import { formatNumber, parseRecordingStart } from '$lib/utils/format';
+  import { formatNumber } from '$lib/utils/format';
+  import { displayZone, offsetLabel, parseStoredInstant, wallClockAt } from '$shared/time-zone';
   import { latestRequest } from '$lib/utils/latest';
   import { keepIfPresent, reconcileSelectedRun } from '$lib/utils/selection';
   import type {
@@ -65,12 +69,51 @@
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
   const sourceFileName = $derived(selectedRun ? (selectedRun.source_path.split(/[\\/]/).pop() ?? '') : '');
-  // The grid view is for a single file; its name gives the date, by the rule the grid's hours use.
-  const recordingDate = $derived(
-    selectedRun && !selectedRun.is_directory
-      ? parseRecordingStart(selectedRun.source_path, { allowSuffix: true })
-      : null,
-  );
+  // The run's clock: its zone, else the offset of its files (UTC when they have none).
+  const runZone = $derived(selectedRun ? displayZone(selectedRun.timezone, selectedRun.timezone_offset_min) : null);
+  // The grid needs recording starts; files without one are left out of it.
+  const gridAvailable = $derived((selectedRun?.timed_file_count ?? 0) > 0);
+  // The day the sun phases are drawn for, in the run's clock. A run whose
+  // recordings start on different days has no single day, so it gets no phases.
+  const sunDate = $derived.by(() => {
+    const first = parseStoredInstant(selectedRun?.first_recording_start ?? null);
+    const last = parseStoredInstant(selectedRun?.last_recording_start ?? null);
+    if (first === null || last === null || runZone === null) return null;
+    const a = wallClockAt(first, runZone);
+    const b = wallClockAt(last, runZone);
+    if (a.year !== b.year || a.month !== b.month || a.day !== b.day) return null;
+    return { year: a.year, month: a.month, day: a.day };
+  });
+  // What the zone button shows: the run's zone, else the fixed offset its files are shown in.
+  const runZoneLabel = $derived(selectedRun?.timezone ?? offsetLabel(selectedRun?.timezone_offset_min ?? 0));
+
+  // --- Run time zone dialog ---
+  let zoneDialogOpen = $state(false);
+  let zoneChoice = $state('UTC');
+  let zoneSaving = $state(false);
+
+  // A run without a zone shows its files in a fixed offset that no zone stands
+  // for, so the dialog makes the user pick one instead of preselecting UTC.
+  function openZoneDialog() {
+    zoneChoice = selectedRun?.timezone ?? '';
+    zoneDialogOpen = true;
+  }
+
+  async function applyZone() {
+    if (!selectedRun) return;
+    zoneSaving = true;
+    try {
+      await setRunTimezone(selectedRun.id, zoneChoice);
+      zoneDialogOpen = false;
+      catalogChanged();
+    } catch (error) {
+      showToast(m.detections_timezoneFailed({ error: error instanceof Error ? error.message : String(error) }), {
+        severity: 'error',
+      });
+    } finally {
+      zoneSaving = false;
+    }
+  }
 
   // --- Contextual header count ---
   const headerCount = $derived.by(() => {
@@ -135,7 +178,7 @@
     } finally {
       runsLoading = false;
     }
-    // A run that just finished is only known now; a directory run has no grid.
+    // A run that just finished is only known now; one without timed files has no grid.
     if (fallBackFromGrid()) loadActiveView();
   }
 
@@ -160,9 +203,9 @@
     if (seq === selectionSeq && selected !== null && appState.selectedRunId === selected) loadActiveView();
   }
 
-  /** A directory run has no grid view: show the table instead. Returns whether the view changed. */
+  /** A run without timed files has no grid view: show the table instead. Returns whether the view changed. */
   function fallBackFromGrid(): boolean {
-    if (activeView === 'grid' && selectedRun?.is_directory) {
+    if (activeView === 'grid' && selectedRun && !gridAvailable) {
       activeView = 'table';
       return true;
     }
@@ -423,7 +466,29 @@
         <span class="text-base-content/40">|</span>
         <span class="text-base-content/60">{headerCount}</span>
 
+        {#if selectedRun.range_filter_note !== null}
+          <span
+            class="badge badge-warning badge-sm gap-1"
+            title={m.analysis_rangeFilterOff({ reason: selectedRun.range_filter_note })}
+          >
+            <TriangleAlert size={12} />
+            {m.analysis_noRangeFiltering()}
+          </span>
+        {/if}
+
         <div class="flex-1"></div>
+
+        {#if selectedRun.filename_file_count > 0}
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm gap-1.5"
+            onclick={openZoneDialog}
+            title={m.detections_timezoneTitle()}
+          >
+            <Clock size={14} />
+            {m.detections_timezone({ zone: runZoneLabel })}
+          </button>
+        {/if}
 
         <!-- View toggle -->
         <div class="join">
@@ -447,19 +512,17 @@
             <LayoutGrid size={14} />
             <span class="hidden sm:inline">{m.view_species()}</span>
           </button>
-          <div class="tooltip tooltip-left" data-tip={selectedRun.is_directory ? m.grid_noTimestamp() : ''}>
+          <div class="tooltip tooltip-left" data-tip={!gridAvailable ? m.grid_noTimestamp() : ''}>
             <button
               class="btn btn-sm join-item {activeView === 'grid' ? 'btn-active' : ''}"
-              disabled={selectedRun.is_directory}
+              disabled={!gridAvailable}
               onclick={() => {
                 switchView('grid');
               }}
-              title={!selectedRun.is_directory ? m.view_grid() : undefined}
+              title={gridAvailable ? m.view_grid() : undefined}
             >
-              <Grid3x3 size={14} class={selectedRun.is_directory ? 'opacity-40' : ''} />
-              <span class="hidden sm:inline {selectedRun.is_directory ? 'line-through opacity-40' : ''}"
-                >{m.view_grid()}</span
-              >
+              <Grid3x3 size={14} class={!gridAvailable ? 'opacity-40' : ''} />
+              <span class="hidden sm:inline {!gridAvailable ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
             </button>
           </div>
         </div>
@@ -551,6 +614,7 @@
           {total}
           {loading}
           isDirectory={selectedRun.is_directory}
+          runTimezone={selectedRun.timezone}
           {sortColumn}
           {sortDir}
           {offset}
@@ -571,8 +635,9 @@
           loading={gridLoading}
           latitude={selectedRun.latitude}
           longitude={selectedRun.longitude}
-          {recordingDate}
-          timezoneOffsetMin={selectedRun.timezone_offset_min}
+          {sunDate}
+          zone={runZone ?? 'UTC'}
+          untimedFiles={selectedRun.file_count - selectedRun.timed_file_count}
         />
       {/if}
     </div>
@@ -584,3 +649,30 @@
     </div>
   {/if}
 </div>
+
+<Modal bind:open={zoneDialogOpen} title={m.detections_timezoneTitle()} icon={Clock} descriptionId="run-zone-body">
+  <div class="space-y-3">
+    <p id="run-zone-body" class="text-base-content/80 text-sm">
+      {m.detections_timezoneBody({ count: String(selectedRun?.filename_file_count ?? 0) })}
+    </p>
+    <TimeZoneSelect
+      bind:value={zoneChoice}
+      placeholder={m.detections_timezoneChoose()}
+      class="w-full"
+      aria-label={m.detections_timezoneTitle()}
+    />
+  </div>
+  {#snippet actions()}
+    <button type="button" class="btn btn-sm" onclick={() => (zoneDialogOpen = false)}>
+      {m.common_button_cancel()}
+    </button>
+    <button
+      type="button"
+      class="btn btn-primary btn-sm"
+      onclick={() => void applyZone()}
+      disabled={zoneSaving || zoneChoice === '' || zoneChoice === selectedRun?.timezone}
+    >
+      {m.common_button_apply()}
+    </button>
+  {/snippet}
+</Modal>

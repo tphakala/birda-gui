@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { execBirda } from './exec';
-import { findBirda, superviseChild, type SupervisedChild } from './runner';
+import { birdaChildEnv, findBirda, superviseChild, type SupervisedChild } from './runner';
 import { classifyExit } from './process-exit';
 import { parseProgressLine } from './progress';
 import type {
@@ -129,6 +129,7 @@ export async function installModel(
       // and manages defaults separately via birda:models-set-default.
       const proc = spawn(birdaPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: birdaChildEnv(),
       });
       const tracked = superviseChild(proc);
       installProcess = tracked;

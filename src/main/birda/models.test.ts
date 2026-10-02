@@ -34,6 +34,17 @@ afterAll(() => {
 });
 
 describe('installModel', () => {
+  it('starts birda with NO_COLOR set', async () => {
+    const { spawn } = await import('child_process');
+    const install = installModel({ id: 'birdnet' });
+    const child = await spawnedChild();
+    const options = vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv } | undefined;
+    expect(options?.env?.NO_COLOR).toBe('1');
+    child.stdout.write(JSON.stringify({ payload: { id: 'birdnet' } }));
+    child.exit(0);
+    await install;
+  });
+
   it('waits for close when a started install reports an error', async () => {
     const install = installModel({ id: 'birdnet' });
     const child = await spawnedChild();

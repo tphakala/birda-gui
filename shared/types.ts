@@ -138,11 +138,23 @@ export interface AnalysisRun {
   completed_at: string | null;
   /** UTC offset in minutes of the recording's timezone (0 = UTC, null = unknown). */
   timezone_offset_min: number | null;
+  /** IANA zone (or 'UTC') the run's filename timestamps were read in. Null for AudioMoth runs and older runs, which show each file's stored offset. */
+  timezone: string | null;
+  /** Reason birda gave when it ran without the range filter, else null. */
+  range_filter_note: string | null;
 }
 
 export interface RunWithStats extends AnalysisRun {
   detection_count: number;
   file_count: number; // NEW: number of audio files in this run
+  /** Files with a recording start that parses as a time. */
+  timed_file_count: number;
+  /** Files whose recording start was read from the file name (the run's zone applies to them). */
+  filename_file_count: number;
+  /** Earliest recording start in the run, as stored (UTC text), or null. */
+  first_recording_start: string | null;
+  /** Latest recording start in the run, as stored (UTC text), or null. */
+  last_recording_start: string | null;
   is_directory: boolean; // NEW: true if source_path is a directory
   location_name: string | null;
   latitude: number | null;
@@ -172,6 +184,8 @@ export interface AudioFile {
   file_name: string;
   recording_start: string | null;
   timezone_offset_min: number | null;
+  /** Where recording_start came from: the AudioMoth header, the file name, or nowhere. */
+  timestamp_source: 'header' | 'filename' | null;
   duration_sec: number | null;
   sample_rate: number | null;
   channels: number | null;
@@ -186,6 +200,7 @@ export interface AudioFile {
 export interface AudioFileMetadata {
   recording_start: string | null;
   timezone_offset_min: number | null;
+  timestamp_source: 'header' | 'filename' | null;
   duration_sec: number | null;
   sample_rate: number | null;
   channels: number | null;
@@ -283,6 +298,8 @@ export interface AnalysisRequest {
   day?: number | undefined;
   /** UTC offset in minutes from AudioMoth metadata (0 = UTC). Omit if unknown. */
   timezone_offset_min?: number | undefined;
+  /** IANA zone (or 'UTC') that file name timestamps are written in. Omit when no file is named by timestamp. */
+  timezone?: string | undefined;
 }
 
 /**
@@ -295,6 +312,8 @@ export interface AnalysisResult {
   status: FinishedRunStatus;
   /** The run's partial results were deleted because an earlier complete result for the same source and model exists. */
   discardedPartial: boolean;
+  /** birda ran without the range filter; the reason it gave. */
+  rangeFilterNote?: string | undefined;
 }
 
 /** Progress counted from the analysis events so far, for a window that joins a running analysis. */
@@ -310,7 +329,7 @@ export interface AnalysisProgressSnapshot {
 /** The settings of the analysis that holds the lock, for a window that joins it. */
 export type RunningAnalysisSettings = Pick<
   AnalysisRequest,
-  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day'
+  'model' | 'min_confidence' | 'latitude' | 'longitude' | 'location_name' | 'month' | 'day' | 'timezone'
 >;
 
 /**
@@ -368,6 +387,8 @@ export interface InstalledModel {
   id: string;
   model_type: string;
   is_default: boolean;
+  /** Whether the model has its own meta (range) model. Absent from older birda. */
+  has_meta_model?: boolean;
   path?: string;
   labels_path?: string;
   // Install provenance from birda (present on registry installs, absent for
@@ -377,6 +398,12 @@ export interface InstalledModel {
   installed_build?: number;
   region?: string;
   variant?: string;
+}
+
+/** What `birda config show` reports: where the config file is and its contents. */
+export interface BirdaConfigPayload {
+  config_path?: string;
+  config: Record<string, unknown>;
 }
 
 export interface AvailableModel {
@@ -462,6 +489,8 @@ export interface AppSettings {
   default_spectrogram_height: number;
   species_language: string;
   ui_language: string;
+  /** Zone last chosen for file name timestamps; '' means the system zone. */
+  filename_timezone: string;
   theme: 'system' | 'light' | 'dark';
   setup_completed: boolean;
 }
@@ -612,6 +641,8 @@ export interface SpeciesFetchRequest {
   longitude: number;
   week: number;
   threshold?: number;
+  /** Model whose range model is preferred; another is used when it has none. */
+  model?: string | undefined;
 }
 
 /** A single species returned from birda CLI species command */
@@ -629,4 +660,6 @@ export interface BirdaSpeciesResponse {
   threshold: number;
   species_count: number;
   species: BirdaSpeciesResult[];
+  /** Model whose range model produced the list; set by the GUI, not by birda. */
+  model_used?: string | undefined;
 }

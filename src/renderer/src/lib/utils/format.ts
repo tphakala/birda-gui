@@ -1,4 +1,5 @@
 import { parseRecordingName } from '$shared/recording-name';
+import { parseStoredInstant, wallClockAt, type ClockZone, type Wall } from '$shared/time-zone';
 export function formatDuration(seconds: number | null): string {
   if (seconds === null || isNaN(seconds)) return '--:--';
   const h = Math.floor(seconds / 3600);
@@ -59,47 +60,44 @@ export function parseRecordingStart(filename: string, options: { allowSuffix?: b
   return new Date(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute, parsed.second);
 }
 
+/** The detection's wall clock in a zone: recording start plus its offset into the file, or null without a start. */
+function detectionWall(
+  detection: { audio_file: { recording_start: string | null } | null; start_time: number },
+  zone: ClockZone,
+): Wall | null {
+  const start = parseStoredInstant(detection.audio_file?.recording_start ?? null);
+  if (start === null) return null;
+  return wallClockAt(start + detection.start_time * 1000, zone);
+}
+
+const two = (n: number): string => n.toString().padStart(2, '0');
+
 /**
- * Format detection date from recording_start + offset
- * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
+ * Format detection date from recording_start + offset, in the run's zone
+ * Returns: "01-15" (MM-DD) for the current year on the zone's clock, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */
-export function formatDetectionDate(detection: {
-  audio_file: { recording_start: string | null } | null;
-  start_time: number;
-}): string {
-  if (!detection.audio_file?.recording_start) return '--';
-
-  const recordingStart = new Date(detection.audio_file.recording_start);
-  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
-  const now = new Date();
-
-  const month = (actualTime.getMonth() + 1).toString().padStart(2, '0');
-  const day = actualTime.getDate().toString().padStart(2, '0');
-
-  // Include year if different from current year
-  if (actualTime.getFullYear() !== now.getFullYear()) {
-    const year = actualTime.getFullYear().toString().slice(-2);
-    return `${year}-${month}-${day}`;
+export function formatDetectionDate(
+  detection: { audio_file: { recording_start: string | null } | null; start_time: number },
+  zone: ClockZone,
+): string {
+  const wall = detectionWall(detection, zone);
+  if (!wall) return '--';
+  // Include the year when it differs from the current year on the same clock
+  if (wall.year !== wallClockAt(Date.now(), zone).year) {
+    return `${two(wall.year % 100)}-${two(wall.month)}-${two(wall.day)}`;
   }
-
-  return `${month}-${day}`;
+  return `${two(wall.month)}-${two(wall.day)}`;
 }
 
 /**
- * Format detection time from recording_start + offset
+ * Format detection time from recording_start + offset, in the run's zone
  * Returns: "14:30:22" (HH:MM:SS) or "--" if no timestamp
  */
-export function formatDetectionTime(detection: {
-  audio_file: { recording_start: string | null } | null;
-  start_time: number;
-}): string {
-  if (!detection.audio_file?.recording_start) return '--';
-
-  const recordingStart = new Date(detection.audio_file.recording_start);
-  const actualTime = new Date(recordingStart.getTime() + detection.start_time * 1000);
-
-  const h = actualTime.getHours().toString().padStart(2, '0');
-  const m = actualTime.getMinutes().toString().padStart(2, '0');
-  const s = actualTime.getSeconds().toString().padStart(2, '0');
-  return `${h}:${m}:${s}`;
+export function formatDetectionTime(
+  detection: { audio_file: { recording_start: string | null } | null; start_time: number },
+  zone: ClockZone,
+): string {
+  const wall = detectionWall(detection, zone);
+  if (!wall) return '--';
+  return `${two(wall.hour)}:${two(wall.minute)}:${two(wall.second)}`;
 }

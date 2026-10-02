@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import type { HourlyDetectionCell } from '$shared/types';
+  import type { ClockZone } from '$shared/time-zone';
   import { computeHourlySunPhases, type SunPhase, type SunPhaseGradient } from '$lib/utils/sun';
   import * as m from '$paraglide/messages';
 
@@ -11,15 +12,20 @@
     loading,
     latitude,
     longitude,
-    recordingDate,
-    timezoneOffsetMin,
+    sunDate,
+    zone,
+    untimedFiles,
   }: {
     cells: HourlyDetectionCell[];
     loading: boolean;
     latitude: number | null;
     longitude: number | null;
-    recordingDate: Date | null;
-    timezoneOffsetMin: number | null;
+    /** The day the sun phases are drawn for, in the run's clock; null hides them. */
+    sunDate: { year: number; month: number; day: number } | null;
+    /** The run's clock, the one the hour columns are in. */
+    zone: ClockZone;
+    /** Files of the run without a recording start, which the grid leaves out. */
+    untimedFiles: number;
   } = $props();
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -119,7 +125,7 @@
       count === 1
         ? m.grid_detectionCountSingular({ count: String(count) })
         : m.grid_detectionCount({ count: String(count) });
-    return `${commonName} @ ${String(hour).padStart(2, '0')}:00 — ${countText}`;
+    return `${commonName} @ ${String(hour).padStart(2, '0')}:00: ${countText}`;
   }
 
   // Legend: subset of current palette stops
@@ -145,8 +151,8 @@
   };
 
   const sunPhases = $derived.by(() => {
-    if (latitude === null || longitude === null || recordingDate === null) return null;
-    return computeHourlySunPhases(recordingDate, latitude, longitude, timezoneOffsetMin ?? 0);
+    if (latitude === null || longitude === null || sunDate === null) return null;
+    return computeHourlySunPhases(sunDate, latitude, longitude, zone);
   });
 
   const sunColors = $derived(isDark ? sunPhaseColorsDark : sunPhaseColorsLight);
@@ -171,9 +177,9 @@
     const lo = Math.max(0, pct - GRADIENT_BAND_HALFWIDTH_PCT);
     const hi = Math.min(100, pct + GRADIENT_BAND_HALFWIDTH_PCT);
 
-    // Sunrise: twilight → daylight — use warm orange→amber accent
+    // Sunrise: twilight → daylight, use warm orange→amber accent
     const isSunrise = gradient.fromPhase === 'twilight' && gradient.toPhase === 'daylight';
-    // Sunset: daylight → twilight — use rose→purple accent
+    // Sunset: daylight → twilight, use rose→purple accent
     const isSunset = gradient.fromPhase === 'daylight' && gradient.toPhase === 'twilight';
 
     if (isSunrise) {
@@ -269,6 +275,12 @@
         {/each}
         <span class="text-base-content/50">{m.grid_more()}</span>
       </div>
+
+      {#if untimedFiles > 0}
+        <p class="text-base-content/50 mt-1.5 text-right text-[11px]">
+          {m.grid_untimedExcluded({ count: String(untimedFiles) })}
+        </p>
+      {/if}
 
       {#if sunPhases}
         <div class="mt-1.5 flex items-center justify-end gap-1.5 text-[11px]">

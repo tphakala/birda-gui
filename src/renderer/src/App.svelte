@@ -115,6 +115,7 @@
 
   /** Shows how an analysis ended and reloads what it changed in the catalog. */
   function showOutcome(outcome: Outcome) {
+    analysisState.rangeFilterNote = outcome.rangeFilterNote ?? null;
     if (outcome.status === 'cancelled') {
       // The panel stays, showing what was analysed before the Stop.
       const nothingKept = outcome.runId === null || analysisState.totalDetections === 0;
@@ -188,6 +189,7 @@
     month?: number | undefined;
     day?: number | undefined;
     timezoneOffsetMin?: number | undefined;
+    timezone?: string | undefined;
   }) {
     const sourcePath = appState.sourcePath;
     if (!sourcePath || appState.isAnalysisRunning) return;
@@ -211,6 +213,7 @@
         month: opts.month,
         day: opts.day,
         timezone_offset_min: opts.timezoneOffsetMin,
+        timezone: opts.timezone,
       });
       showOutcome(result);
       shownOwnOutcome = true;

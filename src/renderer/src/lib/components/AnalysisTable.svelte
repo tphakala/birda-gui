@@ -2,6 +2,7 @@
   import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, ChevronDown, ChevronLeft } from '@lucide/svelte';
   import DetectionDetail from './DetectionDetail.svelte';
   import { formatConfidence, formatTime, formatDetectionDate, formatDetectionTime } from '$lib/utils/format';
+  import { displayZone } from '$shared/time-zone';
   import type { EnrichedDetection } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -10,6 +11,7 @@
     total,
     loading,
     isDirectory,
+    runTimezone,
     sortColumn,
     sortDir,
     offset,
@@ -21,6 +23,8 @@
     total: number;
     loading: boolean;
     isDirectory: boolean;
+    /** The run's zone, or null for a run whose files carry their own offsets. */
+    runTimezone: string | null;
     sortColumn: string;
     sortDir: 'asc' | 'desc';
     offset: number;
@@ -28,6 +32,10 @@
     onsort: (column: string) => void;
     onpage: (newOffset: number) => void;
   } = $props();
+
+  // The run's zone, else the offset stored on the detection's file (UTC when it has none).
+  const zoneOf = (d: EnrichedDetection) =>
+    displayZone(runTimezone, d.audio_file?.timezone_offset_min ?? null, d.audio_file?.timestamp_source ?? null);
 
   type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
@@ -153,9 +161,13 @@
               {#if col.key === 'file_name'}
                 <td class={col.class ?? ''}>{detection.audio_file?.file_name ?? '--'}</td>
               {:else if col.key === 'date'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">{formatDetectionDate(detection)}</td>
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums"
+                  >{formatDetectionDate(detection, zoneOf(detection))}</td
+                >
               {:else if col.key === 'time'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">{formatDetectionTime(detection)}</td>
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums"
+                  >{formatDetectionTime(detection, zoneOf(detection))}</td
+                >
               {:else if col.key === 'start_time'}
                 <td class="{col.class ?? ''} tabular-nums">{formatTime(detection.start_time)}</td>
               {:else if col.key === 'common_name'}
@@ -170,7 +182,7 @@
           {#if expandedId === detection.id && detection.audio_file}
             <tr>
               <td colspan={colCount} class="p-0">
-                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} />
+                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} zone={zoneOf(detection)} />
               </td>
             </tr>
           {/if}

@@ -9,6 +9,7 @@ import { app } from 'electron';
 import type { BirdaEventEnvelope } from './types';
 import { AnalysisCancelledError } from './analysis-session';
 import { classifyExit } from './process-exit';
+import { stripAnsi } from '$shared/birda-error';
 import { BIRDA_CLI_VERSION, BIRDA_GITHUB_URL, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
 const MAX_STDERR_LINES = 500;
@@ -128,6 +129,8 @@ export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 export interface AnalysisHandle {
   on(event: 'data', callback: (envelope: BirdaEventEnvelope) => void): void;
   on(event: 'log', callback: (level: LogLevel, message: string) => void): void;
+  /** Each non-empty stderr line, colour codes removed. */
+  on(event: 'stderr', callback: (line: string) => void): void;
   cancel: () => void;
   promise: Promise<void>;
 }
@@ -159,6 +162,14 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
   };
 
   return flagMap[ep.toLowerCase()] ?? null;
+}
+
+/**
+ * Environment for any birda child. NO_COLOR keeps birda's log output free of
+ * ANSI escapes, which would show as junk in the log panel and in error text.
+ */
+export function birdaChildEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
+  return { ...process.env, ...extra, NO_COLOR: '1' };
 }
 
 function getCudaEnv(): Record<string, string> | undefined {
@@ -325,6 +336,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   let child: ChildProcess | null = null;
   let dataCallback: ((envelope: BirdaEventEnvelope) => void) | null = null;
   let logCallback: ((level: LogLevel, message: string) => void) | null = null;
+  let stderrCallback: ((line: string) => void) | null = null;
   const stderrLines: string[] = [];
   const cancelState = { requested: false };
   let supervised: SupervisedChild | null = null;
@@ -408,11 +420,10 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       emitLog('info', `Spawning: ${birdaPath} ${args.join(' ')}`);
 
-      const cudaEnv = getCudaEnv();
       try {
         child = spawn(birdaPath, args, {
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: cudaEnv ? { ...process.env, ...cudaEnv } : undefined,
+          env: birdaChildEnv(getCudaEnv()),
         });
       } catch (err) {
         // spawn can throw synchronously as well as emit 'error'.
@@ -462,10 +473,11 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
 
       const stderrReader = createInterface({ input: child.stderr });
       stderrReader.on('line', (line) => {
-        const text = line.trimEnd();
+        const text = stripAnsi(line).trimEnd();
         if (!text) return;
         pushStderr(text);
         emitLog('warn', shortenLine(`[stderr] ${text}`));
+        stderrCallback?.(text);
       });
 
       child.on('close', (code, signal) => {
@@ -486,9 +498,11 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
   });
 
   return {
-    on(event: 'data' | 'log', callback: (...args: never[]) => void) {
+    on(event: 'data' | 'log' | 'stderr', callback: (...args: never[]) => void) {
       if (event === 'data') {
         dataCallback = callback as (envelope: BirdaEventEnvelope) => void;
+      } else if (event === 'stderr') {
+        stderrCallback = callback as (line: string) => void;
       } else {
         logCallback = callback as (level: LogLevel, message: string) => void;
       }

@@ -3,7 +3,7 @@ import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { detectionHourOf } from '$shared/recording-name';
+import { displayZone, formatIsoWithOffset, parseStoredInstant, wallClockAt } from '$shared/time-zone';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
@@ -41,11 +41,25 @@ export function initializeCatalog(db: Database.Database): void {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  // Hour of day of a detection, from the recording name and offset. Only for
-  // ad-hoc queries: it must not be used in views or indexes, because a catalog
-  // that references it would fail to open in a build without this function.
-  db.function('detection_hour', { deterministic: true }, (filePath, startTime) =>
-    detectionHourOf(typeof filePath === 'string' ? filePath : '', Number(startTime)),
+  // Hour of day (0-23) of a detection in the run's clock: the recording start
+  // plus the detection's offset into the file, read in the run's zone, else in
+  // the file's stored offset (always the stored offset for a file whose start came
+  // from an AudioMoth header). Null when the recording has no usable start. Only
+  // for ad-hoc queries: it must not be used in views or indexes, because a
+  // catalog that references it would fail to open in a build without this function.
+  db.function(
+    'detection_hour',
+    { deterministic: true },
+    (recordingStart, startTime, runTimezone, fileOffsetMin, timestampSource) => {
+      const start = parseStoredInstant(typeof recordingStart === 'string' ? recordingStart : null);
+      if (start === null) return null;
+      const zone = displayZone(
+        typeof runTimezone === 'string' ? runTimezone : null,
+        typeof fileOffsetMin === 'number' ? fileOffsetMin : null,
+        timestampSource === 'header' ? 'header' : null,
+      );
+      return wallClockAt(start + Number(startTime) * 1000, zone).hour;
+    },
   );
 
   // SCHEMA_SQL indexes columns that older catalogs only gain through a migration
@@ -279,12 +293,62 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(9);
     }).immediate();
   }
+
+  // Migration 10: run time zone, range filter note and timestamp source. It
+  // runs for new catalogs too, since migrations 4 and 8 rebuild their
+  // analysis_runs from a fixed column list and drop what SCHEMA_SQL added.
+  if (!applied.has(10)) {
+    console.log('Migrating to version 10: run time zone, range filter note, timestamp source');
+    db.transaction(() => {
+      addColumnIfMissing(db, 'analysis_runs', 'timezone', 'TEXT');
+      addColumnIfMissing(db, 'analysis_runs', 'range_filter_note', 'TEXT');
+      addColumnIfMissing(db, 'audio_files', 'timestamp_source', 'TEXT');
+      // Files with an AudioMoth device id are taken to have had their start read
+      // from the header (one with a device id but no recorded time was read from
+      // its name, and cannot be told apart here); any other file with a start was
+      // read from its name.
+      db.exec(`
+        UPDATE audio_files SET timestamp_source = CASE
+          WHEN recording_start IS NULL THEN NULL
+          WHEN audiomoth_device_id IS NOT NULL THEN 'header'
+          ELSE 'filename'
+        END
+      `);
+      // Migration 5 stored filename starts as zone-less wall clock text next to
+      // the run's offset. Reading that text as UTC and then showing it in the
+      // file's offset would shift it by that offset, so pin each one to the
+      // instant it meant: the wall clock in the file's offset (UTC when none).
+      const zoneless = db
+        .prepare(
+          `SELECT id, recording_start, timezone_offset_min FROM audio_files
+           WHERE recording_start IS NOT NULL
+             AND recording_start NOT LIKE '%Z'
+             AND substr(recording_start, -6, 1) NOT IN ('+', '-')`,
+        )
+        .all() as { id: number; recording_start: string; timezone_offset_min: number | null }[];
+      const pin = db.prepare('UPDATE audio_files SET recording_start = ? WHERE id = ?');
+      for (const row of zoneless) {
+        const wallAsUtc = parseStoredInstant(row.recording_start);
+        if (wallAsUtc === null) continue;
+        const offsetMin = row.timezone_offset_min ?? 0;
+        pin.run(formatIsoWithOffset(wallAsUtc - offsetMin * 60_000, offsetMin), row.id);
+      }
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(10);
+    }).immediate();
+  }
+}
+
+function addColumnIfMissing(db: Database.Database, table: string, column: string, type: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
 }
 
 /**
  * Rebuilds analysis_runs with a new status CHECK, which SQLite cannot change
  * in place, and records the migration, in one IMMEDIATE transaction. Rows keep their ids, and the
  * AUTOINCREMENT sequence is restored so a deleted run's id is not reused.
+ * The column list is fixed: any later rebuild must also carry timezone and
+ * range_filter_note (added by migration 10), or it drops them.
  */
 function rebuildAnalysisRuns(db: Database.Database, statusCheck: string, version: number): void {
   // Foreign keys are off so dropping the old table does not cascade into the

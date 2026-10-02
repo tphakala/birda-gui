@@ -90,6 +90,14 @@ describe('loadSettings', () => {
     expect(corruptBackups()).toEqual([]);
   });
 
+  it('keeps a valid filename_timezone and drops an invalid one', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    fs.writeFileSync(file, JSON.stringify({ filename_timezone: 'Europe/Helsinki' }));
+    expect((await loadSettings()).filename_timezone).toBe('Europe/Helsinki');
+    fs.writeFileSync(file, JSON.stringify({ filename_timezone: 'Mars/Base' }));
+    expect((await loadSettings()).filename_timezone).toBe('');
+  });
+
   it('leaves the file alone and returns defaults on a read error other than a missing file', async () => {
     // A directory at the settings path makes the read fail with EISDIR.
     fs.mkdirSync(file);

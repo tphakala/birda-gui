@@ -12,6 +12,8 @@ import {
   getAnalysisSourcePaths,
   getRunsWithStats,
   markStaleRunsAsFailed,
+  setRunRangeFilterNote,
+  setRunTimezone,
 } from './runs';
 import {
   getCatalogStats,
@@ -443,5 +445,92 @@ describe('markStaleRunsAsFailed under a foreign write lock', () => {
 
     expect(code).toBe('SQLITE_BUSY');
     expect(waited).toBeLessThan(BUSY_TIMEOUT_MS / 2);
+  });
+});
+
+describe('setRunTimezone', () => {
+  function addFile(runId: number, name: string, start: string | null, source: 'header' | 'filename' | null): number {
+    return Number(
+      db()
+        .prepare(
+          'INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min, timestamp_source) VALUES (?, ?, ?, ?, 0, ?)',
+        )
+        .run(runId, `/rec/${name}`, name, start, source).lastInsertRowid,
+    );
+  }
+
+  const fileRow = (id: number) =>
+    db().prepare('SELECT recording_start, timezone_offset_min AS off FROM audio_files WHERE id = ?').get(id);
+
+  it('recomputes filename files per date, so a DST switch gets each file its own offset', () => {
+    const run = createRun('/rec', 'birdnet', 0.1);
+    const winter = addFile(run.id, '20260328_120000.wav', '2026-03-28T12:00:00Z', 'filename');
+    const summer = addFile(run.id, '20260330_120000_A.wav', '2026-03-30T12:00:00Z', 'filename');
+
+    expect(setRunTimezone(run.id, 'Europe/Helsinki')).toBe(2);
+
+    expect(fileRow(winter)).toEqual({ recording_start: '2026-03-28T12:00:00+02:00', off: 120 });
+    expect(fileRow(summer)).toEqual({ recording_start: '2026-03-30T12:00:00+03:00', off: 180 });
+    expect(db().prepare('SELECT timezone FROM analysis_runs WHERE id = ?').get(run.id)).toEqual({
+      timezone: 'Europe/Helsinki',
+    });
+  });
+
+  it('leaves header and untimed files alone', () => {
+    const run = createRun('/rec', 'birdnet', 0.1);
+    const header = addFile(run.id, '20260328_120000.wav', '2026-03-28T12:00:00+03:00', 'header');
+    const untimed = addFile(run.id, 'a.wav', null, null);
+
+    expect(setRunTimezone(run.id, 'Europe/Helsinki')).toBe(0);
+
+    expect(fileRow(header)).toEqual({ recording_start: '2026-03-28T12:00:00+03:00', off: 0 });
+    expect(fileRow(untimed)).toEqual({ recording_start: null, off: 0 });
+  });
+
+  it('does not touch another run', () => {
+    const a = createRun('/a', 'birdnet', 0.1);
+    const b = createRun('/b', 'birdnet', 0.1);
+    const other = addFile(b.id, '20260328_120000.wav', '2026-03-28T12:00:00Z', 'filename');
+    setRunTimezone(a.id, 'Europe/Helsinki');
+    expect(fileRow(other)).toEqual({ recording_start: '2026-03-28T12:00:00Z', off: 0 });
+  });
+});
+
+describe('run time columns', () => {
+  it('createRun stores the zone and setRunRangeFilterNote the note', () => {
+    const run = createRun('/rec', 'birdnet', 0.1, null, null, null, 'Europe/Helsinki');
+    expect(run.timezone).toBe('Europe/Helsinki');
+    expect(run.range_filter_note).toBeNull();
+    setRunRangeFilterNote(run.id, 'no meta model configured');
+    expect(getRunsWithStats()[0]?.range_filter_note).toBe('no meta model configured');
+  });
+
+  it('getRunsWithStats counts files with a parseable start and filename files, and reports the first and last start', () => {
+    const run = createRun('/rec', 'birdnet', 0.1);
+    const insert = db().prepare(
+      'INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timestamp_source) VALUES (?, ?, ?, ?, ?)',
+    );
+    insert.run(run.id, '/rec/a.wav', 'a.wav', '2026-03-30T12:00:00+03:00', 'filename');
+    insert.run(run.id, '/rec/b.wav', 'b.wav', '2026-03-29T08:00:00Z', 'header');
+    insert.run(run.id, '/rec/c.wav', 'c.wav', null, null);
+    insert.run(run.id, '/rec/d.wav', 'd.wav', 'not a time', 'filename');
+
+    expect(getRunsWithStats()[0]).toMatchObject({
+      file_count: 4,
+      timed_file_count: 2,
+      filename_file_count: 2,
+      first_recording_start: '2026-03-29 08:00:00',
+      last_recording_start: '2026-03-30 09:00:00',
+    });
+  });
+
+  it('getRunsWithStats reports zero counts and no first start for a run without files', () => {
+    createRun('/rec', 'birdnet', 0.1);
+    expect(getRunsWithStats()[0]).toMatchObject({
+      timed_file_count: 0,
+      filename_file_count: 0,
+      first_recording_start: null,
+      last_recording_start: null,
+    });
   });
 });
