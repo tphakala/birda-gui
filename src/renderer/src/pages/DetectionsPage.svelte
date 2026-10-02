@@ -448,13 +448,15 @@
   {#if appState.selectedRunId && selectedRun}
     <div class="flex flex-1 flex-col overflow-hidden">
       <!-- Header row -->
-      <div class="border-base-300 bg-base-200/50 @container flex min-w-0 items-center gap-3 border-b px-4 py-2 text-sm">
+      <div
+        class="border-base-300 bg-base-200/50 @container flex min-w-0 items-center gap-1.5 border-b px-4 py-2 text-sm @5xl:gap-3"
+      >
         <AudioLines size={16} class="text-primary shrink-0" />
 
         {#if selectedRun.is_directory}
           <span class="min-w-20 shrink-[10] truncate font-medium" title={selectedRun.source_path}>{sourceFileName}</span
           >
-          <span class="text-base-content/40 hidden @2xl:inline">|</span>
+          <span class="text-base-content/40 hidden @5xl:inline">|</span>
           <span class="text-base-content/60 whitespace-nowrap"
             >{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span
           >
@@ -462,7 +464,7 @@
           <span class="min-w-20 shrink-[10] truncate font-medium" title={sourceFileName}>{sourceFileName}</span>
         {/if}
 
-        <span class="text-base-content/40 hidden @2xl:inline">|</span>
+        <span class="text-base-content/40 hidden @5xl:inline">|</span>
         <span class="text-base-content/60 whitespace-nowrap">{headerCount}</span>
 
         {#if selectedRun.range_filter_note !== null}
@@ -472,7 +474,7 @@
             <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
             <span class="badge badge-warning badge-sm gap-1" tabindex="0">
               <TriangleAlert size={12} aria-hidden="true" />
-              <span class="sr-only @3xl:not-sr-only">{m.analysis_noRangeFiltering()}</span>
+              <span class="sr-only @min-[900px]:not-sr-only">{m.analysis_noRangeFiltering()}</span>
               <span class="sr-only">{reason}</span>
             </span>
           </div>
@@ -481,16 +483,18 @@
         <div class="flex-1"></div>
 
         {#if selectedRun.filename_file_count > 0}
+          <!-- Icon only in a narrow header, so the counts and the view toggle keep their room. -->
           <button
             type="button"
-            class="btn btn-ghost btn-sm min-w-28 shrink gap-1.5 @2xl:shrink-0"
+            class="btn btn-ghost btn-sm shrink-0 gap-1 px-1.5 @5xl:gap-1.5 @5xl:px-3"
             onclick={openZoneDialog}
-            title={m.detections_timezoneTitle()}
+            title="{m.detections_timezone({ zone: runZoneLabel })}&#10;{m.detections_timezoneTitle()}"
+            aria-label={m.detections_timezone({ zone: runZoneLabel })}
           >
-            <Clock size={14} class="shrink-0" />
-            <!-- The "Time zone:" prefix only fits in a wide header. -->
-            <span class="max-w-48 truncate @2xl:hidden">{runZoneLabel}</span>
-            <span class="hidden max-w-48 truncate @2xl:inline">{m.detections_timezone({ zone: runZoneLabel })}</span>
+            <Clock size={14} class="shrink-0" aria-hidden="true" />
+            <!-- Just the zone name until there is room for the "Time zone:" prefix. -->
+            <span class="hidden max-w-48 truncate @3xl:inline @5xl:hidden">{runZoneLabel}</span>
+            <span class="hidden max-w-48 truncate @5xl:inline">{m.detections_timezone({ zone: runZoneLabel })}</span>
           </button>
         {/if}
 
