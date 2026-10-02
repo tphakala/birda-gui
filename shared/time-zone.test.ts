@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clockDayKey,
   currentZoneName,
@@ -11,6 +11,7 @@ import {
   offsetLabel,
   parseStoredInstant,
   sharedClockDay,
+  systemTimeZone,
   wallClockAt,
   zonedWallToUtc,
 } from './time-zone';
@@ -158,6 +159,31 @@ describe('listTimeZones', () => {
     expect(zones).not.toContain('Asia/Calcutta');
     expect(zones).not.toContain('Europe/Kiev');
     expect(zones).toEqual([...new Set(zones)].sort());
+  });
+});
+
+describe('systemTimeZone', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function reportZone(timeZone: string) {
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+      locale: 'en-US',
+      calendar: 'gregory',
+      numberingSystem: 'latn',
+      timeZone,
+    });
+  }
+
+  it('returns the current name when the system reports a legacy one', () => {
+    reportZone('Asia/Calcutta');
+    expect(systemTimeZone()).toBe('Asia/Kolkata');
+  });
+
+  it('falls back to UTC when the system reports no usable zone', () => {
+    reportZone('Not/AZone');
+    expect(systemTimeZone()).toBe('UTC');
   });
 });
 
