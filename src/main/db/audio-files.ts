@@ -20,10 +20,10 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
     .prepare(
       `
     INSERT INTO audio_files (
-      run_id, file_path, file_name, recording_start, timezone_offset_min,
+      run_id, file_path, file_name, recording_start, timezone_offset_min, timestamp_source,
       duration_sec, sample_rate, channels,
       audiomoth_device_id, audiomoth_gain, audiomoth_battery_v, audiomoth_temperature_c
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     )
     .run(
@@ -32,6 +32,7 @@ export function createAudioFile(runId: number, filePath: string, metadata: Audio
       path.basename(filePath),
       metadata.recording_start,
       metadata.timezone_offset_min,
+      metadata.timestamp_source,
       metadata.duration_sec,
       metadata.sample_rate,
       metadata.channels,

@@ -37,6 +37,11 @@ describe.skipIf(!posix)('execBirda', () => {
     await expect(execBirda([])).resolves.toBe('hello\n');
   });
 
+  it('runs birda with NO_COLOR set', async () => {
+    setBirdaPath(fakeBirda('env', 'echo "$NO_COLOR"'));
+    await expect(execBirda([])).resolves.toBe('1\n');
+  });
+
   it('kills a birda that does not finish and says how long it waited', async () => {
     setBirdaPath(fakeBirda('slow', 'exec sleep 5'));
     await expect(execBirda(['config', 'show'], { timeoutMs: 200 })).rejects.toThrow(

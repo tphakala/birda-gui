@@ -2,7 +2,6 @@ import { ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import type { AudioFileInfo, AudioMothMeta, SourceScanResult } from '$shared/types';
-import { parseRecordingName } from '$shared/recording-name';
 
 export const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.flac', '.ogg', '.m4a']);
 
@@ -80,42 +79,6 @@ function parseAudioMothComment(comment: string | undefined, artist: string | und
   return { deviceId, gain, batteryV, temperatureC, recordedAt, timezoneOffsetMin };
 }
 
-/**
- * Parse recording start time from AudioMoth-style filenames: YYYYMMDD_HHMMSS
- * Returns null if the filename doesn't match the pattern or holds an impossible date or time.
- * Allows additional suffixes after timestamp (e.g., "20250328_032043_48khz.flac")
- */
-export function parseRecordingStart(filename: string): Date | null {
-  const parsed = parseRecordingName(filename, { allowSuffix: true });
-  if (!parsed) return null;
-  // Parse as UTC to avoid timezone interpretation issues
-  return new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute, parsed.second));
-}
-
-/**
- * Format Date + timezone offset as ISO 8601 string
- * Date is assumed to be in UTC, components are extracted using UTC getters
- * Example: formatIsoTimestamp(new Date(Date.UTC(2025, 0, 15, 14, 30, 22)), 0) => "2025-01-15T14:30:22Z"
- */
-export function formatIsoTimestamp(date: Date, offsetMin: number): string {
-  const year = date.getUTCFullYear();
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-  const day = date.getUTCDate().toString().padStart(2, '0');
-  const hour = date.getUTCHours().toString().padStart(2, '0');
-  const minute = date.getUTCMinutes().toString().padStart(2, '0');
-  const second = date.getUTCSeconds().toString().padStart(2, '0');
-
-  const offsetSign = offsetMin >= 0 ? '+' : '-';
-  const offsetAbs = Math.abs(offsetMin);
-  const offsetHour = Math.floor(offsetAbs / 60)
-    .toString()
-    .padStart(2, '0');
-  const offsetMinute = (offsetAbs % 60).toString().padStart(2, '0');
-  const offsetStr = offsetMin === 0 ? 'Z' : `${offsetSign}${offsetHour}:${offsetMinute}`;
-
-  return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetStr}`;
-}
-
 interface AudioMeta {
   durationSec: number | null;
   sampleRate: number | null;
@@ -128,7 +91,7 @@ export async function getAudioMetadata(filePath: string): Promise<AudioMeta> {
     const { parseFile } = await import('music-metadata');
     const metadata = await parseFile(filePath, { duration: true, skipCovers: true });
 
-    // Extract comment — music-metadata stores it in common.comment as an array
+    // Extract comment - music-metadata stores it in common.comment as an array
     const commentArr = metadata.common.comment;
     const comment = Array.isArray(commentArr) ? (commentArr[0]?.text ?? commentArr[0]) : undefined;
     const artist = metadata.common.artist ?? metadata.common.albumartist;

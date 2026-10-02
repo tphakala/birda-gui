@@ -14,14 +14,14 @@ vi.mock('../db/database', () => ({
   optimizeDatabase: vi.fn(),
   vacuumDatabase: vi.fn(),
 }));
-vi.mock('../db/runs', () => ({ getRunsWithStats: vi.fn(), deleteRun: vi.fn() }));
+vi.mock('../db/runs', () => ({ getRunsWithStats: vi.fn(), deleteRun: vi.fn(), setRunTimezone: vi.fn(() => 2) }));
 vi.mock('../db/detections', () => ({}));
 vi.mock('../db/locations', () => ({}));
 vi.mock('../labels/label-service', () => ({}));
 
 const { registerCatalogHandlers } = await import('./catalog');
 const { clearDatabase } = await import('../db/database');
-const { deleteRun } = await import('../db/runs');
+const { deleteRun, setRunTimezone } = await import('../db/runs');
 registerCatalogHandlers();
 
 beforeEach(() => {
@@ -55,5 +55,24 @@ describe('catalog:delete-run', () => {
     h.activeRun = 3;
     expect(() => invoke('catalog:delete-run', 3)).toThrow('Stop the analysis');
     expect(deleteRun).not.toHaveBeenCalled();
+  });
+});
+
+describe('catalog:set-run-timezone', () => {
+  it('sets the zone of a run that no analysis is writing to and returns the files changed', () => {
+    h.activeRun = 3;
+    expect(invoke('catalog:set-run-timezone', 2, 'Europe/Helsinki')).toBe(2);
+    expect(setRunTimezone).toHaveBeenCalledWith(2, 'Europe/Helsinki');
+  });
+
+  it('refuses the run of the running analysis', () => {
+    h.activeRun = 3;
+    expect(() => invoke('catalog:set-run-timezone', 3, 'UTC')).toThrow('Stop the analysis');
+    expect(setRunTimezone).not.toHaveBeenCalled();
+  });
+
+  it.each(['Mars/Base', '', 42])('refuses the zone %j', (zone) => {
+    expect(() => invoke('catalog:set-run-timezone', 2, zone)).toThrow('Unknown time zone');
+    expect(setRunTimezone).not.toHaveBeenCalled();
   });
 });

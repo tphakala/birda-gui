@@ -16,7 +16,7 @@ vi.mock('child_process', async (importOriginal) => ({
   }),
 }));
 
-const { CANCEL_KILL_TIMEOUT_MS, killAll, runAnalysis, setBirdaPath } = await import('./runner');
+const { CANCEL_KILL_TIMEOUT_MS, birdaChildEnv, killAll, runAnalysis, setBirdaPath } = await import('./runner');
 
 const fakeBirda = createFakeBirda();
 const options = { model: 'birdnet', minConfidence: 0.1 };
@@ -105,6 +105,34 @@ describe('runAnalysis', () => {
     const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
     expect(message.length).toBeLessThan(1100);
     expect(message).not.toContain('earlier lines omitted');
+  });
+
+  it('starts birda with NO_COLOR set and the rest of the environment kept', async () => {
+    const { spawn } = await import('child_process');
+    const handle = runAnalysis('/rec.wav', options);
+    (await spawnedChild()).exit(0);
+    await handle.promise;
+    const env = (vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv }).env;
+    expect(env?.NO_COLOR).toBe('1');
+    expect(env?.PATH).toBe(process.env.PATH);
+  });
+
+  it('removes colour codes from stderr in the error, the log and the stderr callback', async () => {
+    const esc = String.fromCharCode(27);
+    const handle = runAnalysis('/rec.wav', options);
+    const logs: string[] = [];
+    const lines: string[] = [];
+    handle.on('log', (_level, message) => logs.push(message));
+    handle.on('stderr', (line) => lines.push(line));
+    const child = await spawnedChild();
+    child.stderr.write(`${esc}[31merror:${esc}[0m model missing\n`);
+    await new Promise((r) => setImmediate(r));
+    child.exit(1);
+    const message = ((await handle.promise.catch((e: unknown) => e)) as Error).message;
+    expect(message).toContain('error: model missing');
+    expect(message).not.toContain(esc);
+    expect(lines).toEqual(['error: model missing']);
+    expect(logs.join('\n')).not.toContain(esc);
   });
 
   it('logs an event by name only and skips progress events', async () => {
@@ -251,5 +279,14 @@ describe('killAll', () => {
     expect(child.killCalls).toEqual([]);
     child.exit(0);
     await handle.promise;
+  });
+});
+
+describe('birdaChildEnv', () => {
+  it('sets NO_COLOR, keeps the environment and lets extra values override it', () => {
+    const env = birdaChildEnv({ LD_LIBRARY_PATH: '/cuda' });
+    expect(env.NO_COLOR).toBe('1');
+    expect(env.LD_LIBRARY_PATH).toBe('/cuda');
+    expect(env.PATH).toBe(process.env.PATH);
   });
 });

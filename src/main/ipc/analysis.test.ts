@@ -15,7 +15,7 @@ const h = vi.hoisted(() => {
       resolve = res;
       reject = rej;
     });
-    const callbacks: { data?: (e: unknown) => void } = {};
+    const callbacks: { data?: (e: unknown) => void; stderr?: (line: string) => void } = {};
     return {
       promise,
       resolve,
@@ -23,6 +23,10 @@ const h = vi.hoisted(() => {
       cancel: vi.fn(),
       on(event: string, cb: (...args: never[]) => void) {
         if (event === 'data') callbacks.data = cb as (e: unknown) => void;
+        if (event === 'stderr') callbacks.stderr = cb as (line: string) => void;
+      },
+      emitStderr(line: string) {
+        callbacks.stderr?.(line);
       },
       emit(envelope: unknown) {
         callbacks.data?.(envelope);
@@ -46,10 +50,16 @@ vi.mock('../birda/runner', () => ({
     return handle;
   }),
   findBirda: vi.fn(),
+  birdaChildEnv: () => ({}),
 }));
 
 vi.mock('../db/runs', () => ({
-  createRun: vi.fn(() => ({ id: h.nextRunId++, timezone_offset_min: null })),
+  createRun: vi.fn((...args: unknown[]) => ({
+    id: h.nextRunId++,
+    timezone_offset_min: args[5] ?? null,
+    timezone: args[6] ?? null,
+  })),
+  setRunRangeFilterNote: vi.fn(),
   finishRun: vi.fn(() => ({ replaced: 0, discardedPartial: false })),
 }));
 vi.mock('../db/locations', () => ({ createLocation: vi.fn(), findLocationByCoords: vi.fn() }));
@@ -67,7 +77,7 @@ vi.mock('./files', async (importOriginal) => ({
 
 const { activeRunId, isAnalysisActive, registerAnalysisHandlers, stopAnalysisForQuit } = await import('./analysis');
 const { runAnalysis } = await import('../birda/runner');
-const { createRun, finishRun } = await import('../db/runs');
+const { createRun, finishRun, setRunRangeFilterNote } = await import('../db/runs');
 const { createLocation, findLocationByCoords } = await import('../db/locations');
 const { createAudioFile, deleteAudioFile } = await import('../db/audio-files');
 const { importDetectionsFromJson, insertDetections } = await import('../db/detections');
@@ -498,6 +508,114 @@ describe('stopAnalysisForQuit', () => {
     await run;
     expect(finishRun).toHaveBeenCalledTimes(1);
     expect(finishRun).toHaveBeenCalledWith(expect.any(Number), 'completed', false);
+  });
+
+  describe('file name timestamps', () => {
+    const named = '/rec/20260315_103000.wav';
+    const importNamed = async (extra: Record<string, unknown>) => {
+      const run = analyze(sourceFile, extra);
+      const handle = await started();
+      handle.emit(envelope('pipeline_started', { total_files: 1 }));
+      handle.emit(envelope('detections', { file: named, detections: [{ scientific_name: 'Turdus merula' }] }));
+      handle.emit(envelope('file_completed', { file: named, status: 'processed', detections: 1 }));
+      handle.resolve();
+      await run;
+    };
+
+    it('reads the name in the requested zone, at that file date, and marks it as from the filename', async () => {
+      await importNamed({ timezone: 'Europe/Helsinki' });
+
+      expect(createRun).toHaveBeenCalledWith(sourceFile, 'birdnet', 0.1, null, undefined, undefined, 'Europe/Helsinki');
+      expect(createAudioFile).toHaveBeenCalledWith(
+        expect.any(Number),
+        named,
+        expect.objectContaining({
+          recording_start: '2026-03-15T10:30:00+02:00',
+          timezone_offset_min: 120,
+          timestamp_source: 'filename',
+        }),
+      );
+    });
+
+    it('reads the name as UTC when the run has no zone', async () => {
+      await importNamed({});
+
+      expect(createAudioFile).toHaveBeenCalledWith(
+        expect.any(Number),
+        named,
+        expect.objectContaining({
+          recording_start: '2026-03-15T10:30:00Z',
+          timezone_offset_min: 0,
+          timestamp_source: 'filename',
+        }),
+      );
+    });
+
+    it('keeps an AudioMoth header start and marks it as from the header', async () => {
+      vi.mocked(getAudioMetadata).mockResolvedValueOnce({
+        durationSec: 1,
+        sampleRate: 48000,
+        channels: 1,
+        audiomoth: {
+          deviceId: 'AM1',
+          gain: null,
+          batteryV: null,
+          temperatureC: null,
+          recordedAt: '2026-03-15T11:30:00+03:00',
+          timezoneOffsetMin: 180,
+        },
+      });
+
+      await importNamed({ timezone: 'Europe/Helsinki' });
+
+      expect(createAudioFile).toHaveBeenCalledWith(
+        expect.any(Number),
+        named,
+        expect.objectContaining({
+          recording_start: '2026-03-15T11:30:00+03:00',
+          timezone_offset_min: 180,
+          timestamp_source: 'header',
+        }),
+      );
+    });
+
+    it('rejects a time zone that does not exist', async () => {
+      await expect(analyze(sourceFile, { timezone: 'Mars/Base' })).rejects.toThrow();
+    });
+  });
+
+  describe('range filter warning', () => {
+    it('stores the first warning on the run, logs it and returns it in the result', async () => {
+      const run = analyze();
+      const handle = await started();
+      handle.emitStderr("WARN birda: Range filtering disabled for model 'x': no meta model configured");
+      handle.emitStderr('WARN birda: Range filtering disabled: something else');
+      handle.resolve();
+
+      await expect(run).resolves.toMatchObject({ rangeFilterNote: 'no meta model configured' });
+      expect(setRunRangeFilterNote).toHaveBeenCalledTimes(1);
+      expect(setRunRangeFilterNote).toHaveBeenCalledWith(expect.any(Number), 'no meta model configured');
+    });
+
+    it('leaves the note out when birda printed no such warning', async () => {
+      const run = analyze();
+      const handle = await started();
+      handle.emitStderr('WARN birda: something unrelated');
+      handle.resolve();
+
+      expect((await run).rangeFilterNote).toBeUndefined();
+      expect(setRunRangeFilterNote).not.toHaveBeenCalled();
+    });
+
+    it('ignores a warning that arrives after the quit', async () => {
+      const run = analyze();
+      const handle = await started();
+      stopAnalysisForQuit();
+      handle.emitStderr('WARN Range filtering disabled: no meta model configured');
+      handle.reject(new AnalysisCancelledError());
+      await run;
+      expect(setRunRangeFilterNote).not.toHaveBeenCalled();
+    });
   });
 
   it('writes nothing for events that arrive after the quit', async () => {

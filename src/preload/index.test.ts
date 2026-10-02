@@ -22,6 +22,7 @@ const { ipcRenderer } = (await import('electron')) as unknown as { ipcRenderer: 
 
 type On = (channel: string, callback: (...args: unknown[]) => void) => () => void;
 const on = (...args: Parameters<On>) => (h.api?.on as unknown as On)(...args);
+const invoke = (...args: unknown[]) => (h.api?.invoke as unknown as (...a: unknown[]) => Promise<unknown>)(...args);
 
 describe('window.birda.on', () => {
   it('returns an unsubscribe that removes only its own listener', () => {
@@ -38,6 +39,24 @@ describe('window.birda.on', () => {
 
   it('refuses a channel that is not allowlisted', () => {
     expect(() => on('not:allowed', vi.fn())).toThrow('IPC receive channel not allowed');
+  });
+});
+
+describe('window.birda.invoke', () => {
+  const failWith = (message: string) => {
+    vi.mocked((ipcRenderer as unknown as { invoke: () => Promise<unknown> }).invoke).mockRejectedValueOnce(
+      new Error(message),
+    );
+  };
+
+  it("strips Electron's remote method prefix from a handler's error", async () => {
+    failWith("Error invoking remote method 'birda:analyze': Error: Analysis failed: birda exited with code 1");
+    await expect(invoke('birda:analyze', {})).rejects.toThrow(/^Analysis failed: birda exited with code 1$/);
+  });
+
+  it('leaves an error without the prefix alone', async () => {
+    failWith('plain failure');
+    await expect(invoke('birda:analyze', {})).rejects.toThrow(/^plain failure$/);
   });
 });
 

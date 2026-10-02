@@ -268,6 +268,30 @@ describe('initializeCatalog', () => {
     expect(upgraded.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
+  it('migration 10 sets the timestamp source of existing audio files and adds the run columns', () => {
+    const db = v121Catalog([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    db.exec(`
+      INSERT INTO analysis_runs (id, source_path, model, status) VALUES (1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (run_id, file_path, file_name, recording_start, audiomoth_device_id)
+      VALUES (1, '/rec/a.wav', 'a.wav', '2024-05-01T05:30:00+03:00', 'AM1'),
+             (1, '/rec/20240501_053000.wav', '20240501_053000.wav', '2024-05-01 05:30:00', NULL),
+             (1, '/rec/c.wav', 'c.wav', NULL, NULL);
+    `);
+
+    initializeCatalog(db);
+
+    const sources = db.prepare('SELECT file_name, timestamp_source AS s FROM audio_files ORDER BY id').all();
+    expect(sources).toEqual([
+      { file_name: 'a.wav', s: 'header' },
+      { file_name: '20240501_053000.wav', s: 'filename' },
+      { file_name: 'c.wav', s: null },
+    ]);
+    expect(db.prepare('SELECT timezone, range_filter_note FROM analysis_runs').get()).toEqual({
+      timezone: null,
+      range_filter_note: null,
+    });
+  });
+
   it.each([
     ['migration 8', [1, 2, 3, 4, 5, 6]],
     ['migrations 4 and 8', [1, 2, 3]],
@@ -282,7 +306,11 @@ describe('initializeCatalog', () => {
         (3, NULL, '/rec/c', 'birdnet', 0.1, NULL, 'failed', '2024-05-03 12:00:00', NULL, NULL);
       DELETE FROM analysis_runs WHERE id = 3;
     `);
-    const before = db.prepare('SELECT * FROM analysis_runs ORDER BY id').all();
+    const before = (db.prepare('SELECT * FROM analysis_runs ORDER BY id').all() as object[]).map((row) => ({
+      ...row,
+      timezone: null,
+      range_filter_note: null,
+    }));
 
     initializeCatalog(db);
 
@@ -529,9 +557,23 @@ describe('initializeCatalog locking', () => {
     const db = memoryDb();
     initializeCatalog(db);
     const row = db
-      .prepare('SELECT detection_hour(?, ?) AS a, detection_hour(NULL, ?) AS b')
-      .get('/rec/20240501_053000_A.wav', 1800, 7300) as { a: number; b: number };
-    expect(row).toEqual({ a: 6, b: 2 });
+      .prepare(
+        `SELECT detection_hour(?, ?, NULL, 0) AS a,
+                detection_hour(NULL, ?, NULL, 0) AS b,
+                detection_hour(?, ?, 'Europe/Helsinki', 180) AS c,
+                detection_hour(?, ?, NULL, 180) AS d,
+                detection_hour('garbage', 0, NULL, NULL) AS e`,
+      )
+      .get(
+        '2024-05-01T05:30:00Z',
+        1800,
+        7300,
+        '2024-05-01T05:30:00+03:00',
+        1800,
+        '2024-05-01T02:30:00Z',
+        1800,
+      ) as Record<string, number | null>;
+    expect(row).toEqual({ a: 6, b: null, c: 6, d: 6, e: null });
   });
 
   // Each migration that opens an IMMEDIATE transaction is replayed against a current
@@ -558,6 +600,7 @@ describe('initializeCatalog locking', () => {
     { version: 5, prepare: legacySourceFile, ran: (db) => !hasSourceFile(db) },
     { version: 7 },
     { version: 8 },
+    { version: 10 },
   ];
 
   it.each(replays)(

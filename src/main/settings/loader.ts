@@ -39,6 +39,7 @@ export async function loadSettings(): Promise<AppSettings> {
     default_spectrogram_height: 160,
     species_language: 'en',
     ui_language: 'en',
+    filename_timezone: '',
     theme: 'system',
     setup_completed: false,
   };

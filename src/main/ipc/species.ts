@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { fetchSpecies } from '../birda/species';
+import { fetchSpeciesForRequest } from '../birda/species';
 import {
   createSpeciesList,
   getSpeciesLists,
@@ -26,7 +26,7 @@ function enrichEntries(entries: SpeciesListEntry[]): EnrichedSpeciesListEntry[] 
 
 export function registerSpeciesHandlers(): void {
   ipcMain.handle('species:fetch', async (_event, request: SpeciesFetchRequest) => {
-    return fetchSpecies(request.latitude, request.longitude, request.week, request.threshold);
+    return fetchSpeciesForRequest(request);
   });
 
   ipcMain.handle('species:save-list', (_event, name: string, response: BirdaSpeciesResponse) => {

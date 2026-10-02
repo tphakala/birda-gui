@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import type { GpuCapabilities, BirdaProvidersResponse } from '$shared/types';
 import path from 'node:path';
 import { getCudaLibsDir } from '../cuda/manager';
+import { birdaChildEnv } from '../birda/runner';
 import { BIRDA_CLI_VERSION, CUDA_VERSION_FILE, NVIDIA_VENDOR_ID } from '$shared/constants';
 
 const execAsync = promisify(exec);
@@ -22,7 +23,7 @@ async function checkNvidiaSmi(): Promise<boolean> {
 
 async function getBirdaProviders(birdaPath: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(birdaPath, ['providers', '--output-mode', 'json']);
+    const proc = spawn(birdaPath, ['providers', '--output-mode', 'json'], { env: birdaChildEnv() });
     let stdout = '';
     let stderr = '';
     let resolved = false;

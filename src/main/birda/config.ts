@@ -39,15 +39,31 @@ export async function getRegistryLanguages(modelId: string): Promise<RegistryLan
   return model?.files.labels?.languages ?? [];
 }
 
-export async function getConfig(): Promise<Record<string, unknown>> {
+/** What `birda config show` reports: where the config file is and its contents. */
+export interface BirdaConfigPayload {
+  config_path?: string;
+  config: Record<string, unknown>;
+}
+
+export async function getConfig(): Promise<BirdaConfigPayload> {
   const stdout = await execBirda(['--output-mode', 'json', 'config', 'show'], {
     errorPrefix: 'Failed to get birda config: ',
   });
+  let payload: unknown;
   try {
-    return JSON.parse(stdout) as Record<string, unknown>;
+    payload = (JSON.parse(stdout) as { payload?: unknown }).payload;
   } catch {
     throw new Error(`Failed to parse birda config output: ${stdout.slice(0, 200)}`);
   }
+  const config = (payload as { config?: unknown } | null | undefined)?.config;
+  if (typeof config !== 'object' || config === null) {
+    throw new Error(`Unexpected birda config output: ${stdout.slice(0, 200)}`);
+  }
+  const { config_path } = payload as { config_path?: unknown };
+  return {
+    ...(typeof config_path === 'string' && { config_path }),
+    config: config as Record<string, unknown>,
+  };
 }
 
 export async function setDefaultModel(modelId: string): Promise<void> {

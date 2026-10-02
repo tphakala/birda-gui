@@ -46,7 +46,9 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
                         ${RUN_STATUS_CHECK},
     started_at          TEXT,
     completed_at        TEXT,
-    timezone_offset_min INTEGER
+    timezone_offset_min INTEGER,
+    timezone            TEXT,
+    range_filter_note   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS detections (
@@ -82,7 +84,8 @@ CREATE TABLE IF NOT EXISTS audio_files (
     audiomoth_gain          TEXT,
     audiomoth_battery_v     REAL,
     audiomoth_temperature_c REAL,
-    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at              TEXT NOT NULL DEFAULT (datetime('now')),
+    timestamp_source        TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audio_files_run ON audio_files(run_id);

@@ -11,7 +11,7 @@ import {
 } from '../db/detections';
 import { clearDatabase, checkDatabaseHealth, optimizeDatabase, vacuumDatabase } from '../db/database';
 import { getLocations, getLocationsWithCounts } from '../db/locations';
-import { getRunsWithStats, deleteRun } from '../db/runs';
+import { getRunsWithStats, deleteRun, setRunTimezone } from '../db/runs';
 import { resolveAll, searchByCommonName } from '../labels/label-service';
 import type {
   Detection,
@@ -24,6 +24,7 @@ import type {
   AudioFile,
 } from '$shared/types';
 import { activeRunId, isAnalysisActive } from './analysis';
+import { isValidTimeZone } from '$shared/time-zone';
 
 function enrichDetections(detections: (Detection & { audio_file: AudioFile | null })[]): EnrichedDetection[] {
   const scientificNames = [...new Set(detections.map((d) => d.scientific_name))];
@@ -65,6 +66,17 @@ export function registerCatalogHandlers(): void {
       throw new Error('Stop the analysis before deleting its run.');
     }
     deleteRun(id);
+  });
+
+  ipcMain.handle('catalog:set-run-timezone', (_event, runId: number, timezone: string) => {
+    // The running analysis still writes this run's files with the old zone.
+    if (runId === activeRunId()) {
+      throw new Error('Stop the analysis before changing its time zone.');
+    }
+    if (typeof timezone !== 'string' || !isValidTimeZone(timezone)) {
+      throw new Error('Unknown time zone.');
+    }
+    return setRunTimezone(runId, timezone);
   });
 
   ipcMain.handle('catalog:get-detections', (_event, filter: DetectionFilter) => {
