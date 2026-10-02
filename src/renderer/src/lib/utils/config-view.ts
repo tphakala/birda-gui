@@ -4,10 +4,10 @@ export interface ConfigEntry {
   value: string | null;
 }
 
-/** Text of a config value: floats rounded to 7 significant digits (birda stores f32 widened to f64). */
+/** Text of a config value: non-integer numbers rounded to 7 significant digits (birda stores f32 widened to f64). */
 function formatValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'number') return String(Number(value.toPrecision(7)));
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(7)));
   if (typeof value === 'string') return value === '' ? null : value;
   if (typeof value === 'boolean') return String(value);
   if (Array.isArray(value)) {

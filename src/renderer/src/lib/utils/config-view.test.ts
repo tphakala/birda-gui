@@ -20,6 +20,13 @@ describe('flattenConfig', () => {
     ]);
   });
 
+  it('keeps integers exact', () => {
+    expect(flattenConfig({ models: { max_bytes: 123456789, seed: 16777217 } })).toEqual([
+      { key: 'models.max_bytes', value: '123456789' },
+      { key: 'models.seed', value: '16777217' },
+    ]);
+  });
+
   it('marks nulls, empty strings, empty arrays and empty sections as not set', () => {
     expect(
       flattenConfig({ defaults: { latitude: null, label: '', formats: [], csv_columns: { include: [] } }, models: {} }),
