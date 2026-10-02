@@ -7,9 +7,11 @@
   import { mapAvailable } from '$lib/utils/maplibre';
   import * as m from '$paraglide/messages';
 
+  // Probed once per opening and shared with AppMap, so the layout and the map agree.
+  let mapSupported = $state(false);
   // Set when the map throws while starting; the dialog then falls back like a system without WebGL 2.
   let mapFailed = $state(false);
-  const canShowMap = $derived(mapAvailable() && !mapFailed);
+  const canShowMap = $derived(mapSupported && !mapFailed);
 
   let {
     latitude = $bindable(), // eslint-disable-line @typescript-eslint/no-useless-default-assignment -- $bindable() required for Svelte bind:
@@ -51,6 +53,7 @@
       type="button"
       onclick={() => {
         // Each opening tries the map again in its full-height area.
+        mapSupported = mapAvailable();
         mapFailed = false;
         showMapModal = true;
       }}
@@ -117,6 +120,7 @@
           cursor="crosshair"
           onclick={handleMapClick}
           message={m.coords_mapUnavailable()}
+          available={mapSupported}
           onfail={() => (mapFailed = true)}
         >
           {#if mapPoint}

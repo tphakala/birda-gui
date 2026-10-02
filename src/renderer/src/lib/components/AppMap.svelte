@@ -12,12 +12,15 @@
    */
   const {
     message,
+    available = mapAvailable(),
     onfail,
     onerror,
     ...rest
   }: ComponentProps<typeof MapLibre> & {
     /** Shown instead of the map. */
     message: string;
+    /** Whether WebGL 2 is present; probed here unless the caller already did. */
+    available?: boolean;
     /** Called once when the map fails to start or to restore its WebGL context. */
     onfail?: () => void;
   } = $props();
@@ -44,7 +47,7 @@
   }
 </script>
 
-{#if mapAvailable() && !gpuFailed}
+{#if available && !gpuFailed}
   <svelte:boundary onerror={fail}>
     <MapLibre
       style="https://tiles.openfreemap.org/styles/bright"
