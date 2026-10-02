@@ -267,7 +267,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - zod@4.6.1
+ - zod@4.6.5
 
 This package contains the following license:
 
@@ -454,7 +454,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - music-metadata@11.15.0
+ - music-metadata@11.16.1
 
 This package contains the following license:
 
