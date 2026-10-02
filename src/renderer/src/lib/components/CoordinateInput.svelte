@@ -49,7 +49,11 @@
     {/if}
     <button
       type="button"
-      onclick={() => (showMapModal = true)}
+      onclick={() => {
+        // Each opening tries the map again in its full-height area.
+        mapFailed = false;
+        showMapModal = true;
+      }}
       class="btn btn-outline btn-sm ml-auto gap-1.5"
       title={m.coords_pickOnMap()}
     >
