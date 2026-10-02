@@ -8,10 +8,10 @@ import { supportsWebGL2 } from './webgl';
 // module from a map component runs this before the component creates its map.
 setWorkerUrl(workerUrl);
 
-let available: boolean | undefined;
+let available = false;
 
-/** Whether a map can be drawn here (WebGL 2 is present); probed once. */
+/** Whether a map can be drawn here (WebGL 2 is present). A success is kept; a failure is probed again on the next call, in case it was temporary. */
 export function mapAvailable(): boolean {
-  available ??= supportsWebGL2();
+  available ||= supportsWebGL2();
   return available;
 }

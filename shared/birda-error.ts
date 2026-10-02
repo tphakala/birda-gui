@@ -24,7 +24,9 @@ export function describeBirdaFailure(message: string): BirdaFailure {
   // The last line of either form wins.
   for (let i = lines.length - 1; i >= 0 && headline === undefined; i--) {
     const line = lines[i] ?? '';
-    headline = (/^\s*error:\s*(.+)$/i.exec(line) ?? /\sERROR\s+[^\s:]+(?:::\S+)*:\s*(.+)$/.exec(line))?.[1]?.trim();
+    const found = (/^\s*error:\s*(.+)$/i.exec(line) ?? /\sERROR\s+[^\s:]+(?:::\S+)*:\s*(.+)$/.exec(line))?.[1]?.trim();
+    // An error line with no text after the marker says nothing; keep looking.
+    if (found) headline = found;
   }
   return {
     headline: headline ?? (lines.length > 0 ? lines[0].trim() : cleaned),

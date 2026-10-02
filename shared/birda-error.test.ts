@@ -10,6 +10,10 @@ describe('stripAnsi', () => {
 });
 
 describe('describeBirdaFailure', () => {
+  it('skips an error line with nothing after the marker', () => {
+    expect(describeBirdaFailure('error: model not found\nerror:   \nexiting').headline).toBe('model not found');
+  });
+
   it('takes the last error: line from ANSI stderr and strips the IPC prefix', () => {
     const msg =
       "Error invoking remote method 'birda:analyze': Error: Analysis failed: birda exited with code 1\n" +
