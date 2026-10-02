@@ -505,7 +505,7 @@ describe('run time columns', () => {
     expect(getRunsWithStats()[0]?.range_filter_note).toBe('no meta model configured');
   });
 
-  it('getRunsWithStats counts timed and filename files and reports the first start', () => {
+  it('getRunsWithStats counts files with a parseable start and filename files, and reports the first and last start', () => {
     const run = createRun('/rec', 'birdnet', 0.1);
     const insert = db().prepare(
       'INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timestamp_source) VALUES (?, ?, ?, ?, ?)',
@@ -513,12 +513,14 @@ describe('run time columns', () => {
     insert.run(run.id, '/rec/a.wav', 'a.wav', '2026-03-30T12:00:00+03:00', 'filename');
     insert.run(run.id, '/rec/b.wav', 'b.wav', '2026-03-29T08:00:00Z', 'header');
     insert.run(run.id, '/rec/c.wav', 'c.wav', null, null);
+    insert.run(run.id, '/rec/d.wav', 'd.wav', 'not a time', 'filename');
 
     expect(getRunsWithStats()[0]).toMatchObject({
-      file_count: 3,
+      file_count: 4,
       timed_file_count: 2,
-      filename_file_count: 1,
+      filename_file_count: 2,
       first_recording_start: '2026-03-29 08:00:00',
+      last_recording_start: '2026-03-30 09:00:00',
     });
   });
 
@@ -528,6 +530,7 @@ describe('run time columns', () => {
       timed_file_count: 0,
       filename_file_count: 0,
       first_recording_start: null,
+      last_recording_start: null,
     });
   });
 });

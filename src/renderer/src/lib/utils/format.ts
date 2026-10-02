@@ -74,7 +74,7 @@ const two = (n: number): string => n.toString().padStart(2, '0');
 
 /**
  * Format detection date from recording_start + offset, in the run's zone
- * Returns: "01-15" (MM-DD) for current year, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
+ * Returns: "01-15" (MM-DD) for the current year on the zone's clock, "25-01-15" (YY-MM-DD) for other years, or "--" if no timestamp
  */
 export function formatDetectionDate(
   detection: { audio_file: { recording_start: string | null } | null; start_time: number },
@@ -82,8 +82,8 @@ export function formatDetectionDate(
 ): string {
   const wall = detectionWall(detection, zone);
   if (!wall) return '--';
-  // Include year if different from current year
-  if (wall.year !== new Date().getFullYear()) {
+  // Include the year when it differs from the current year on the same clock
+  if (wall.year !== wallClockAt(Date.now(), zone).year) {
     return `${two(wall.year % 100)}-${two(wall.month)}-${two(wall.day)}`;
   }
   return `${two(wall.month)}-${two(wall.day)}`;

@@ -8,6 +8,8 @@
    */
   interface Props {
     value: string;
+    /** Shown, and not selectable, while value is '' (no zone chosen yet). */
+    placeholder?: string | undefined;
     onchange?: ((zone: string) => void) | undefined;
     id?: string | undefined;
     disabled?: boolean | undefined;
@@ -18,6 +20,7 @@
   /* eslint-disable prefer-const, @typescript-eslint/no-useless-default-assignment */
   let {
     value = $bindable(),
+    placeholder,
     onchange,
     id,
     disabled = false,
@@ -47,6 +50,9 @@
   }}
   class="select select-bordered select-sm {className}"
 >
+  {#if placeholder !== undefined && value === ''}
+    <option value="" disabled>{placeholder}</option>
+  {/if}
   <option value="UTC">UTC</option>
   {#if system !== 'UTC'}
     <option value={system}>{m.timezone_system({ zone: system })}</option>

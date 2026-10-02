@@ -65,14 +65,15 @@ export async function fetchSpecies(
   return payload as unknown as BirdaSpeciesResponse;
 }
 
-/** Message of the error thrown when no installed model has a range (meta) model; speciesFetchProblem recognises it. */
+/** Messages of the errors thrown when no model is installed, or none has a range (meta) model; speciesFetchProblem recognises both. */
+const NO_INSTALLED_MODEL_MESSAGE = 'No model is installed';
 const NO_RANGE_MODEL_MESSAGE = 'No installed model has a range filter (meta model)';
 
 /**
  * Fetch Species with the best range model for the request: birda needs a model
  * with its own meta model and does not borrow another's. When the model list
  * cannot be read, birda is called without a model and left to report what is wrong;
- * when it is empty, this throws a "no model" error without calling birda.
+ * when it is empty, this throws a "no model installed" error without calling birda.
  * The result names the model used.
  */
 export async function fetchSpeciesForRequest(request: SpeciesFetchRequest): Promise<BirdaSpeciesResponse> {
@@ -86,8 +87,7 @@ export async function fetchSpeciesForRequest(request: SpeciesFetchRequest): Prom
   if (models === null) {
     return fetchSpecies(request.latitude, request.longitude, request.week, request.threshold);
   }
-  // birda's own wording for this case, so the renderer classifies it as no model.
-  if (models.length === 0) throw new Error('No model specified: no model is installed');
+  if (models.length === 0) throw new Error(NO_INSTALLED_MODEL_MESSAGE);
   const picked = pickRangeModel(models, request.model);
   if (!picked) throw new Error(NO_RANGE_MODEL_MESSAGE);
   const response = await fetchSpecies(request.latitude, request.longitude, request.week, request.threshold, picked.id);

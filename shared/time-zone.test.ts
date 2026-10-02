@@ -4,6 +4,7 @@ import {
   formatIsoWithOffset,
   isValidTimeZone,
   offsetAt,
+  offsetLabel,
   parseStoredInstant,
   wallClockAt,
   zonedWallToUtc,
@@ -94,6 +95,17 @@ describe('parseStoredInstant', () => {
   it('returns null for null and garbage', () => {
     expect(parseStoredInstant(null)).toBeNull();
     expect(parseStoredInstant('not a date')).toBeNull();
+  });
+});
+
+describe('offsetLabel', () => {
+  it.each([
+    [0, 'UTC'],
+    [180, 'UTC+03:00'],
+    [-330, 'UTC-05:30'],
+    [345, 'UTC+05:45'],
+  ])('labels %i as %s', (offset, label) => {
+    expect(offsetLabel(offset)).toBe(label);
   });
 });
 

@@ -108,9 +108,10 @@ export function getRunsWithStats(): RunWithStats[] {
       ar.*,
       (SELECT COUNT(*) FROM detections d WHERE d.run_id = ar.id) as detection_count,
       (SELECT COUNT(*) FROM audio_files af WHERE af.run_id = ar.id) as file_count,
-      (SELECT COUNT(recording_start) FROM audio_files af WHERE af.run_id = ar.id) as timed_file_count,
+      (SELECT COUNT(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as timed_file_count,
       (SELECT COALESCE(SUM(timestamp_source = 'filename'), 0) FROM audio_files af WHERE af.run_id = ar.id) as filename_file_count,
       (SELECT MIN(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as first_recording_start,
+      (SELECT MAX(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as last_recording_start,
       l.name as location_name,
       l.latitude,
       l.longitude

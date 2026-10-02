@@ -147,12 +147,14 @@ export interface AnalysisRun {
 export interface RunWithStats extends AnalysisRun {
   detection_count: number;
   file_count: number; // NEW: number of audio files in this run
-  /** Files with a recording start. */
+  /** Files with a recording start that parses as a time. */
   timed_file_count: number;
   /** Files whose recording start was read from the file name (the run's zone applies to them). */
   filename_file_count: number;
   /** Earliest recording start in the run, as stored (UTC text), or null. */
   first_recording_start: string | null;
+  /** Latest recording start in the run, as stored (UTC text), or null. */
+  last_recording_start: string | null;
   is_directory: boolean; // NEW: true if source_path is a directory
   location_name: string | null;
   latitude: number | null;

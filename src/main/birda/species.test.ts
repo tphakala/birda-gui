@@ -116,10 +116,10 @@ describe('fetchSpeciesForRequest', () => {
     expect(execBirda).not.toHaveBeenCalled();
   });
 
-  it('throws a message that classifies as no model when nothing is installed', async () => {
+  it('throws a message that classifies as no installed model when nothing is installed', async () => {
     vi.mocked(listModels).mockResolvedValue([]);
     const err = await fetchSpeciesForRequest(request).catch((e: unknown) => e as Error);
-    expect(speciesFetchProblem((err as Error).message)).toBe('no_model');
+    expect(speciesFetchProblem((err as Error).message)).toBe('no_installed_model');
     expect(execBirda).not.toHaveBeenCalled();
   });
 

@@ -124,6 +124,14 @@ export function parseStoredInstant(s: string | null): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+/** Label of a fixed offset: "UTC", "UTC+03:00", "UTC-05:30". */
+export function offsetLabel(offsetMin: number): string {
+  if (offsetMin === 0) return 'UTC';
+  const sign = offsetMin < 0 ? '-' : '+';
+  const abs = Math.abs(offsetMin);
+  return `UTC${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
 export function isValidTimeZone(tz: string): boolean {
   if (tz === 'UTC') return true;
   if (tz === '') return false;

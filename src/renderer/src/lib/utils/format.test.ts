@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatDetectionDate, formatDetectionTime, parseRecordingStart } from './format';
 
 describe('parseRecordingStart', () => {
@@ -50,6 +50,21 @@ describe('formatDetectionDate', () => {
     const now = { audio_file: { recording_start: `${year}-06-15T12:00:00Z` }, start_time: 0 };
     expect(formatDetectionDate(now, 'UTC')).toBe('06-15');
     expect(formatDetectionDate(now, 'Europe/Helsinki')).toBe('06-15');
+  });
+
+  describe('around New Year', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('decides the current year on the run clock, not the machine clock', () => {
+      // 2026-12-31 23:30Z is already 2027-01-01 in Helsinki.
+      vi.useFakeTimers({ now: Date.parse('2026-12-31T23:30:00Z') });
+      const d = { audio_file: { recording_start: '2026-12-31T23:00:00Z' }, start_time: 0 };
+      expect(formatDetectionDate(d, 'Europe/Helsinki')).toBe('01-01');
+      expect(formatDetectionDate(d, 'UTC')).toBe('12-31');
+      expect(formatDetectionDate({ ...d, start_time: -86_400 }, 'Europe/Helsinki')).toBe('26-12-31');
+    });
   });
 
   it('shows -- without a recording start', () => {

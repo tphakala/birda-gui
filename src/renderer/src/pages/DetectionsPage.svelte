@@ -19,7 +19,7 @@
     setRunTimezone,
   } from '$lib/utils/ipc';
   import { formatNumber } from '$lib/utils/format';
-  import { displayZone, parseStoredInstant, wallClockAt } from '$shared/time-zone';
+  import { displayZone, offsetLabel, parseStoredInstant, wallClockAt } from '$shared/time-zone';
   import { latestRequest } from '$lib/utils/latest';
   import { keepIfPresent, reconcileSelectedRun } from '$lib/utils/selection';
   import type {
@@ -73,21 +73,29 @@
   const runZone = $derived(selectedRun ? displayZone(selectedRun.timezone, selectedRun.timezone_offset_min) : null);
   // The grid needs recording starts; files without one are left out of it.
   const gridAvailable = $derived((selectedRun?.timed_file_count ?? 0) > 0);
-  // The day the sun phases are drawn for: the first recording's date in the run's clock.
+  // The day the sun phases are drawn for, in the run's clock. A run whose
+  // recordings start on different days has no single day, so it gets no phases.
   const sunDate = $derived.by(() => {
-    const start = parseStoredInstant(selectedRun?.first_recording_start ?? null);
-    if (start === null || runZone === null) return null;
-    const { year, month, day } = wallClockAt(start, runZone);
-    return { year, month, day };
+    const first = parseStoredInstant(selectedRun?.first_recording_start ?? null);
+    const last = parseStoredInstant(selectedRun?.last_recording_start ?? null);
+    if (first === null || last === null || runZone === null) return null;
+    const a = wallClockAt(first, runZone);
+    const b = wallClockAt(last, runZone);
+    if (a.year !== b.year || a.month !== b.month || a.day !== b.day) return null;
+    return { year: a.year, month: a.month, day: a.day };
   });
+  // What the zone button shows: the run's zone, else the fixed offset its files are shown in.
+  const runZoneLabel = $derived(selectedRun?.timezone ?? offsetLabel(selectedRun?.timezone_offset_min ?? 0));
 
   // --- Run time zone dialog ---
   let zoneDialogOpen = $state(false);
   let zoneChoice = $state('UTC');
   let zoneSaving = $state(false);
 
+  // A run without a zone shows its files in a fixed offset that no zone stands
+  // for, so the dialog makes the user pick one instead of preselecting UTC.
   function openZoneDialog() {
-    zoneChoice = selectedRun?.timezone ?? 'UTC';
+    zoneChoice = selectedRun?.timezone ?? '';
     zoneDialogOpen = true;
   }
 
@@ -478,7 +486,7 @@
             title={m.detections_timezoneTitle()}
           >
             <Clock size={14} />
-            {m.detections_timezone({ zone: selectedRun.timezone ?? 'UTC' })}
+            {m.detections_timezone({ zone: runZoneLabel })}
           </button>
         {/if}
 
@@ -647,13 +655,23 @@
     <p id="run-zone-body" class="text-base-content/80 text-sm">
       {m.detections_timezoneBody({ count: String(selectedRun?.filename_file_count ?? 0) })}
     </p>
-    <TimeZoneSelect bind:value={zoneChoice} class="w-full" aria-label={m.detections_timezoneTitle()} />
+    <TimeZoneSelect
+      bind:value={zoneChoice}
+      placeholder={m.detections_timezoneChoose()}
+      class="w-full"
+      aria-label={m.detections_timezoneTitle()}
+    />
   </div>
   {#snippet actions()}
     <button type="button" class="btn btn-sm" onclick={() => (zoneDialogOpen = false)}>
       {m.common_button_cancel()}
     </button>
-    <button type="button" class="btn btn-primary btn-sm" onclick={() => void applyZone()} disabled={zoneSaving}>
+    <button
+      type="button"
+      class="btn btn-primary btn-sm"
+      onclick={() => void applyZone()}
+      disabled={zoneSaving || zoneChoice === '' || zoneChoice === selectedRun?.timezone}
+    >
       {m.common_button_apply()}
     </button>
   {/snippet}

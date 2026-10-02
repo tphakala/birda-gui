@@ -196,11 +196,13 @@
         const message = err instanceof Error ? err.message : String(err);
         const problem = speciesFetchProblem(message);
         fetchError =
-          problem === 'no_model'
-            ? m.species_fetch_noModel()
-            : problem === 'no_range_model'
-              ? m.species_fetch_noRangeModel()
-              : describeBirdaFailure(message).headline;
+          problem === 'no_installed_model'
+            ? m.species_fetch_noInstalledModel()
+            : problem === 'no_model'
+              ? m.species_fetch_noModel()
+              : problem === 'no_range_model'
+                ? m.species_fetch_noRangeModel()
+                : describeBirdaFailure(message).headline;
       }
     } finally {
       if (seq === fetchSeq) fetchLoading = false;

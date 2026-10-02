@@ -54,6 +54,7 @@ describe('speciesFetchProblem', () => {
     expect(speciesFetchProblem('range filtering requires meta model')).toBe('no_range_model');
     expect(speciesFetchProblem("model 'a' has no meta model")).toBe('no_range_model');
     expect(speciesFetchProblem('no installed model has a range filter')).toBe('no_range_model');
+    expect(speciesFetchProblem('No model is installed')).toBe('no_installed_model');
     expect(speciesFetchProblem('network down')).toBeNull();
   });
 });

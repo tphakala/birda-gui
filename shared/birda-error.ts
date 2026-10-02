@@ -39,10 +39,11 @@ export function rangeFilterDisabledReason(line: string): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
-export type SpeciesFetchProblem = 'no_model' | 'no_range_model';
+export type SpeciesFetchProblem = 'no_installed_model' | 'no_model' | 'no_range_model';
 
 /** Class of a Fetch Species failure the user can fix, else null. */
 export function speciesFetchProblem(message: string): SpeciesFetchProblem | null {
+  if (/no model is installed/i.test(message)) return 'no_installed_model';
   if (/no model specified/i.test(message)) return 'no_model';
   if (/requires meta model|has no meta model|no installed model has a range filter/i.test(message)) {
     return 'no_range_model';
