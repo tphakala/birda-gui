@@ -113,5 +113,7 @@ describe('displayZone', () => {
     expect(displayZone('Europe/Helsinki', 60)).toBe('Europe/Helsinki');
     expect(displayZone(null, 180)).toEqual({ offsetMin: 180 });
     expect(displayZone(null, null)).toEqual({ offsetMin: 0 });
+    expect(displayZone('Europe/Helsinki', 60, 'filename')).toBe('Europe/Helsinki');
+    expect(displayZone('Europe/Helsinki', 180, 'header')).toEqual({ offsetMin: 180 });
   });
 });

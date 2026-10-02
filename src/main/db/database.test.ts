@@ -558,11 +558,13 @@ describe('initializeCatalog locking', () => {
     initializeCatalog(db);
     const row = db
       .prepare(
-        `SELECT detection_hour(?, ?, NULL, 0) AS a,
-                detection_hour(NULL, ?, NULL, 0) AS b,
-                detection_hour(?, ?, 'Europe/Helsinki', 180) AS c,
-                detection_hour(?, ?, NULL, 180) AS d,
-                detection_hour('garbage', 0, NULL, NULL) AS e`,
+        `SELECT detection_hour(?, ?, NULL, 0, 'filename') AS a,
+                detection_hour(NULL, ?, NULL, 0, NULL) AS b,
+                detection_hour(?, ?, 'Europe/Helsinki', 180, 'filename') AS c,
+                detection_hour(?, ?, NULL, 180, 'filename') AS d,
+                detection_hour('garbage', 0, NULL, NULL, NULL) AS e,
+                detection_hour(?, 0, 'UTC', 180, 'header') AS f,
+                detection_hour(?, 0, 'UTC', 180, 'filename') AS g`,
       )
       .get(
         '2024-05-01T05:30:00Z',
@@ -572,8 +574,11 @@ describe('initializeCatalog locking', () => {
         1800,
         '2024-05-01T02:30:00Z',
         1800,
+        '2024-05-01T05:30:00+03:00',
+        '2024-05-01T05:30:00+03:00',
       ) as Record<string, number | null>;
-    expect(row).toEqual({ a: 6, b: null, c: 6, d: 6, e: null });
+    // A header file keeps its own offset (+03:00) in a run that has a zone; a name-timed file follows the run zone.
+    expect(row).toEqual({ a: 6, b: null, c: 6, d: 6, e: null, f: 5, g: 2 });
   });
 
   // Each migration that opens an IMMEDIATE transaction is replayed against a current

@@ -253,7 +253,7 @@ export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCoun
     .prepare(
       `
       SELECT d.scientific_name,
-             detection_hour(af.recording_start, d.start_time, ar.timezone, af.timezone_offset_min) AS hour,
+             detection_hour(af.recording_start, d.start_time, ar.timezone, af.timezone_offset_min, af.timestamp_source) AS hour,
              COUNT(*) AS detection_count
       FROM detections d
       JOIN audio_files af ON d.audio_file_id = af.id

@@ -146,9 +146,15 @@ export function systemTimeZone(): string {
 }
 
 /**
- * Zone a run's times are shown in: the run's own zone, else the offset stored
- * on the file (an AudioMoth header, or UTC when there is none).
+ * Zone a file's times are shown in: the run's own zone, else the offset stored
+ * on the file (an AudioMoth header, or UTC when there is none). A file whose
+ * start came from an AudioMoth header always uses its own offset, since the
+ * run's zone is the zone of file name timestamps.
  */
-export function displayZone(runTz: string | null, fileOffsetMin: number | null): ClockZone {
-  return runTz ?? { offsetMin: fileOffsetMin ?? 0 };
+export function displayZone(
+  runTz: string | null,
+  fileOffsetMin: number | null,
+  timestampSource: 'header' | 'filename' | null = null,
+): ClockZone {
+  return (timestampSource === 'header' ? null : runTz) ?? { offsetMin: fileOffsetMin ?? 0 };
 }

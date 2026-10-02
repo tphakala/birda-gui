@@ -36,7 +36,9 @@ function classifyAltitude(altDeg: number): SunPhase {
  * field is included with the from/to phases and the fractional position of the transition.
  *
  * Hours match the heatmap columns, which come from detection_hour() in the
- * catalog (src/main/db/database.ts) and are in the run's clock: the zone given here.
+ * catalog (src/main/db/database.ts). They are in the run's clock, the zone given
+ * here, except for files whose start came from an AudioMoth header: those are
+ * in their own offset.
  *
  * @param day        Calendar day in the zone's clock.
  * @param latitude   Recording location latitude.

@@ -34,7 +34,8 @@
   } = $props();
 
   // The run's zone, else the offset stored on the detection's file (UTC when it has none).
-  const zoneOf = (d: EnrichedDetection) => displayZone(runTimezone, d.audio_file?.timezone_offset_min ?? null);
+  const zoneOf = (d: EnrichedDetection) =>
+    displayZone(runTimezone, d.audio_file?.timezone_offset_min ?? null, d.audio_file?.timestamp_source ?? null);
 
   type ColumnKey = 'file_name' | 'date' | 'time' | 'start_time' | 'common_name' | 'scientific_name' | 'confidence';
 
