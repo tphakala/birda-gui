@@ -69,6 +69,7 @@ export function registerCatalogHandlers(): void {
   });
 
   ipcMain.handle('catalog:set-run-timezone', (_event, runId: number, timezone: string) => {
+    if (!Number.isInteger(runId)) throw new Error('Invalid run id.');
     // The running analysis still writes this run's files with the old zone.
     if (runId === activeRunId()) {
       throw new Error('Stop the analysis before changing its time zone.');

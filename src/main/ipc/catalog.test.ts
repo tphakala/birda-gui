@@ -71,6 +71,12 @@ describe('catalog:set-run-timezone', () => {
     expect(setRunTimezone).not.toHaveBeenCalled();
   });
 
+  it.each([null, undefined, '2', 1.5])('refuses the run id %j even when no analysis is running', (runId) => {
+    h.activeRun = null;
+    expect(() => invoke('catalog:set-run-timezone', runId, 'UTC')).toThrow('Invalid run id');
+    expect(setRunTimezone).not.toHaveBeenCalled();
+  });
+
   it.each(['Mars/Base', '', 42])('refuses the zone %j', (zone) => {
     expect(() => invoke('catalog:set-run-timezone', 2, zone)).toThrow('Unknown time zone');
     expect(setRunTimezone).not.toHaveBeenCalled();

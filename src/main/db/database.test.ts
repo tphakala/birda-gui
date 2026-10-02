@@ -292,6 +292,34 @@ describe('initializeCatalog', () => {
     });
   });
 
+  it('migration 10 pins zone-less starts from migration 5 to the wall clock in the file offset', () => {
+    const db = v121Catalog([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    db.exec(`
+      INSERT INTO analysis_runs (id, source_path, model, status) VALUES (1, '/rec', 'birdnet', 'completed');
+      INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min)
+      VALUES (1, '/rec/20240501_053000.wav', '20240501_053000.wav', '2024-05-01 05:30:00', 180),
+             (1, '/rec/20240501_063000.wav', '20240501_063000.wav', '2024-05-01 06:30:00', NULL),
+             (1, '/rec/20240501_073000.wav', '20240501_073000.wav', '2024-05-01T07:30:00-05:00', -300),
+             (1, '/rec/20240501_083000.wav', '20240501_083000.wav', '2024-05-01T08:30:00Z', 0);
+    `);
+
+    initializeCatalog(db);
+
+    expect(db.prepare('SELECT recording_start AS r FROM audio_files ORDER BY id').all()).toEqual([
+      { r: '2024-05-01T05:30:00+03:00' },
+      { r: '2024-05-01T06:30:00Z' },
+      { r: '2024-05-01T07:30:00-05:00' },
+      { r: '2024-05-01T08:30:00Z' },
+    ]);
+    // The grid reads the pinned start back as the filename's hour.
+    const hour = db
+      .prepare("SELECT detection_hour(?, 0, NULL, 180, 'filename') AS h")
+      .get('2024-05-01T05:30:00+03:00') as {
+      h: number;
+    };
+    expect(hour.h).toBe(5);
+  });
+
   it.each([
     ['migration 8', [1, 2, 3, 4, 5, 6]],
     ['migrations 4 and 8', [1, 2, 3]],
@@ -347,14 +375,15 @@ describe('initializeCatalog', () => {
         run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
-        recording_start: '2024-05-01 05:30:00',
+        // Migration 5 writes the filename wall clock; migration 10 pins it (no run offset: UTC).
+        recording_start: '2024-05-01T05:30:00Z',
       },
       {
         id: 2,
         run_id: 1,
         file_path: '/rec/20240501_053000.wav',
         file_name: '20240501_053000.wav',
-        recording_start: '2024-05-01 05:30:00',
+        recording_start: '2024-05-01T05:30:00Z',
       },
       { id: 3, run_id: 1, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },
       { id: 4, run_id: 2, file_path: '/rec/other.wav', file_name: 'other.wav', recording_start: null },

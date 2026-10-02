@@ -3,7 +3,7 @@ import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { displayZone, parseStoredInstant, wallClockAt } from '$shared/time-zone';
+import { displayZone, formatIsoWithOffset, parseStoredInstant, wallClockAt } from '$shared/time-zone';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
@@ -314,6 +314,25 @@ function runMigrations(db: Database.Database): void {
           ELSE 'filename'
         END
       `);
+      // Migration 5 stored filename starts as zone-less wall clock text next to
+      // the run's offset. Reading that text as UTC and then showing it in the
+      // file's offset would shift it by that offset, so pin each one to the
+      // instant it meant: the wall clock in the file's offset (UTC when none).
+      const zoneless = db
+        .prepare(
+          `SELECT id, recording_start, timezone_offset_min FROM audio_files
+           WHERE recording_start IS NOT NULL
+             AND recording_start NOT LIKE '%Z'
+             AND substr(recording_start, -6, 1) NOT IN ('+', '-')`,
+        )
+        .all() as { id: number; recording_start: string; timezone_offset_min: number | null }[];
+      const pin = db.prepare('UPDATE audio_files SET recording_start = ? WHERE id = ?');
+      for (const row of zoneless) {
+        const wallAsUtc = parseStoredInstant(row.recording_start);
+        if (wallAsUtc === null) continue;
+        const offsetMin = row.timezone_offset_min ?? 0;
+        pin.run(formatIsoWithOffset(wallAsUtc - offsetMin * 60_000, offsetMin), row.id);
+      }
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(10);
     }).immediate();
   }

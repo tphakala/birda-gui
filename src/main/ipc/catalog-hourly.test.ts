@@ -40,13 +40,18 @@ afterEach(() => {
   conn.db = null;
 });
 
-function addFile(name: string, recordingStart: string | null, offsetMin: number | null = null): number {
+function addFile(
+  name: string,
+  recordingStart: string | null,
+  offsetMin: number | null = null,
+  source: 'header' | 'filename' | null = null,
+): number {
   return Number(
     db()
       .prepare(
-        "INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min) VALUES (1, ?, 'f', ?, ?)",
+        "INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timezone_offset_min, timestamp_source) VALUES (1, ?, 'f', ?, ?, ?)",
       )
-      .run(`/rec/${name}`, recordingStart, offsetMin).lastInsertRowid,
+      .run(`/rec/${name}`, recordingStart, offsetMin, source).lastInsertRowid,
   );
 }
 
@@ -92,6 +97,30 @@ describe('catalog:get-hourly-detections', () => {
   it("uses an AudioMoth header file's own offset in a run without a zone", () => {
     const file = addFile('AM.wav', '2026-05-15T05:30:00+03:00', 180);
     addDetection(file, 'Turdus merula', 0);
+
+    expect(byHour()).toEqual({ 5: 1 });
+  });
+
+  it("keeps an AudioMoth header file's own offset in a run that has a zone", () => {
+    db().prepare("UPDATE analysis_runs SET timezone = 'UTC' WHERE id = 1").run();
+    const header = addFile('AM.wav', '2026-05-15T05:30:00+03:00', 180, 'header');
+    const named = addFile('20260515_053000.wav', '2026-05-15T05:30:00Z', 0, 'filename');
+    addDetection(header, 'Turdus merula', 0);
+    addDetection(named, 'Parus major', 0);
+
+    expect(cells().map((c) => [c.scientific_name, c.hour])).toEqual(
+      expect.arrayContaining([
+        ['Turdus merula', 5],
+        ['Parus major', 5],
+      ]),
+    );
+  });
+
+  it('leaves out a file whose recording start cannot be parsed', () => {
+    const broken = addFile('broken.wav', 'not a time', 0, 'filename');
+    const timed = addFile('20240501_053000.wav', '2024-05-01T05:30:00Z', 0, 'filename');
+    addDetection(broken, 'Turdus merula', 10);
+    addDetection(timed, 'Turdus merula', 10);
 
     expect(byHour()).toEqual({ 5: 1 });
   });

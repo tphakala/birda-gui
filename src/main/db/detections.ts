@@ -246,7 +246,7 @@ export function getRunSpeciesAggregation(filter: DetectionFilter): RawRunSpecies
 export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCount[] {
   const db = getDb();
   const { where, params } = buildWhereClause(filter, 'd');
-  // Files without a recording start have no clock to bucket by, so they are left out.
+  // Files without a usable recording start have no clock to bucket by, so they are left out.
   const timed = `${where ? `${where} AND` : 'WHERE'} af.recording_start IS NOT NULL`;
 
   return db
@@ -260,6 +260,7 @@ export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCoun
       LEFT JOIN analysis_runs ar ON ar.id = d.run_id
       ${timed}
       GROUP BY d.scientific_name, hour
+      HAVING hour IS NOT NULL
     `,
     )
     .all(...params) as RawHourlyCount[];
