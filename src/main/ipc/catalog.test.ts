@@ -65,6 +65,11 @@ describe('catalog:set-run-timezone', () => {
     expect(setRunTimezone).toHaveBeenCalledWith(2, 'Europe/Helsinki');
   });
 
+  it('stores a legacy zone name under its current name', () => {
+    invoke('catalog:set-run-timezone', 2, 'Europe/Kiev');
+    expect(setRunTimezone).toHaveBeenCalledWith(2, 'Europe/Kyiv');
+  });
+
   it('refuses the run of the running analysis', () => {
     h.activeRun = 3;
     expect(() => invoke('catalog:set-run-timezone', 3, 'UTC')).toThrow('Stop the analysis');

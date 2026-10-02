@@ -3,7 +3,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import { tick } from 'svelte';
   import { focusIfLost } from '$lib/utils/dialog';
-  import { formatDate, formatNumber } from '$lib/utils/format';
+  import { baseName, formatDate, formatNumber } from '$lib/utils/format';
   import type { RunWithStats } from '$shared/types';
   import * as m from '$paraglide/messages';
 
@@ -20,10 +20,6 @@
     ondelete?: (runId: number) => Promise<void>;
     loading?: boolean;
   } = $props();
-
-  function sourceName(sourcePath: string): string {
-    return sourcePath.split(/[\\/]/).pop() ?? sourcePath;
-  }
 
   // A run is deleted only after a confirmation; its audio files and annotations go with it.
   let confirmOpen = $state(false);
@@ -98,7 +94,7 @@
             aria-current={selectedRunId === run.id ? 'true' : undefined}
             class="w-full cursor-pointer px-3 py-2.5 text-left"
           >
-            <span class="block truncate text-sm font-medium">{sourceName(run.source_path)}</span>
+            <span class="block truncate text-sm font-medium">{baseName(run.source_path)}</span>
             <span class="text-base-content/50 mt-0.5 flex items-center gap-1.5 text-xs">
               <span class="truncate">{run.model}</span>
               <span class="text-base-content/30">·</span>
@@ -158,7 +154,7 @@
   <p id="run-delete-body" class="text-base-content/80 text-sm">
     {#if pendingDelete}
       {m.runs_confirmDelete_body({
-        source: sourceName(pendingDelete.source_path),
+        source: baseName(pendingDelete.source_path),
         detections: detectionLabel(pendingDelete.detection_count),
       })}
     {/if}

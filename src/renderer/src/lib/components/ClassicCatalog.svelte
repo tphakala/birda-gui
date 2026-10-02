@@ -89,8 +89,7 @@
           <div class="flex items-center gap-2">
             <span class="text-base-content/60 text-xs">v{model.version}</span>
             {#if !model.commercial_use}
-              <span class="text-base-content/20">·</span>
-              <span class="text-error/80 text-xs">{m.settings_models_nonCommercial()}</span>
+              <span class="badge badge-warning badge-sm">{m.settings_models_nonCommercial()}</span>
             {/if}
           </div>
           {#if isInstalled}

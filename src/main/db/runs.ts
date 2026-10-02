@@ -3,7 +3,7 @@ import type { AnalysisRun, FinishedRunStatus, RunWithStats } from '$shared/types
 import { COMPLETE_RUN_STATUSES, PARTIAL_RUN_STATUSES } from '$shared/constants';
 import { sqlList } from './schema';
 import { parseRecordingName } from '$shared/recording-name';
-import { formatIsoWithOffset, zonedWallToUtc } from '$shared/time-zone';
+import { currentZoneName, formatIsoWithOffset, zonedWallToUtc } from '$shared/time-zone';
 
 export function createRun(
   sourcePath: string,
@@ -110,8 +110,6 @@ export function getRunsWithStats(): RunWithStats[] {
       (SELECT COUNT(*) FROM audio_files af WHERE af.run_id = ar.id) as file_count,
       (SELECT COUNT(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as timed_file_count,
       (SELECT COALESCE(SUM(timestamp_source = 'filename'), 0) FROM audio_files af WHERE af.run_id = ar.id) as filename_file_count,
-      (SELECT MIN(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as first_recording_start,
-      (SELECT MAX(datetime(recording_start)) FROM audio_files af WHERE af.run_id = ar.id) as last_recording_start,
       l.name as location_name,
       l.latitude,
       l.longitude
@@ -122,9 +120,10 @@ export function getRunsWithStats(): RunWithStats[] {
     )
     .all() as (RunWithStats & { file_count: number })[];
 
-  // Derive is_directory from file_count
+  // Derive is_directory from file_count. A zone stored under a legacy name is returned under its current one.
   return rows.map((row) => ({
     ...row,
+    timezone: row.timezone === null ? null : currentZoneName(row.timezone),
     is_directory: row.file_count > 1,
   }));
 }

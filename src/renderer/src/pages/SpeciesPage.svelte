@@ -14,6 +14,7 @@
     searchByCommonName,
     resolveAllLabels,
   } from '$lib/utils/ipc';
+  import { modelDisplayName } from '$lib/utils/models';
   import { latestRequest } from '$lib/utils/latest';
   import { describeBirdaFailure, speciesFetchProblem } from '$shared/birda-error';
   import { keepIfPresent } from '$lib/utils/selection';
@@ -52,8 +53,8 @@
   let fetchLoading = $state(false);
   let fetchError = $state<string | null>(null);
   let fetchResult = $state<BirdaSpeciesResponse | null>(null);
-  // The model the fetch asked for, to tell when another model's range model was used.
-  let fetchRequestedModel = $state('');
+  // Display name of the model whose range model was used, when it is not the one requested; '' otherwise.
+  let fetchUsedModelName = $state('');
   let fetchListName = $state('');
 
   // --- Custom list modal state ---
@@ -155,6 +156,7 @@
     fetchLoading = false;
     fetchError = null;
     fetchResult = null;
+    fetchUsedModelName = '';
     fetchListName = '';
     showFetchModal = true;
   }
@@ -183,8 +185,12 @@
     try {
       const result = await fetchSpeciesList(request);
       if (seq !== fetchSeq) return;
+      // Another model's range model was used: name it, the id until looked up.
+      const usedModel = result.model_used && result.model_used !== request.model ? result.model_used : '';
+      const usedName = usedModel ? await modelDisplayName(usedModel) : '';
+      if (seq !== fetchSeq) return;
       fetchResult = result;
-      fetchRequestedModel = request.model ?? '';
+      fetchUsedModelName = usedName;
       // Auto-generate a default name
       fetchListName = m.species_fetch_defaultName({
         lat: request.latitude.toFixed(2),
@@ -554,9 +560,9 @@
             <div class="text-sm font-medium">
               {m.species_fetch_resultCount({ count: String(fetchResult.species_count) })}
             </div>
-            {#if fetchResult.model_used && fetchResult.model_used !== fetchRequestedModel}
+            {#if fetchUsedModelName}
               <div class="text-base-content/60 mt-1 text-xs">
-                {m.species_fetch_usedModel({ model: fetchResult.model_used })}
+                {m.species_fetch_usedModel({ model: fetchUsedModelName })}
               </div>
             {/if}
             <div class="mt-2 max-h-48 overflow-y-auto">

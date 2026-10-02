@@ -1,5 +1,5 @@
 import { getPosition } from 'suncalc';
-import { zonedWallToUtc, type ClockZone } from '$shared/time-zone';
+import { zonedWallToUtc, type ClockDay } from '$shared/time-zone';
 
 export type SunPhase = 'night' | 'twilight' | 'daylight';
 
@@ -36,24 +36,23 @@ function classifyAltitude(altDeg: number): SunPhase {
  * field is included with the from/to phases and the fractional position of the transition.
  *
  * Hours match the heatmap columns, which come from detection_hour() in the
- * catalog (src/main/db/database.ts). They are in the run's clock, the zone given
- * here, except for files whose start came from an AudioMoth header: those are
- * in their own offset.
+ * catalog (src/main/db/database.ts). The caller passes the day and zone that
+ * every detection in the grid shares (getHourlyDetectionDays() in
+ * src/main/db/detections.ts), so the hours, including those of AudioMoth header files, are all in this zone.
  *
- * @param day        Calendar day in the zone's clock.
+ * @param day        Calendar day and the zone the hours are in (IANA name or fixed
+ *                   offset). Each hour is converted to UTC at that day's offset, so
+ *                   a DST change is followed.
  * @param latitude   Recording location latitude.
  * @param longitude  Recording location longitude.
- * @param zone       The zone the hours are in (IANA name or fixed offset). Each hour is
- *                   converted to UTC at that day's offset, so a DST change is followed.
  */
 export function computeHourlySunPhases(
-  day: { year: number; month: number; day: number },
+  { year, month, day, zone }: ClockDay,
   latitude: number,
   longitude: number,
-  zone: ClockZone,
 ): HourlySunPhase[] {
   const at = (hour: number, minute: number, second: number): number =>
-    zonedWallToUtc({ ...day, hour, minute, second }, zone).instantMs;
+    zonedWallToUtc({ year, month, day, hour, minute, second }, zone).instantMs;
 
   const result: HourlySunPhase[] = [];
   for (let h = 0; h < 24; h++) {

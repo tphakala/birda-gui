@@ -11,7 +11,7 @@ import type {
   DetectionFilter,
   EnrichedSpeciesSummary,
   RunSpeciesAggregation,
-  HourlyDetectionCell,
+  HourlyDetections,
   Location,
   InstalledModel,
   AvailableModel,
@@ -96,8 +96,8 @@ export function getRunSpecies(filter: DetectionFilter): Promise<RunSpeciesAggreg
   return window.birda.invoke('catalog:get-run-species', filter) as Promise<RunSpeciesAggregation[]>;
 }
 
-export function getHourlyDetections(filter: DetectionFilter): Promise<HourlyDetectionCell[]> {
-  return window.birda.invoke('catalog:get-hourly-detections', filter) as Promise<HourlyDetectionCell[]>;
+export function getHourlyDetections(filter: DetectionFilter): Promise<HourlyDetections> {
+  return window.birda.invoke('catalog:get-hourly-detections', filter) as Promise<HourlyDetections>;
 }
 
 export function searchSpecies(query: string): Promise<EnrichedSpeciesSummary[]> {

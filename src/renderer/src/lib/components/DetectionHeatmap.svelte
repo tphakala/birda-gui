@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import type { HourlyDetectionCell } from '$shared/types';
-  import type { ClockZone } from '$shared/time-zone';
+  import type { ClockDay } from '$shared/time-zone';
   import { computeHourlySunPhases, type SunPhase, type SunPhaseGradient } from '$lib/utils/sun';
   import * as m from '$paraglide/messages';
 
@@ -12,18 +12,15 @@
     loading,
     latitude,
     longitude,
-    sunDate,
-    zone,
+    sunDay,
     untimedFiles,
   }: {
     cells: HourlyDetectionCell[];
     loading: boolean;
     latitude: number | null;
     longitude: number | null;
-    /** The day the sun phases are drawn for, in the run's clock; null hides them. */
-    sunDate: { year: number; month: number; day: number } | null;
-    /** The run's clock, the one the hour columns are in. */
-    zone: ClockZone;
+    /** The one day (and its clock) every counted detection falls on, which the sun phases are drawn for; null hides them. */
+    sunDay: ClockDay | null;
     /** Files of the run without a recording start, which the grid leaves out. */
     untimedFiles: number;
   } = $props();
@@ -151,8 +148,8 @@
   };
 
   const sunPhases = $derived.by(() => {
-    if (latitude === null || longitude === null || sunDate === null) return null;
-    return computeHourlySunPhases(sunDate, latitude, longitude, zone);
+    if (latitude === null || longitude === null || sunDay === null) return null;
+    return computeHourlySunPhases(sunDay, latitude, longitude);
   });
 
   const sunColors = $derived(isDark ? sunPhaseColorsDark : sunPhaseColorsLight);

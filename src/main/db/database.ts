@@ -3,7 +3,8 @@ import { app } from 'electron';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { displayZone, formatIsoWithOffset, parseStoredInstant, wallClockAt } from '$shared/time-zone';
+import { formatIsoWithOffset, parseStoredInstant, wallClockAt } from '$shared/time-zone';
+import { detectionClock } from './detection-clock';
 import { RUN_STATUS_CHECK, SCHEMA_SQL, SPECIES_SUMMARY_VIEW } from './schema';
 import type { DatabaseHealthResult, ClearDatabaseResult } from '$shared/types';
 
@@ -41,26 +42,13 @@ export function initializeCatalog(db: Database.Database): void {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  // Hour of day (0-23) of a detection in the run's clock: the recording start
-  // plus the detection's offset into the file, read in the run's zone, else in
-  // the file's stored offset (always the stored offset for a file whose start came
-  // from an AudioMoth header). Null when the recording has no usable start. Only
-  // for ad-hoc queries: it must not be used in views or indexes, because a
-  // catalog that references it would fail to open in a build without this function.
-  db.function(
-    'detection_hour',
-    { deterministic: true },
-    (recordingStart, startTime, runTimezone, fileOffsetMin, timestampSource) => {
-      const start = parseStoredInstant(typeof recordingStart === 'string' ? recordingStart : null);
-      if (start === null) return null;
-      const zone = displayZone(
-        typeof runTimezone === 'string' ? runTimezone : null,
-        typeof fileOffsetMin === 'number' ? fileOffsetMin : null,
-        timestampSource === 'header' ? 'header' : null,
-      );
-      return wallClockAt(start + Number(startTime) * 1000, zone).hour;
-    },
-  );
+  // Hour of day (0-23) of a detection on the detectionClock clock. Only for
+  // ad-hoc queries: it must not be used in views or indexes, because a catalog
+  // that references it would fail to open in a build without this function.
+  db.function('detection_hour', { deterministic: true }, (start, offset, runTz, fileOffset, source) => {
+    const clock = detectionClock(start, offset, runTz, fileOffset, source);
+    return clock ? wallClockAt(clock.ms, clock.zone).hour : null;
+  });
 
   // SCHEMA_SQL indexes columns that older catalogs only gain through a migration
   // (detections.audio_file_id arrives in migration 5), so an existing catalog is

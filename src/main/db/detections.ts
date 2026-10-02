@@ -4,6 +4,8 @@ import type { BirdaDetection } from '../birda/types';
 import fs from 'fs';
 import { z } from 'zod';
 import { FINISHED_RUN_IDS } from './schema';
+import { detectionClock } from './detection-clock';
+import { clockDayKey } from '$shared/time-zone';
 
 const JSON_READ_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 100;
@@ -264,6 +266,49 @@ export function getHourlyDetectionCounts(filter: DetectionFilter): RawHourlyCoun
     `,
     )
     .all(...params) as RawHourlyCount[];
+}
+
+/**
+ * Distinct clock days (clockDayKey values) of the detections the hourly grid
+ * counts, same filter and joins as getHourlyDetectionCounts. A file's first and
+ * last detection bound its days, so one row per file is enough. Stops at two:
+ * a caller only needs to know whether there is exactly one.
+ */
+export function getHourlyDetectionDays(filter: DetectionFilter): string[] {
+  const db = getDb();
+  const { where, params } = buildWhereClause(filter, 'd');
+  const timed = `${where ? `${where} AND` : 'WHERE'} af.recording_start IS NOT NULL`;
+
+  const files = db
+    .prepare(
+      `
+      SELECT af.recording_start, ar.timezone, af.timezone_offset_min, af.timestamp_source,
+             MIN(d.start_time) AS first_start, MAX(d.start_time) AS last_start
+      FROM detections d
+      JOIN audio_files af ON d.audio_file_id = af.id
+      LEFT JOIN analysis_runs ar ON ar.id = d.run_id
+      ${timed}
+      GROUP BY af.id
+    `,
+    )
+    .iterate(...params) as IterableIterator<{
+    recording_start: string;
+    timezone: string | null;
+    timezone_offset_min: number | null;
+    timestamp_source: string | null;
+    first_start: number;
+    last_start: number;
+  }>;
+
+  const days = new Set<string>();
+  for (const f of files) {
+    for (const start of [f.first_start, f.last_start]) {
+      const clock = detectionClock(f.recording_start, start, f.timezone, f.timezone_offset_min, f.timestamp_source);
+      if (clock) days.add(clockDayKey(clock.ms, clock.zone));
+    }
+    if (days.size >= 2) break;
+  }
+  return [...days];
 }
 
 export function searchSpecies(query: string, scientificNames?: string[]): SpeciesSummary[] {

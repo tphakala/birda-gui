@@ -143,11 +143,48 @@ export function isValidTimeZone(tz: string): boolean {
   }
 }
 
+/**
+ * Zone names that ICU still lists under their old CLDR spelling, mapped to the
+ * current IANA name. Intl accepts both spellings, so a stored legacy name keeps
+ * working; this only decides what is shown and saved.
+ */
+export const LEGACY_ZONE_NAMES: ReadonlyMap<string, string> = new Map([
+  ['Africa/Asmera', 'Africa/Asmara'],
+  ['America/Buenos_Aires', 'America/Argentina/Buenos_Aires'],
+  ['America/Catamarca', 'America/Argentina/Catamarca'],
+  ['America/Coral_Harbour', 'America/Atikokan'],
+  ['America/Cordoba', 'America/Argentina/Cordoba'],
+  ['America/Godthab', 'America/Nuuk'],
+  ['America/Indianapolis', 'America/Indiana/Indianapolis'],
+  ['America/Jujuy', 'America/Argentina/Jujuy'],
+  ['America/Louisville', 'America/Kentucky/Louisville'],
+  ['America/Mendoza', 'America/Argentina/Mendoza'],
+  ['Asia/Calcutta', 'Asia/Kolkata'],
+  ['Asia/Katmandu', 'Asia/Kathmandu'],
+  ['Asia/Rangoon', 'Asia/Yangon'],
+  ['Asia/Saigon', 'Asia/Ho_Chi_Minh'],
+  ['Atlantic/Faeroe', 'Atlantic/Faroe'],
+  ['Europe/Kiev', 'Europe/Kyiv'],
+  ['Pacific/Enderbury', 'Pacific/Kanton'],
+  ['Pacific/Ponape', 'Pacific/Pohnpei'],
+  ['Pacific/Truk', 'Pacific/Chuuk'],
+]);
+
+/** The current name of a zone: a legacy spelling is mapped, anything else is returned as is. */
+export function currentZoneName(zone: string): string {
+  return LEGACY_ZONE_NAMES.get(zone) ?? zone;
+}
+
+/** Every zone Intl knows, under current names, sorted and without duplicates. */
+export function listTimeZones(): string[] {
+  return [...new Set(Intl.supportedValuesOf('timeZone').map(currentZoneName))].sort();
+}
+
 /** The machine's IANA zone, falling back to UTC when it cannot be resolved. */
 export function systemTimeZone(): string {
   try {
     const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return tz && isValidTimeZone(tz) ? tz : 'UTC';
+    return tz && isValidTimeZone(tz) ? currentZoneName(tz) : 'UTC';
   } catch {
     return 'UTC';
   }
@@ -165,4 +202,39 @@ export function displayZone(
   timestampSource: 'header' | 'filename' | null = null,
 ): ClockZone {
   return (timestampSource === 'header' ? null : runTz) ?? { offsetMin: fileOffsetMin ?? 0 };
+}
+
+/** A calendar day in a zone's clock. */
+export interface ClockDay {
+  year: number;
+  month: number;
+  day: number;
+  zone: ClockZone;
+}
+
+/**
+ * "YYYY-MM-DD|zone" of an instant, the zone being the IANA name or the offset
+ * label. A zero offset and the IANA zone UTC key alike.
+ */
+export function clockDayKey(ms: number, zone: ClockZone): string {
+  const w = wallClockAt(ms, zone);
+  const label = typeof zone === 'string' ? zone : offsetLabel(zone.offsetMin);
+  return `${pad(w.year, 4)}-${pad(w.month)}-${pad(w.day)}|${label}`;
+}
+
+/** Inverse of offsetLabel for the offset forms ("UTC+03:00"); other text is an IANA name. */
+function parseZoneLabel(label: string): ClockZone {
+  const m = /^UTC([+-])(\d\d):(\d\d)$/.exec(label);
+  if (!m) return label;
+  const minutes = Number(m[2]) * 60 + Number(m[3]);
+  return { offsetMin: m[1] === '-' ? -minutes : minutes };
+}
+
+/** The one day and zone that clockDayKey values share, or null for none or several. */
+export function sharedClockDay(keys: readonly string[]): ClockDay | null {
+  const distinct = [...new Set(keys)];
+  if (distinct.length !== 1) return null;
+  const m = /^(\d{4})-(\d\d)-(\d\d)\|(.+)$/.exec(distinct[0] ?? '');
+  if (!m) return null;
+  return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]), zone: parseZoneLabel(m[4]) };
 }

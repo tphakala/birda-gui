@@ -533,6 +533,12 @@ describe('stopAnalysisForQuit', () => {
       await run;
     };
 
+    it('stores a legacy requested zone under its current name', async () => {
+      await importNamed({ timezone: 'Europe/Kiev' });
+
+      expect(createRun).toHaveBeenCalledWith(sourceFile, 'birdnet', 0.1, null, undefined, undefined, 'Europe/Kyiv');
+    });
+
     it('reads the name in the requested zone, at that file date, and marks it as from the filename', async () => {
       await importNamed({ timezone: 'Europe/Helsinki' });
 
@@ -627,6 +633,19 @@ describe('stopAnalysisForQuit', () => {
       await expect(run).resolves.toMatchObject({ rangeFilterNote: 'no meta model configured' });
       expect(setRunRangeFilterNote).toHaveBeenCalledTimes(1);
       expect(setRunRangeFilterNote).toHaveBeenCalledWith(expect.any(Number), 'no meta model configured');
+    });
+
+    it('records the cross-model warning as the range filter note', async () => {
+      const run = analyze();
+      const handle = await started();
+      handle.emitStderr(
+        'WARN birda::inference::classifier: Cross-model range filter produced zero matching species, disabling',
+      );
+      handle.resolve();
+
+      await expect(run).resolves.toMatchObject({
+        rangeFilterNote: 'cross-model range filter produced zero matching species',
+      });
     });
 
     it('leaves the note out when birda printed no such warning', async () => {

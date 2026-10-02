@@ -18,8 +18,8 @@
     getSpeciesLists,
     setRunTimezone,
   } from '$lib/utils/ipc';
-  import { formatNumber } from '$lib/utils/format';
-  import { displayZone, offsetLabel, parseStoredInstant, wallClockAt } from '$shared/time-zone';
+  import { baseName, formatNumber } from '$lib/utils/format';
+  import { offsetLabel, type ClockDay } from '$shared/time-zone';
   import { latestRequest } from '$lib/utils/latest';
   import { keepIfPresent, reconcileSelectedRun } from '$lib/utils/selection';
   import type {
@@ -60,6 +60,8 @@
 
   // --- Grid view state ---
   let gridData = $state<HourlyDetectionCell[]>([]);
+  // The one day (and zone) the grid's detections share, which the sun phases are drawn for; null when there is none.
+  let gridSunDay = $state<ClockDay | null>(null);
   let gridLoading = $state(false);
 
   // --- Species list filter state ---
@@ -68,24 +70,13 @@
 
   // --- Derived from selected run ---
   const selectedRun = $derived(runs.find((r) => r.id === appState.selectedRunId) ?? null);
-  const sourceFileName = $derived(selectedRun ? (selectedRun.source_path.split(/[\\/]/).pop() ?? '') : '');
-  // The run's clock: its zone, else the offset of its files (UTC when they have none).
-  const runZone = $derived(selectedRun ? displayZone(selectedRun.timezone, selectedRun.timezone_offset_min) : null);
+  const sourceFileName = $derived(selectedRun ? baseName(selectedRun.source_path) : '');
   // The grid needs recording starts; files without one are left out of it.
   const gridAvailable = $derived((selectedRun?.timed_file_count ?? 0) > 0);
-  // The day the sun phases are drawn for, in the run's clock. A run whose
-  // recordings start on different days has no single day, so it gets no phases.
-  const sunDate = $derived.by(() => {
-    const first = parseStoredInstant(selectedRun?.first_recording_start ?? null);
-    const last = parseStoredInstant(selectedRun?.last_recording_start ?? null);
-    if (first === null || last === null || runZone === null) return null;
-    const a = wallClockAt(first, runZone);
-    const b = wallClockAt(last, runZone);
-    if (a.year !== b.year || a.month !== b.month || a.day !== b.day) return null;
-    return { year: a.year, month: a.month, day: a.day };
-  });
   // What the zone button shows: the run's zone, else the fixed offset its files are shown in.
-  const runZoneLabel = $derived(selectedRun?.timezone ?? offsetLabel(selectedRun?.timezone_offset_min ?? 0));
+  const runZoneLabel = $derived(
+    selectedRun?.timezone ?? m.detections_timezoneNotSet({ zone: offsetLabel(selectedRun?.timezone_offset_min ?? 0) }),
+  );
 
   // --- Run time zone dialog ---
   let zoneDialogOpen = $state(false);
@@ -281,9 +272,13 @@
     try {
       const result = await getHourlyDetections(buildBaseFilter());
       if (!isLatest()) return;
-      gridData = result;
+      gridData = result.cells;
+      gridSunDay = result.sunDay;
     } catch {
-      if (isLatest()) gridData = [];
+      if (isLatest()) {
+        gridData = [];
+        gridSunDay = null;
+      }
     } finally {
       if (isLatest()) gridLoading = false;
     }
@@ -380,6 +375,7 @@
     ignoreConfidence = false;
     speciesData = [];
     gridData = [];
+    gridSunDay = null;
     fallBackFromGrid();
     loadActiveView();
     // Refresh runs list only if the selected run is not already in our list
@@ -452,28 +448,34 @@
   {#if appState.selectedRunId && selectedRun}
     <div class="flex flex-1 flex-col overflow-hidden">
       <!-- Header row -->
-      <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2 text-sm">
+      <div class="border-base-300 bg-base-200/50 @container flex min-w-0 items-center gap-3 border-b px-4 py-2 text-sm">
         <AudioLines size={16} class="text-primary shrink-0" />
 
         {#if selectedRun.is_directory}
-          <span class="truncate font-medium" title={selectedRun.source_path}>{selectedRun.source_path}</span>
-          <span class="text-base-content/40">|</span>
-          <span class="text-base-content/60">{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span>
+          <span class="min-w-20 shrink-[10] truncate font-medium" title={selectedRun.source_path}>{sourceFileName}</span
+          >
+          <span class="text-base-content/40 hidden @2xl:inline">|</span>
+          <span class="text-base-content/60 whitespace-nowrap"
+            >{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span
+          >
         {:else}
-          <span class="font-medium">{sourceFileName}</span>
+          <span class="min-w-20 shrink-[10] truncate font-medium" title={sourceFileName}>{sourceFileName}</span>
         {/if}
 
-        <span class="text-base-content/40">|</span>
-        <span class="text-base-content/60">{headerCount}</span>
+        <span class="text-base-content/40 hidden @2xl:inline">|</span>
+        <span class="text-base-content/60 whitespace-nowrap">{headerCount}</span>
 
         {#if selectedRun.range_filter_note !== null}
-          <span
-            class="badge badge-warning badge-sm gap-1"
-            title={m.analysis_rangeFilterOff({ reason: selectedRun.range_filter_note })}
-          >
-            <TriangleAlert size={12} />
-            {m.analysis_noRangeFiltering()}
-          </span>
+          {@const reason = m.analysis_rangeFilterOff({ reason: selectedRun.range_filter_note })}
+          <div class="tooltip tooltip-bottom shrink-0" data-tip={reason}>
+            <!-- Focusable so keyboard users can reach the tooltip text. -->
+            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+            <span class="badge badge-warning badge-sm gap-1" tabindex="0">
+              <TriangleAlert size={12} aria-hidden="true" />
+              <span class="sr-only @3xl:not-sr-only">{m.analysis_noRangeFiltering()}</span>
+              <span class="sr-only">{reason}</span>
+            </span>
+          </div>
         {/if}
 
         <div class="flex-1"></div>
@@ -481,17 +483,19 @@
         {#if selectedRun.filename_file_count > 0}
           <button
             type="button"
-            class="btn btn-ghost btn-sm gap-1.5"
+            class="btn btn-ghost btn-sm min-w-28 shrink gap-1.5 @2xl:shrink-0"
             onclick={openZoneDialog}
             title={m.detections_timezoneTitle()}
           >
-            <Clock size={14} />
-            {m.detections_timezone({ zone: runZoneLabel })}
+            <Clock size={14} class="shrink-0" />
+            <!-- The "Time zone:" prefix only fits in a wide header. -->
+            <span class="max-w-48 truncate @2xl:hidden">{runZoneLabel}</span>
+            <span class="hidden max-w-48 truncate @2xl:inline">{m.detections_timezone({ zone: runZoneLabel })}</span>
           </button>
         {/if}
 
         <!-- View toggle -->
-        <div class="join">
+        <div class="join shrink-0">
           <button
             class="btn btn-sm join-item {activeView === 'table' ? 'btn-active' : ''}"
             onclick={() => {
@@ -500,7 +504,7 @@
             title={m.view_table()}
           >
             <Table2 size={14} />
-            <span class="hidden sm:inline">{m.view_table()}</span>
+            <span class="hidden @4xl:inline">{m.view_table()}</span>
           </button>
           <button
             class="btn btn-sm join-item {activeView === 'species' ? 'btn-active' : ''}"
@@ -510,7 +514,7 @@
             title={m.view_species()}
           >
             <LayoutGrid size={14} />
-            <span class="hidden sm:inline">{m.view_species()}</span>
+            <span class="hidden @4xl:inline">{m.view_species()}</span>
           </button>
           <div class="tooltip tooltip-left" data-tip={!gridAvailable ? m.grid_noTimestamp() : ''}>
             <button
@@ -522,7 +526,7 @@
               title={gridAvailable ? m.view_grid() : undefined}
             >
               <Grid3x3 size={14} class={!gridAvailable ? 'opacity-40' : ''} />
-              <span class="hidden sm:inline {!gridAvailable ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
+              <span class="hidden @4xl:inline {!gridAvailable ? 'line-through opacity-40' : ''}">{m.view_grid()}</span>
             </button>
           </div>
         </div>
@@ -635,8 +639,7 @@
           loading={gridLoading}
           latitude={selectedRun.latitude}
           longitude={selectedRun.longitude}
-          {sunDate}
-          zone={runZone ?? 'UTC'}
+          sunDay={gridSunDay}
           untimedFiles={selectedRun.file_count - selectedRun.timed_file_count}
         />
       {/if}

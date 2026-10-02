@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clockDayKey,
+  currentZoneName,
   displayZone,
   formatIsoWithOffset,
   isValidTimeZone,
+  LEGACY_ZONE_NAMES,
+  listTimeZones,
   offsetAt,
   offsetLabel,
   parseStoredInstant,
+  sharedClockDay,
   wallClockAt,
   zonedWallToUtc,
 } from './time-zone';
@@ -127,5 +132,59 @@ describe('displayZone', () => {
     expect(displayZone(null, null)).toEqual({ offsetMin: 0 });
     expect(displayZone('Europe/Helsinki', 60, 'filename')).toBe('Europe/Helsinki');
     expect(displayZone('Europe/Helsinki', 180, 'header')).toEqual({ offsetMin: 180 });
+  });
+});
+
+describe('currentZoneName', () => {
+  it.each([...LEGACY_ZONE_NAMES])('maps %s to a zone Intl treats as the same: %s', (legacy, current) => {
+    expect(currentZoneName(legacy)).toBe(current);
+    for (const t of [Date.UTC(2026, 0, 15), Date.UTC(2026, 6, 15)]) {
+      expect(offsetAt(t, current)).toBe(offsetAt(t, legacy));
+    }
+  });
+
+  it('passes unknown and current names through', () => {
+    expect(currentZoneName('Europe/Helsinki')).toBe('Europe/Helsinki');
+    expect(currentZoneName('Mars/Base')).toBe('Mars/Base');
+    expect(currentZoneName('UTC')).toBe('UTC');
+  });
+});
+
+describe('listTimeZones', () => {
+  it('has Asia/Kolkata and Europe/Kyiv, not Asia/Calcutta or Europe/Kiev, sorted, without duplicates', () => {
+    const zones = listTimeZones();
+    expect(zones).toContain('Asia/Kolkata');
+    expect(zones).toContain('Europe/Kyiv');
+    expect(zones).not.toContain('Asia/Calcutta');
+    expect(zones).not.toContain('Europe/Kiev');
+    expect(zones).toEqual([...new Set(zones)].sort());
+  });
+});
+
+describe('clockDayKey', () => {
+  it('keys a fixed zero offset and IANA UTC alike', () => {
+    const ms = Date.UTC(2026, 5, 21, 12);
+    expect(clockDayKey(ms, 'UTC')).toBe('2026-06-21|UTC');
+    expect(clockDayKey(ms, { offsetMin: 0 })).toBe('2026-06-21|UTC');
+  });
+});
+
+describe('sharedClockDay', () => {
+  it('returns the day and zone for one key, null for none or two, and an offset object for a UTC+03:00 key', () => {
+    expect(sharedClockDay(['2026-06-21|Europe/Helsinki'])).toEqual({
+      year: 2026,
+      month: 6,
+      day: 21,
+      zone: 'Europe/Helsinki',
+    });
+    expect(sharedClockDay([])).toBeNull();
+    expect(sharedClockDay(['2026-06-21|UTC', '2026-06-22|UTC'])).toBeNull();
+    expect(sharedClockDay(['2026-06-21|UTC+03:00'])).toEqual({
+      year: 2026,
+      month: 6,
+      day: 21,
+      zone: { offsetMin: 180 },
+    });
+    expect(sharedClockDay(['2026-06-21|UTC'])?.zone).toBe('UTC');
   });
 });

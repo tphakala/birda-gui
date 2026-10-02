@@ -101,3 +101,9 @@ export function formatDetectionTime(
   if (!wall) return '--';
   return `${two(wall.hour)}:${two(wall.minute)}:${two(wall.second)}`;
 }
+
+/** The file or folder name of a path; a path ending in a separator falls back to the whole path. */
+export function baseName(path: string): string {
+  const last = path.split(/[\\/]/).pop() ?? '';
+  return last === '' ? path : last;
+}

@@ -505,7 +505,7 @@ describe('run time columns', () => {
     expect(getRunsWithStats()[0]?.range_filter_note).toBe('no meta model configured');
   });
 
-  it('getRunsWithStats counts files with a parseable start and filename files, and reports the first and last start', () => {
+  it('getRunsWithStats counts files with a parseable start and filename files', () => {
     const run = createRun('/rec', 'birdnet', 0.1);
     const insert = db().prepare(
       'INSERT INTO audio_files (run_id, file_path, file_name, recording_start, timestamp_source) VALUES (?, ?, ?, ?, ?)',
@@ -519,18 +519,21 @@ describe('run time columns', () => {
       file_count: 4,
       timed_file_count: 2,
       filename_file_count: 2,
-      first_recording_start: '2026-03-29 08:00:00',
-      last_recording_start: '2026-03-30 09:00:00',
     });
+    expect(getRunsWithStats()[0]).not.toHaveProperty('first_recording_start');
+    expect(getRunsWithStats()[0]).not.toHaveProperty('last_recording_start');
   });
 
-  it('getRunsWithStats reports zero counts and no first start for a run without files', () => {
+  it('getRunsWithStats returns the current name for a zone stored under a legacy one', () => {
+    createRun('/rec', 'birdnet', 0.1, null, null, null, 'Europe/Kiev');
+    expect(getRunsWithStats()[0]?.timezone).toBe('Europe/Kyiv');
+  });
+
+  it('getRunsWithStats reports zero counts for a run without files', () => {
     createRun('/rec', 'birdnet', 0.1);
     expect(getRunsWithStats()[0]).toMatchObject({
       timed_file_count: 0,
       filename_file_count: 0,
-      first_recording_start: null,
-      last_recording_start: null,
     });
   });
 });
