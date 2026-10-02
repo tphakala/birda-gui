@@ -35,7 +35,7 @@ import type {
 import { applyProgressEvent } from '$shared/analysis-progress';
 import { dayOfYearOf, parseRecordingName } from '$shared/recording-name';
 import { rangeFilterDisabledReason } from '$shared/birda-error';
-import { formatIsoWithOffset, isValidTimeZone, zonedWallToUtc } from '$shared/time-zone';
+import { currentZoneName, formatIsoWithOffset, isValidTimeZone, zonedWallToUtc } from '$shared/time-zone';
 
 const MAX_CONCURRENT_IMPORTS = 10; // Limit concurrent JSON imports to prevent DoS
 
@@ -151,7 +151,7 @@ const AnalysisRequestSchema = z.object({
   day: z.number().int().min(1).max(31).optional(),
   location_name: z.string().optional(),
   timezone_offset_min: z.number().int().optional(),
-  timezone: z.string().refine(isValidTimeZone, 'Unknown time zone').optional(),
+  timezone: z.string().refine(isValidTimeZone, 'Unknown time zone').transform(currentZoneName).optional(),
 });
 
 type AnalysisRequestInput = z.infer<typeof AnalysisRequestSchema>;

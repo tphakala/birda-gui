@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValidTimeZone } from '$shared/time-zone';
+import { currentZoneName, isValidTimeZone } from '$shared/time-zone';
 
 /**
  * Shared Zod schema for app settings validation.
@@ -21,7 +21,10 @@ export const PartialSettingsSchema = z
     default_spectrogram_height: z.number().int().positive(),
     species_language: z.string(),
     ui_language: z.string(),
-    filename_timezone: z.string().refine((v) => v === '' || isValidTimeZone(v)),
+    filename_timezone: z
+      .string()
+      .refine((v) => v === '' || isValidTimeZone(v))
+      .transform(currentZoneName),
     theme: z.enum(['system', 'light', 'dark']),
     setup_completed: z.boolean(),
   })

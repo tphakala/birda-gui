@@ -29,7 +29,7 @@
     getSettings,
     setSettings,
   } from '$lib/utils/ipc';
-  import { parseLocalDate, parseRecordingStart } from '$lib/utils/format';
+  import { baseName, parseLocalDate, parseRecordingStart } from '$lib/utils/format';
   import { parseRecordingName } from '$shared/recording-name';
   import { isValidTimeZone, systemTimeZone } from '$shared/time-zone';
   import type { AvailableModel, InstalledModel, Location, SourceScanResult } from '$shared/types';
@@ -329,7 +329,7 @@
   <!-- Source selected: two-column layout -->
   <div class="flex flex-1 overflow-hidden">
     <!-- Left column: Configuration -->
-    <div class="border-base-300 flex w-80 shrink-0 flex-col space-y-4 overflow-y-auto border-r p-4">
+    <div class="border-base-300 flex w-80 shrink-0 flex-col space-y-4 overflow-y-auto border-r p-4 pb-0">
       <h1 class="text-lg font-semibold">{m.analysis_title()}</h1>
 
       <!-- Compact Open File / Open Folder buttons -->
@@ -361,7 +361,7 @@
       <!-- Selected source (compact) -->
       <div class="border-base-300 bg-base-200/50 flex items-center gap-2 rounded-lg border px-3 py-2">
         <AudioLines size={16} class="text-primary shrink-0" />
-        <span class="min-w-0 flex-1 truncate text-sm">{appState.sourcePath.split(/[\\/]/).pop()}</span>
+        <span class="min-w-0 flex-1 truncate text-sm">{baseName(appState.sourcePath)}</span>
         <button
           type="button"
           onclick={() => (appState.sourcePath = null)}
@@ -495,71 +495,82 @@
               onchange={rememberTimezone}
               class="w-full"
             />
-            <p class="text-base-content/50 text-xs">{m.analysis_filenameTimezoneHint()}</p>
+            <p class="text-base-content/60 text-xs">{m.analysis_filenameTimezoneHint()}</p>
           </div>
         {/if}
       </fieldset>
 
-      <!-- Range filter warning -->
-      {#if showNoFilterWarning}
-        <div role="alert" class="alert alert-warning py-2 text-xs">
-          <TriangleAlert size={14} />
-          <div>
-            <p class="font-medium">{m.analysis_noRangeFiltering()}</p>
-            <p class="mt-0.5">
-              {!hasCoords && !hasDate
-                ? m.analysis_noRangeWarningBoth()
-                : !hasCoords
-                  ? m.analysis_noRangeWarningNoCoords()
-                  : m.analysis_noRangeWarningNoDate()}
-            </p>
+      <!-- Stays at the bottom of the scroll area so Start is reachable when the settings are taller than the window. -->
+      <div class="bg-base-100 border-base-content/20 sticky bottom-0 -mx-4 mt-auto space-y-4 border-t px-4 pt-3 pb-4">
+        <!-- Range filter warning -->
+        {#if showNoFilterWarning}
+          <div role="alert" class="alert alert-warning py-2 text-xs">
+            <TriangleAlert size={14} />
+            <div>
+              <p class="font-medium">{m.analysis_noRangeFiltering()}</p>
+              <p class="mt-0.5">
+                {!hasCoords && !hasDate
+                  ? m.analysis_noRangeWarningBoth()
+                  : !hasCoords
+                    ? m.analysis_noRangeWarningNoCoords()
+                    : m.analysis_noRangeWarningNoDate()}
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="flex gap-2">
+          <div class="flex gap-2">
+            <button
+              type="button"
+              onclick={() => void backFromWarning()}
+              onkeydown={ignoreKeyRepeat}
+              class="btn btn-sm flex-1">{m.common_button_back()}</button
+            >
+            <button
+              type="button"
+              bind:this={startAnywayButton}
+              onclick={() => void startAnyway()}
+              onkeydown={ignoreKeyRepeat}
+              aria-disabled={scanning}
+              class="btn btn-warning btn-sm flex-1 whitespace-nowrap {scanning ? 'btn-disabled' : ''}"
+            >
+              {#if scanning}
+                <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+                {m.sourceFiles_scanning()}
+              {:else}
+                {m.analysis_startAnyway()}
+              {/if}
+            </button>
+          </div>
+        {:else}
+          <!-- One Start / Stop button, so focus stays on it as the analysis starts, stops and ends. -->
           <button
             type="button"
-            onclick={() => void backFromWarning()}
+            bind:this={startStopButton}
+            onclick={handleStartStopClick}
             onkeydown={ignoreKeyRepeat}
-            class="btn btn-sm flex-1">{m.common_button_back()}</button
+            aria-disabled={appState.isAnalysisStopping || (scanning && !appState.isAnalysisRunning)}
+            class="btn w-full gap-2 {appState.isAnalysisRunning
+              ? 'btn-error'
+              : 'btn-primary transition-all duration-200 hover:brightness-110'} {appState.isAnalysisStopping ||
+            (scanning && !appState.isAnalysisRunning)
+              ? 'btn-disabled'
+              : ''}"
           >
-          <button
-            type="button"
-            bind:this={startAnywayButton}
-            onclick={() => void startAnyway()}
-            onkeydown={ignoreKeyRepeat}
-            class="btn btn-warning btn-sm flex-1">{m.analysis_startAnyway()}</button
-          >
-        </div>
-      {:else}
-        <!-- One Start / Stop button, so focus stays on it as the analysis starts, stops and ends. -->
-        <button
-          type="button"
-          bind:this={startStopButton}
-          onclick={handleStartStopClick}
-          onkeydown={ignoreKeyRepeat}
-          aria-disabled={appState.isAnalysisStopping || (scanning && !appState.isAnalysisRunning)}
-          class="btn w-full gap-2 {appState.isAnalysisRunning
-            ? 'btn-error'
-            : 'btn-primary transition-all duration-200 hover:brightness-110'} {appState.isAnalysisStopping ||
-          (scanning && !appState.isAnalysisRunning)
-            ? 'btn-disabled'
-            : ''}"
-        >
-          {#if appState.isAnalysisStopping}
-            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
-            {m.analysis_stopping()}
-          {:else if scanning && !appState.isAnalysisRunning}
-            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
-            {m.sourceFiles_scanning()}
-          {:else if appState.isAnalysisRunning}
-            <Square size={18} />
-            {m.analysis_stopAnalysis()}
-          {:else}
-            <Play size={18} />
-            {m.analysis_startAnalysis()}
-          {/if}
-        </button>
-      {/if}
+            {#if appState.isAnalysisStopping}
+              <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+              {m.analysis_stopping()}
+            {:else if scanning && !appState.isAnalysisRunning}
+              <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+              {m.sourceFiles_scanning()}
+            {:else if appState.isAnalysisRunning}
+              <Square size={18} />
+              {m.analysis_stopAnalysis()}
+            {:else}
+              <Play size={18} />
+              {m.analysis_startAnalysis()}
+            {/if}
+          </button>
+        {/if}
+      </div>
     </div>
 
     <!-- Right column: Source files panel -->

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { systemTimeZone } from '$shared/time-zone';
+  import { listTimeZones, systemTimeZone } from '$shared/time-zone';
   import * as m from '$paraglide/messages';
 
   /**
@@ -31,9 +31,9 @@
 
   const system = systemTimeZone();
 
-  // Intl.supportedValuesOf leaves UTC out; the picker adds it.
+  // The list leaves UTC out; the picker adds it. Legacy names are shown under their current spelling.
   const groups = Object.entries(
-    Object.groupBy(Intl.supportedValuesOf('timeZone'), (zone) => {
+    Object.groupBy(listTimeZones(), (zone) => {
       const slash = zone.indexOf('/');
       return slash === -1 ? 'Other' : zone.slice(0, slash);
     }),

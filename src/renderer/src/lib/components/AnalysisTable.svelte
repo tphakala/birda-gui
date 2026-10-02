@@ -33,7 +33,7 @@
     onpage: (newOffset: number) => void;
   } = $props();
 
-  // The run's zone, else the offset stored on the detection's file (UTC when it has none).
+  // The run's zone for file name times; a file timed from an AudioMoth header keeps its own offset (UTC when none).
   const zoneOf = (d: EnrichedDetection) =>
     displayZone(runTimezone, d.audio_file?.timezone_offset_min ?? null, d.audio_file?.timestamp_source ?? null);
 

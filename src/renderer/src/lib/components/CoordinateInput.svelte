@@ -1,9 +1,17 @@
 <script lang="ts">
   import { showModal } from '$lib/utils/dialog';
   import { MapPin, Map, X } from '@lucide/svelte';
-  import { MapLibre, Marker } from 'svelte-maplibre-gl';
+  import { Marker } from 'svelte-maplibre-gl';
   import type { MapMouseEvent } from 'maplibre-gl';
+  import AppMap from './AppMap.svelte';
+  import { mapAvailable } from '$lib/utils/maplibre';
   import * as m from '$paraglide/messages';
+
+  // Probed once per opening and shared with AppMap, so the layout and the map agree.
+  let mapSupported = $state(false);
+  // Set when the map throws while starting; the dialog then falls back like a system without WebGL 2.
+  let mapFailed = $state(false);
+  const canShowMap = $derived(mapSupported && !mapFailed);
 
   let {
     latitude = $bindable(), // eslint-disable-line @typescript-eslint/no-useless-default-assignment -- $bindable() required for Svelte bind:
@@ -43,7 +51,12 @@
     {/if}
     <button
       type="button"
-      onclick={() => (showMapModal = true)}
+      onclick={() => {
+        // Each opening tries the map again in its full-height area.
+        mapSupported = mapAvailable();
+        mapFailed = false;
+        showMapModal = true;
+      }}
       class="btn btn-outline btn-sm ml-auto gap-1.5"
       title={m.coords_pickOnMap()}
     >
@@ -99,23 +112,24 @@
           <X size={18} />
         </button>
       </div>
-      <div class="border-base-300 h-[28rem] border-t">
-        <MapLibre
-          style="https://tiles.openfreemap.org/styles/bright"
+      <div class={['border-base-300 border-t', canShowMap && 'h-[28rem]']}>
+        <AppMap
           center={mapPoint ?? [24.9384, 60.1699]}
           zoom={mapPoint ? 10 : 4}
           class="h-full w-full"
           cursor="crosshair"
-          autoloadGlobalCss={false}
           onclick={handleMapClick}
+          message={m.coords_mapUnavailable()}
+          available={mapSupported}
+          onfail={() => (mapFailed = true)}
         >
           {#if mapPoint}
             <Marker lnglat={mapPoint} />
           {/if}
-        </MapLibre>
+        </AppMap>
       </div>
       <div class="flex items-end gap-3 px-4 py-2">
-        <p class="text-base-content/50 flex-1 text-xs">{m.coords_clickToSet()}</p>
+        <p class="text-base-content/50 flex-1 text-xs">{canShowMap ? m.coords_clickToSet() : ''}</p>
         <!-- Typing coordinates is the keyboard route; the map needs a pointer. -->
         <label>
           <span class="text-base-content/70 text-xs">{m.coords_latitude()}</span>

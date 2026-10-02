@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatDetectionDate, formatDetectionTime, parseRecordingStart } from './format';
+import { baseName, formatDetectionDate, formatDetectionTime, parseRecordingStart } from './format';
 
 describe('parseRecordingStart', () => {
   it('reads a local date and time from a YYYYMMDD_HHMMSS name', () => {
@@ -69,5 +69,17 @@ describe('formatDetectionDate', () => {
 
   it('shows -- without a recording start', () => {
     expect(formatDetectionDate({ audio_file: null, start_time: 0 }, 'UTC')).toBe('--');
+  });
+});
+
+describe('baseName', () => {
+  it('returns the last segment of a path with either separator', () => {
+    expect(baseName('/rec/a.wav')).toBe('a.wav');
+    expect(baseName('C:\\rec\\a.wav')).toBe('a.wav');
+    expect(baseName('a.wav')).toBe('a.wav');
+  });
+
+  it('falls back to the whole path when it ends in a separator', () => {
+    expect(baseName('/rec/')).toBe('/rec/');
   });
 });

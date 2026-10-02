@@ -21,11 +21,12 @@ export function describeBirdaFailure(message: string): BirdaFailure {
   const cleaned = stripAnsi(message).replace(IPC_PREFIX, '').trim();
   const lines = cleaned.split(/\r?\n/).filter((l) => l.trim() !== '');
   let headline: string | undefined;
+  // The last line of either form wins.
   for (let i = lines.length - 1; i >= 0 && headline === undefined; i--) {
-    headline = /^\s*error:\s*(.+)$/i.exec(lines[i] ?? '')?.[1]?.trim();
-  }
-  for (let i = lines.length - 1; i >= 0 && headline === undefined; i--) {
-    headline = /\sERROR\s+[^\s:]+(?:::\S+)*:\s*(.+)$/.exec(lines[i] ?? '')?.[1]?.trim();
+    const line = lines[i] ?? '';
+    const found = (/^\s*error:\s*(.+)$/i.exec(line) ?? /\sERROR\s+[^\s:]+(?:::\S+)*:\s*(.+)$/.exec(line))?.[1]?.trim();
+    // An error line with no text after the marker says nothing; keep looking.
+    if (found) headline = found;
   }
   return {
     headline: headline ?? (lines.length > 0 ? lines[0].trim() : cleaned),
@@ -33,10 +34,24 @@ export function describeBirdaFailure(message: string): BirdaFailure {
   };
 }
 
-/** Reason from birda's "Range filtering disabled" warning line, else null. */
+/** Birda warnings that turn range filtering off, each with the reason to report. */
+const RANGE_FILTER_WARNINGS: readonly (readonly [RegExp, string | null])[] = [
+  [
+    /Cross-model range filter produced zero matching species/,
+    'cross-model range filter produced zero matching species',
+  ],
+  // A null reason takes the text after the colon.
+  [/Range filtering disabled(?: for model '[^']*')?: (.+)$/, null],
+];
+
+/** Reason from birda's range filter warning lines ("Range filtering disabled", cross-model zero species), else null. */
 export function rangeFilterDisabledReason(line: string): string | null {
-  const match = /Range filtering disabled(?: for model '[^']*')?: (.+)$/.exec(stripAnsi(line));
-  return match?.[1]?.trim() ?? null;
+  const text = stripAnsi(line);
+  for (const [pattern, reason] of RANGE_FILTER_WARNINGS) {
+    const match = pattern.exec(text);
+    if (match) return reason ?? match[1].trim();
+  }
+  return null;
 }
 
 export type SpeciesFetchProblem = 'no_installed_model' | 'no_model' | 'no_range_model';

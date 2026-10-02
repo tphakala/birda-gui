@@ -990,23 +990,34 @@
           <div class="card-body gap-2 p-4">
             <div class="flex items-center gap-2">
               <FileCode size={16} class="text-base-content/50" />
-              <h3 class="text-base-content/70 text-sm font-medium">{m.settings_data_birdaConfig()}</h3>
+              <h3 id="birda-config-title" class="text-base-content/70 text-sm font-medium">
+                {m.settings_data_birdaConfig()}
+              </h3>
             </div>
             {#if birdaConfig.config_path}
               <p class="text-base-content/50 text-xs break-all">
                 {m.settings_data_configFile()}: <span class="font-mono">{birdaConfig.config_path}</span>
               </p>
             {/if}
-            <dl
-              class="border-base-300 bg-base-300/50 grid max-h-64 grid-cols-[max-content_1fr] gap-x-4 gap-y-1 overflow-auto rounded-lg border p-3 text-xs"
+            <!-- Focusable so keyboard users can scroll the list. -->
+            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+            <div
+              role="region"
+              aria-labelledby="birda-config-title"
+              tabindex="0"
+              class="max-h-64 overflow-auto rounded-lg"
             >
-              {#each configEntries as entry (entry.key)}
-                <dt class="text-base-content/50 font-mono">{entry.key}</dt>
-                <dd class="break-all {entry.value === null ? 'text-base-content/30 italic' : 'text-base-content/70'}">
-                  {entry.value ?? m.settings_data_configNotSet()}
-                </dd>
-              {/each}
-            </dl>
+              <dl
+                class="border-base-300 bg-base-300/50 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 rounded-lg border p-3 text-xs"
+              >
+                {#each configEntries as entry (entry.key)}
+                  <dt class="text-base-content/50 font-mono">{entry.key}</dt>
+                  <dd class="break-all {entry.value === null ? 'text-base-content/30 italic' : 'text-base-content/70'}">
+                    {entry.value ?? m.settings_data_configNotSet()}
+                  </dd>
+                {/each}
+              </dl>
+            </div>
           </div>
         </div>
       {/if}

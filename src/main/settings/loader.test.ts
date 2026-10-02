@@ -90,6 +90,11 @@ describe('loadSettings', () => {
     expect(corruptBackups()).toEqual([]);
   });
 
+  it('reads a legacy filename_timezone under its current name', async () => {
+    fs.writeFileSync(file, JSON.stringify({ filename_timezone: 'Asia/Calcutta' }));
+    expect((await loadSettings()).filename_timezone).toBe('Asia/Kolkata');
+  });
+
   it('keeps a valid filename_timezone and drops an invalid one', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     fs.writeFileSync(file, JSON.stringify({ filename_timezone: 'Europe/Helsinki' }));

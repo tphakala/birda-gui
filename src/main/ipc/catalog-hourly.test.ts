@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { HourlyDetectionCell } from '$shared/types';
+import type { HourlyDetectionCell, HourlyDetections } from '$shared/types';
 import { invoke, resetIpc } from '../test-support/ipc-harness';
 
 const conn = vi.hoisted(() => ({ db: null as Database.Database | null }));
@@ -63,9 +63,15 @@ function addDetection(fileId: number, species: string, start: number): void {
     .run(fileId, start, start + 3, species);
 }
 
-function cells(): HourlyDetectionCell[] {
-  return invoke('catalog:get-hourly-detections', {}) as HourlyDetectionCell[];
+function hourly(filter: object = {}): HourlyDetections {
+  return invoke('catalog:get-hourly-detections', filter) as HourlyDetections;
 }
+
+function cells(): HourlyDetectionCell[] {
+  return hourly().cells;
+}
+
+const sunDay = (filter: object = {}) => hourly(filter).sunDay;
 
 const byHour = () => Object.fromEntries(cells().map((c) => [c.hour, c.detection_count]));
 
@@ -144,5 +150,78 @@ describe('catalog:get-hourly-detections', () => {
       { scientific_name: 'Parus major', common_name: 'common Parus major', hour: 5, detection_count: 1 },
       { scientific_name: 'Turdus merula', common_name: 'common Turdus merula', hour: 5, detection_count: 1 },
     ]);
+  });
+
+  describe('sunDay', () => {
+    it('gives the day and zone when every detection falls on one Helsinki day', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'Europe/Helsinki' WHERE id = 1").run();
+      const file = addFile('a.wav', '2026-05-15T05:30:00+03:00', 180, 'filename');
+      addDetection(file, 'Turdus merula', 0);
+      addDetection(file, 'Turdus merula', 1800);
+
+      expect(sunDay()).toEqual({ year: 2026, month: 5, day: 15, zone: 'Europe/Helsinki' });
+    });
+
+    it('is null when a long file crosses local midnight', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'Europe/Helsinki' WHERE id = 1").run();
+      const file = addFile('a.wav', '2026-05-15T23:30:00+03:00', 180, 'filename');
+      addDetection(file, 'Turdus merula', 0);
+      addDetection(file, 'Turdus merula', 3600);
+
+      expect(sunDay()).toBeNull();
+    });
+
+    it('is null when a header file and a filename file are mixed in a UTC run', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'UTC' WHERE id = 1").run();
+      const header = addFile('AM.wav', '2026-05-15T05:30:00+03:00', 180, 'header');
+      const named = addFile('20260515_053000.wav', '2026-05-15T05:30:00Z', 0, 'filename');
+      addDetection(header, 'Turdus merula', 0);
+      addDetection(named, 'Parus major', 0);
+
+      expect(sunDay()).toBeNull();
+    });
+
+    it('gives a fixed offset for a header-only run without a zone', () => {
+      const file = addFile('AM.wav', '2026-05-15T05:30:00+03:00', 180, 'header');
+      addDetection(file, 'Turdus merula', 0);
+
+      expect(sunDay()).toEqual({ year: 2026, month: 5, day: 15, zone: { offsetMin: 180 } });
+    });
+
+    it('treats a UTC run and a header file at offset 0 as the same zone', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'UTC' WHERE id = 1").run();
+      const header = addFile('AM.wav', '2026-05-15T05:30:00Z', 0, 'header');
+      const named = addFile('20260515_063000.wav', '2026-05-15T06:30:00Z', 0, 'filename');
+      addDetection(header, 'Turdus merula', 0);
+      addDetection(named, 'Parus major', 0);
+
+      expect(sunDay()).toEqual({ year: 2026, month: 5, day: 15, zone: 'UTC' });
+    });
+
+    it('is null for two days, and a species filter that keeps one day gives that day', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'Europe/Helsinki' WHERE id = 1").run();
+      const first = addFile('a.wav', '2026-05-15T05:30:00+03:00', 180, 'filename');
+      const second = addFile('b.wav', '2026-05-16T05:30:00+03:00', 180, 'filename');
+      addDetection(first, 'Turdus merula', 0);
+      addDetection(second, 'Parus major', 0);
+
+      expect(sunDay()).toBeNull();
+      expect(sunDay({ scientific_names: ['Parus major'] })).toEqual({
+        year: 2026,
+        month: 5,
+        day: 16,
+        zone: 'Europe/Helsinki',
+      });
+    });
+
+    it('gives a single day across the 2026-10-25 fall-back in Helsinki', () => {
+      db().prepare("UPDATE analysis_runs SET timezone = 'Europe/Helsinki' WHERE id = 1").run();
+      // 21:30Z on the 24th is 00:30 EEST on the 25th.
+      const file = addFile('a.wav', '2026-10-24T21:30:00Z', 180, 'filename');
+      addDetection(file, 'Turdus merula', 0);
+      addDetection(file, 'Turdus merula', 3 * 3600 + 1800); // 01:00Z is after the fall-back, 03:00 EET
+
+      expect(sunDay()).toEqual({ year: 2026, month: 10, day: 25, zone: 'Europe/Helsinki' });
+    });
   });
 });

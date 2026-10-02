@@ -118,7 +118,13 @@
         {#if failure.details}
           <details class="mt-1">
             <summary class="cursor-pointer">{m.progress_showLog()}</summary>
-            <pre class="mt-1 max-h-48 overflow-auto text-xs whitespace-pre-wrap">{failure.details}</pre>
+            <!-- Focusable so keyboard users can scroll the log. -->
+            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+            <pre
+              class="mt-1 max-h-[20vh] overflow-auto text-xs whitespace-pre-wrap"
+              tabindex="0"
+              role="region"
+              aria-label={m.log_title()}>{failure.details}</pre>
           </details>
         {/if}
       </div>

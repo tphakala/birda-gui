@@ -6,7 +6,7 @@
   import type { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
   import { onMount, onDestroy } from 'svelte';
   import { extractClip, getSettings, saveSpectrogram, exportRegionAsWav } from '$lib/utils/ipc';
-  import { formatTime, formatConfidence } from '$lib/utils/format';
+  import { baseName, formatTime, formatConfidence } from '$lib/utils/format';
   import { toBirdaMediaUrl } from '$shared/media-url';
   import { parseStoredInstant, wallClockAt, type ClockZone } from '$shared/time-zone';
   import { showToast } from '$lib/stores/toast.svelte';
@@ -23,7 +23,7 @@
   }: {
     detection: EnrichedDetection;
     sourceFile: string;
-    /** The clock the detection's time is shown in (the run's zone). */
+    /** The clock the detection's time is shown in: the run's zone, or the file's own offset for an AudioMoth header file. */
     zone: ClockZone;
   } = $props();
 
@@ -293,8 +293,7 @@
       const defaultName = `${species}_${timestamp}.wav`;
       const savedPath = await exportRegionAsWav(wavBytes, defaultName);
       // null means the save dialog was cancelled: nothing to report.
-      if (savedPath)
-        showToast(m.detail_exportSaved({ file: savedPath.split(/[\\/]/).pop() ?? savedPath }), { severity: 'success' });
+      if (savedPath) showToast(m.detail_exportSaved({ file: baseName(savedPath) }), { severity: 'success' });
     } catch (err) {
       console.error('Export failed:', err);
       showToast(m.detail_exportFailed({ error: err instanceof Error ? err.message : String(err) }), {

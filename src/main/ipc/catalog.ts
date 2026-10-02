@@ -3,6 +3,7 @@ import {
   getDetections,
   getRunSpeciesAggregation,
   getHourlyDetectionCounts,
+  getHourlyDetectionDays,
   searchSpecies,
   getSpeciesSummary,
   getSpeciesLocations,
@@ -20,11 +21,11 @@ import type {
   EnrichedDetection,
   EnrichedSpeciesSummary,
   RunSpeciesAggregation,
-  HourlyDetectionCell,
+  HourlyDetections,
   AudioFile,
 } from '$shared/types';
 import { activeRunId, isAnalysisActive } from './analysis';
-import { isValidTimeZone } from '$shared/time-zone';
+import { currentZoneName, isValidTimeZone, sharedClockDay } from '$shared/time-zone';
 
 function enrichDetections(detections: (Detection & { audio_file: AudioFile | null })[]): EnrichedDetection[] {
   const scientificNames = [...new Set(detections.map((d) => d.scientific_name))];
@@ -77,7 +78,7 @@ export function registerCatalogHandlers(): void {
     if (typeof timezone !== 'string' || !isValidTimeZone(timezone)) {
       throw new Error('Unknown time zone.');
     }
-    return setRunTimezone(runId, timezone);
+    return setRunTimezone(runId, currentZoneName(timezone));
   });
 
   ipcMain.handle('catalog:get-detections', (_event, filter: DetectionFilter) => {
@@ -97,18 +98,20 @@ export function registerCatalogHandlers(): void {
     }));
   });
 
-  ipcMain.handle('catalog:get-hourly-detections', (_event, filter: DetectionFilter): HourlyDetectionCell[] => {
+  ipcMain.handle('catalog:get-hourly-detections', (_event, filter: DetectionFilter): HourlyDetections => {
     filter = resolveSpeciesFilter(filter);
 
     // The hour is worked out in SQL (detection_hour) so the grid does not load every detection.
     const rows = getHourlyDetectionCounts(filter);
     const nameMap = resolveAll([...new Set(rows.map((r) => r.scientific_name))]);
-    return rows.map((r) => ({
+    const cells = rows.map((r) => ({
       scientific_name: r.scientific_name,
       common_name: nameMap.get(r.scientific_name) ?? r.scientific_name,
       hour: r.hour,
       detection_count: r.detection_count,
     }));
+    // The grid hours are only one day's sun phases when every counted detection shares a day and zone.
+    return { cells, sunDay: sharedClockDay(getHourlyDetectionDays(filter)) };
   });
 
   ipcMain.handle('catalog:search-species', (_event, query: string) => {

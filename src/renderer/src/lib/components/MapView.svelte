@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { MapLibre, Marker, Popup } from 'svelte-maplibre-gl';
+  import { Marker, Popup } from 'svelte-maplibre-gl';
   import { mapState, type MapLocation } from '$lib/stores/map.svelte';
+  import AppMap from './AppMap.svelte';
   import * as m from '$paraglide/messages';
 
   // The popup follows the location list, so it shows current counts after a reload and closes when its location is gone.
@@ -34,13 +35,7 @@
 </script>
 
 <div class="bg-base-200 relative flex-1">
-  <MapLibre
-    style="https://tiles.openfreemap.org/styles/bright"
-    center={[24.9384, 60.1699]}
-    zoom={4}
-    class="h-full w-full"
-    autoloadGlobalCss={false}
-  >
+  <AppMap center={[24.9384, 60.1699]} zoom={4} class="h-full w-full" message={m.map_unavailable()}>
     {#each mapState.locations as loc (loc.location_id)}
       {@const size = markerSize(loc)}
       {@const color = markerColor(loc)}
@@ -76,5 +71,5 @@
         </div>
       </Popup>
     {/if}
-  </MapLibre>
+  </AppMap>
 </div>

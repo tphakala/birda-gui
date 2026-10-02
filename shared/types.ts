@@ -1,4 +1,5 @@
 import type { RUN_STATUSES } from './constants';
+import type { ClockDay } from './time-zone';
 // === CUDA Library Management ===
 
 export interface CudaStatus {
@@ -151,10 +152,6 @@ export interface RunWithStats extends AnalysisRun {
   timed_file_count: number;
   /** Files whose recording start was read from the file name (the run's zone applies to them). */
   filename_file_count: number;
-  /** Earliest recording start in the run, as stored (UTC text), or null. */
-  first_recording_start: string | null;
-  /** Latest recording start in the run, as stored (UTC text), or null. */
-  last_recording_start: string | null;
   is_directory: boolean; // NEW: true if source_path is a directory
   location_name: string | null;
   latitude: number | null;
@@ -282,6 +279,12 @@ export interface HourlyDetectionCell {
   common_name: string;
   hour: number; // 0-23
   detection_count: number;
+}
+
+/** Hourly grid data plus the one clock day every counted detection falls on (null when it is not one day). */
+export interface HourlyDetections {
+  cells: HourlyDetectionCell[];
+  sunDay: ClockDay | null;
 }
 
 // === Analysis ===

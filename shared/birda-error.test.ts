@@ -10,6 +10,10 @@ describe('stripAnsi', () => {
 });
 
 describe('describeBirdaFailure', () => {
+  it('skips an error line with nothing after the marker', () => {
+    expect(describeBirdaFailure('error: model not found\nerror:   \nexiting').headline).toBe('model not found');
+  });
+
   it('takes the last error: line from ANSI stderr and strips the IPC prefix', () => {
     const msg =
       "Error invoking remote method 'birda:analyze': Error: Analysis failed: birda exited with code 1\n" +
@@ -25,6 +29,13 @@ describe('describeBirdaFailure', () => {
 
   it('falls back to the last tracing ERROR line', () => {
     const r = describeBirdaFailure('Analysis failed\n2026-05-15T05:30:00Z  ERROR birda::run: could not open device');
+    expect(r.headline).toBe('could not open device');
+  });
+
+  it('takes a later tracing ERROR over an earlier error: line', () => {
+    const r = describeBirdaFailure(
+      'error: first problem\n2026-05-15T05:30:00Z  ERROR birda::run: could not open device',
+    );
     expect(r.headline).toBe('could not open device');
   });
 
@@ -56,5 +67,12 @@ describe('speciesFetchProblem', () => {
     expect(speciesFetchProblem('no installed model has a range filter')).toBe('no_range_model');
     expect(speciesFetchProblem('No model is installed')).toBe('no_installed_model');
     expect(speciesFetchProblem('network down')).toBeNull();
+  });
+});
+
+describe('rangeFilterDisabledReason cross-model', () => {
+  it('matches the cross-model zero-species warning', () => {
+    const line = `${ESC}[2m2026-05-15T05:30:00Z${ESC}[0m ${ESC}[33m WARN${ESC}[0m birda::inference::classifier: Cross-model range filter produced zero matching species, disabling`;
+    expect(rangeFilterDisabledReason(line)).toBe('cross-model range filter produced zero matching species');
   });
 });
