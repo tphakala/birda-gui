@@ -79,6 +79,7 @@ const IGNORED_IDENTICAL_KEYS = new Set([
   'audio_pause',
   // Short generic words
   'settings_tab_data',
+  'timezone_system', // System (De/Da/Sv/Pl)
   'sourceFiles_columnName',
   'sourceFiles_columnFormat',
   'sourceFiles_columnStatus',

@@ -22,6 +22,7 @@ import type {
   SpeciesList,
   EnrichedSpeciesListEntry,
   SpeciesFetchRequest,
+  BirdaConfigPayload,
   BirdaSpeciesResponse,
   GpuCapabilities,
   BirdaCheckResponse,
@@ -77,6 +78,11 @@ export function getRuns(): Promise<RunWithStats[]> {
 
 export function deleteRun(id: number): Promise<void> {
   return window.birda.invoke('catalog:delete-run', id) as Promise<void>;
+}
+
+/** Sets the zone a run's file name timestamps are read in; returns how many files were recomputed. */
+export function setRunTimezone(runId: number, timezone: string): Promise<number> {
+  return window.birda.invoke('catalog:set-run-timezone', runId, timezone) as Promise<number>;
 }
 
 export function getDetections(filter: DetectionFilter): Promise<{ detections: EnrichedDetection[]; total: number }> {
@@ -193,8 +199,8 @@ export function checkBirda(): Promise<BirdaCheckResponse> {
   return window.birda.invoke('app:check-birda') as Promise<BirdaCheckResponse>;
 }
 
-export function getBirdaConfig(): Promise<Record<string, unknown>> {
-  return window.birda.invoke('birda:config-show') as Promise<Record<string, unknown>>;
+export function getBirdaConfig(): Promise<BirdaConfigPayload> {
+  return window.birda.invoke('birda:config-show') as Promise<BirdaConfigPayload>;
 }
 
 // GPU detection

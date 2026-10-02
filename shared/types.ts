@@ -398,6 +398,12 @@ export interface InstalledModel {
   variant?: string;
 }
 
+/** What `birda config show` reports: where the config file is and its contents. */
+export interface BirdaConfigPayload {
+  config_path?: string;
+  config: Record<string, unknown>;
+}
+
 export interface AvailableModel {
   id: string;
   name: string;

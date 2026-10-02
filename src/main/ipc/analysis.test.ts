@@ -558,7 +558,7 @@ describe('stopAnalysisForQuit', () => {
         channels: 1,
         audiomoth: {
           deviceId: 'AM1',
-          gain: null,
+          gain: 'medium',
           batteryV: null,
           temperatureC: null,
           recordedAt: '2026-03-15T11:30:00+03:00',

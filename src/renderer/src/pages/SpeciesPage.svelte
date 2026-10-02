@@ -15,6 +15,7 @@
     resolveAllLabels,
   } from '$lib/utils/ipc';
   import { latestRequest } from '$lib/utils/latest';
+  import { describeBirdaFailure, speciesFetchProblem } from '$shared/birda-error';
   import { keepIfPresent } from '$lib/utils/selection';
   import type { SpeciesList, EnrichedSpeciesListEntry, BirdaSpeciesResponse } from '$shared/types';
   import { tick, untrack } from 'svelte';
@@ -51,6 +52,8 @@
   let fetchLoading = $state(false);
   let fetchError = $state<string | null>(null);
   let fetchResult = $state<BirdaSpeciesResponse | null>(null);
+  // The model the fetch asked for, to tell when another model's range model was used.
+  let fetchRequestedModel = $state('');
   let fetchListName = $state('');
 
   // --- Custom list modal state ---
@@ -168,13 +171,20 @@
 
     const seq = fetchSeq;
     // The inputs stay editable while the fetch runs; name the list after the request that was sent.
-    const request = { latitude: fetchLat, longitude: fetchLon, week: fetchWeek, threshold: fetchThreshold };
+    const request = {
+      latitude: fetchLat,
+      longitude: fetchLon,
+      week: fetchWeek,
+      threshold: fetchThreshold,
+      model: appState.selectedModel || undefined,
+    };
     fetchLoading = true;
     fetchError = null;
     try {
       const result = await fetchSpeciesList(request);
       if (seq !== fetchSeq) return;
       fetchResult = result;
+      fetchRequestedModel = request.model ?? '';
       // Auto-generate a default name
       fetchListName = m.species_fetch_defaultName({
         lat: request.latitude.toFixed(2),
@@ -182,7 +192,16 @@
         week: String(request.week),
       });
     } catch (err) {
-      if (seq === fetchSeq) fetchError = (err as Error).message;
+      if (seq === fetchSeq) {
+        const message = err instanceof Error ? err.message : String(err);
+        const problem = speciesFetchProblem(message);
+        fetchError =
+          problem === 'no_model'
+            ? m.species_fetch_noModel()
+            : problem === 'no_range_model'
+              ? m.species_fetch_noRangeModel()
+              : describeBirdaFailure(message).headline;
+      }
     } finally {
       if (seq === fetchSeq) fetchLoading = false;
     }
@@ -533,6 +552,11 @@
             <div class="text-sm font-medium">
               {m.species_fetch_resultCount({ count: String(fetchResult.species_count) })}
             </div>
+            {#if fetchResult.model_used && fetchResult.model_used !== fetchRequestedModel}
+              <div class="text-base-content/60 mt-1 text-xs">
+                {m.species_fetch_usedModel({ model: fetchResult.model_used })}
+              </div>
+            {/if}
             <div class="mt-2 max-h-48 overflow-y-auto">
               {#each fetchResult.species.slice(0, 20) as species (species.scientific_name)}
                 <div class="text-base-content/70 flex justify-between py-0.5 text-xs">

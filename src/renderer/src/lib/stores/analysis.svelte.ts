@@ -31,6 +31,8 @@ interface AnalysisProgress {
   /** Stopped, and the partial results were discarded for earlier complete ones. */
   discarded: boolean;
   error: string | null;
+  /** Why birda ran without the range filter, when it did. */
+  rangeFilterNote: string | null;
   /** Outcome per source file path, set as each file_completed event arrives. */
   fileStatuses: SvelteMap<string, FileStatus>;
 }
@@ -46,6 +48,7 @@ export const analysisState = $state<AnalysisProgress>({
   hadErrors: false,
   discarded: false,
   error: null,
+  rangeFilterNote: null,
   fileStatuses: new SvelteMap<string, FileStatus>(),
 });
 
@@ -68,6 +71,7 @@ export function resetAnalysis(source: string | null): void {
   analysisState.hadErrors = false;
   analysisState.discarded = false;
   analysisState.error = null;
+  analysisState.rangeFilterNote = null;
   analysisState.fileStatuses = new SvelteMap<string, FileStatus>();
 }
 

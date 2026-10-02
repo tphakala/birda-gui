@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { FileHeadphone, CircleCheckBig, CircleSlash, CircleX, X } from '@lucide/svelte';
+  import { FileHeadphone, CircleCheckBig, CircleSlash, CircleX, TriangleAlert, X } from '@lucide/svelte';
   import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import { formatNumber } from '$lib/utils/format';
+  import { describeBirdaFailure } from '$shared/birda-error';
   import * as m from '$paraglide/messages';
 
   const AUTO_DISMISS_DELAY_MS = 5000;
@@ -11,9 +12,16 @@
     analysisState.totalFiles > 0 ? Math.round((analysisState.filesProcessed / analysisState.totalFiles) * 100) : 0,
   );
 
-  // Auto-dismiss a clean success after a delay; one with failed files stays until dismissed.
+  const failure = $derived(analysisState.error ? describeBirdaFailure(analysisState.error) : null);
+
+  // Auto-dismiss a clean success after a delay; one with failed files, or with a range filter warning to read, stays until dismissed.
   $effect(() => {
-    if (analysisState.status === 'completed' && !analysisState.hadErrors && analysisState.filesFailed === 0) {
+    if (
+      analysisState.status === 'completed' &&
+      !analysisState.hadErrors &&
+      analysisState.filesFailed === 0 &&
+      analysisState.rangeFilterNote === null
+    ) {
       const timer = setTimeout(dismissAnalysis, AUTO_DISMISS_DELAY_MS);
       return () => {
         clearTimeout(timer);
@@ -97,9 +105,22 @@
       ></progress>
     {/if}
 
-    {#if analysisState.error}
-      <div role="alert" class="alert alert-error py-2 text-xs">
-        {analysisState.error}
+    {#if analysisState.rangeFilterNote !== null}
+      <div role="alert" class="alert alert-warning py-2 text-xs">
+        <TriangleAlert size={14} />
+        <span>{m.analysis_rangeFilterOff({ reason: analysisState.rangeFilterNote })}</span>
+      </div>
+    {/if}
+
+    {#if failure}
+      <div role="alert" class="alert alert-error block py-2 text-xs">
+        <p class="break-words">{failure.headline}</p>
+        {#if failure.details}
+          <details class="mt-1">
+            <summary class="cursor-pointer">{m.progress_showLog()}</summary>
+            <pre class="mt-1 max-h-48 overflow-auto text-xs whitespace-pre-wrap">{failure.details}</pre>
+          </details>
+        {/if}
       </div>
     {/if}
   </div>

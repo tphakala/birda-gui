@@ -8,6 +8,8 @@
   import { extractClip, getSettings, saveSpectrogram, exportRegionAsWav } from '$lib/utils/ipc';
   import { formatTime, formatConfidence } from '$lib/utils/format';
   import { toBirdaMediaUrl } from '$shared/media-url';
+  import { parseStoredInstant, wallClockAt, type ClockZone } from '$shared/time-zone';
+  import { showToast } from '$lib/stores/toast.svelte';
   import { openAnnotationEditor } from '$lib/stores/annotation.svelte';
   import { lockedTitle } from '$lib/utils/runLock';
   import { appState } from '$lib/stores/app.svelte';
@@ -17,9 +19,12 @@
   const {
     detection,
     sourceFile,
+    zone,
   }: {
     detection: EnrichedDetection;
     sourceFile: string;
+    /** The clock the detection's time is shown in (the run's zone). */
+    zone: ClockZone;
   } = $props();
 
   let wavesurfer: WaveSurfer | null = null;
@@ -275,25 +280,26 @@
       const wavBytes = encodeWavFromRegion(audioBuffer, activeRegion.start, activeRegion.end);
       const species = detection.common_name.replace(/[<>:"/\\|?*]/g, '_');
       let timestamp: string;
-      if (detection.audio_file?.recording_start) {
-        const recordingStart = new Date(detection.audio_file.recording_start);
-        const actual = new Date(recordingStart.getTime() + detection.start_time * 1000);
-        const y = actual.getFullYear();
-        const mo = (actual.getMonth() + 1).toString().padStart(2, '0');
-        const d = actual.getDate().toString().padStart(2, '0');
-        const h = actual.getHours().toString().padStart(2, '0');
-        const mi = actual.getMinutes().toString().padStart(2, '0');
-        const s = actual.getSeconds().toString().padStart(2, '0');
-        timestamp = `${y}${mo}${d}_${h}${mi}${s}`;
+      const recordingStart = parseStoredInstant(detection.audio_file?.recording_start ?? null);
+      if (recordingStart !== null) {
+        const w = wallClockAt(recordingStart + detection.start_time * 1000, zone);
+        const two = (n: number) => n.toString().padStart(2, '0');
+        timestamp = `${w.year}${two(w.month)}${two(w.day)}_${two(w.hour)}${two(w.minute)}${two(w.second)}`;
       } else {
         const mins = Math.floor(detection.start_time / 60);
         const s = Math.floor(detection.start_time % 60);
         timestamp = `${mins}m${s.toString().padStart(2, '0')}s`;
       }
       const defaultName = `${species}_${timestamp}.wav`;
-      await exportRegionAsWav(wavBytes, defaultName);
+      const savedPath = await exportRegionAsWav(wavBytes, defaultName);
+      // null means the save dialog was cancelled: nothing to report.
+      if (savedPath)
+        showToast(m.detail_exportSaved({ file: savedPath.split(/[\\/]/).pop() ?? savedPath }), { severity: 'success' });
     } catch (err) {
       console.error('Export failed:', err);
+      showToast(m.detail_exportFailed({ error: err instanceof Error ? err.message : String(err) }), {
+        severity: 'error',
+      });
     } finally {
       exporting = false;
     }

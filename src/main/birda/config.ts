@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execBirda } from './exec';
+import type { BirdaConfigPayload } from '$shared/types';
 
 export interface RegistryLanguage {
   code: string;
@@ -37,12 +38,6 @@ export async function getRegistryLanguages(modelId: string): Promise<RegistryLan
   const registry = await readRegistry();
   const model = registry.models.find((m) => m.id === modelId);
   return model?.files.labels?.languages ?? [];
-}
-
-/** What `birda config show` reports: where the config file is and its contents. */
-export interface BirdaConfigPayload {
-  config_path?: string;
-  config: Record<string, unknown>;
 }
 
 export async function getConfig(): Promise<BirdaConfigPayload> {

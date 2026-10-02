@@ -14,6 +14,7 @@
   import CoordinateInput from '$lib/components/CoordinateInput.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import SourceFilesPanel from '$lib/components/SourceFilesPanel.svelte';
+  import TimeZoneSelect from '$lib/components/TimeZoneSelect.svelte';
   import { appState } from '$lib/stores/app.svelte';
   import { analysisState, dismissAnalysis } from '$lib/stores/analysis.svelte';
   import { lockedTitle } from '$lib/utils/runLock';
@@ -25,8 +26,12 @@
     readCoordinates,
     getLocations,
     scanSource,
+    getSettings,
+    setSettings,
   } from '$lib/utils/ipc';
   import { parseLocalDate, parseRecordingStart } from '$lib/utils/format';
+  import { parseRecordingName } from '$shared/recording-name';
+  import { isValidTimeZone, systemTimeZone } from '$shared/time-zone';
   import type { AvailableModel, InstalledModel, Location, SourceScanResult } from '$shared/types';
   import { onMount, tick, untrack } from 'svelte';
   import * as m from '$paraglide/messages';
@@ -42,6 +47,7 @@
       month?: number | undefined;
       day?: number | undefined;
       timezoneOffsetMin?: number | undefined;
+      timezone?: string | undefined;
     }) => void;
     onstop: () => void;
   } = $props();
@@ -62,6 +68,21 @@
   // --- Source scan state ---
   let scanResult = $state<SourceScanResult | null>(null);
   let scanning = $state(false);
+
+  // --- Time zone of file name timestamps ---
+  let filenameTimezone = $state(systemTimeZone());
+  // Files that carry no AudioMoth header time but are named YYYYMMDD_HHMMSS: their clock is the recorder's, so the user says which zone it is in.
+  const filenameTimestamped = $derived(
+    scanResult?.files.some(
+      (f) => !f.audiomoth?.recordedAt && parseRecordingName(f.name, { allowSuffix: true }) !== null,
+    ) ?? false,
+  );
+
+  function rememberTimezone(zone: string) {
+    void setSettings({ filename_timezone: zone }).catch((err: unknown) => {
+      console.error('Could not save the file name time zone:', err);
+    });
+  }
 
   // --- Date picker state ---
   let showDatePicker = $state(false);
@@ -202,7 +223,15 @@
     }
     // Extract timezone offset from AudioMoth metadata of the first scanned file
     const timezoneOffsetMin = scanResult?.files[0]?.audiomoth?.timezoneOffsetMin ?? undefined;
-    onstart({ locationName, latitude, longitude, month, day, timezoneOffsetMin });
+    onstart({
+      locationName,
+      latitude,
+      longitude,
+      month,
+      day,
+      timezoneOffsetMin,
+      timezone: filenameTimestamped ? filenameTimezone : undefined,
+    });
   }
 
   // The location and date of a running analysis this window joined (after a
@@ -218,6 +247,7 @@
       joined.month !== undefined && joined.day !== undefined
         ? `2024-${String(joined.month).padStart(2, '0')}-${String(joined.day).padStart(2, '0')}`
         : '';
+    if (joined.timezone) filenameTimezone = joined.timezone;
     appState.joinedSettings = null;
   });
 
@@ -239,6 +269,12 @@
   }
 
   onMount(async () => {
+    try {
+      const saved = (await getSettings()).filename_timezone;
+      if (saved && isValidTimeZone(saved)) filenameTimezone = saved;
+    } catch {
+      // Keep the system zone
+    }
     try {
       [installedModels, availableModels] = await Promise.all([listModels(), listAvailableModels()]);
       if (installedModels.length > 0 && !installedModels.some((mod) => mod.id === appState.selectedModel)) {
@@ -437,6 +473,22 @@
             class="input input-bordered input-sm w-full"
           />
         </div>
+
+        <!-- Time zone of the clock in the file names -->
+        {#if filenameTimestamped}
+          <div class="space-y-1">
+            <label for="filename-timezone" class="text-base-content/70 text-xs font-medium"
+              >{m.analysis_filenameTimezone()}</label
+            >
+            <TimeZoneSelect
+              id="filename-timezone"
+              bind:value={filenameTimezone}
+              onchange={rememberTimezone}
+              class="w-full"
+            />
+            <p class="text-base-content/50 text-xs">{m.analysis_filenameTimezoneHint()}</p>
+          </div>
+        {/if}
       </fieldset>
 
       <!-- Range filter warning -->
@@ -446,7 +498,11 @@
           <div>
             <p class="font-medium">{m.analysis_noRangeFiltering()}</p>
             <p class="mt-0.5">
-              {hasDate ? m.analysis_noRangeWarningCoordsOnly() : m.analysis_noRangeWarningBoth()}
+              {!hasCoords && !hasDate
+                ? m.analysis_noRangeWarningBoth()
+                : !hasCoords
+                  ? m.analysis_noRangeWarningNoCoords()
+                  : m.analysis_noRangeWarningNoDate()}
             </p>
           </div>
         </div>
