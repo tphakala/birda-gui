@@ -303,8 +303,10 @@ function runMigrations(db: Database.Database): void {
       addColumnIfMissing(db, 'analysis_runs', 'timezone', 'TEXT');
       addColumnIfMissing(db, 'analysis_runs', 'range_filter_note', 'TEXT');
       addColumnIfMissing(db, 'audio_files', 'timestamp_source', 'TEXT');
-      // Files with an AudioMoth device id had their start read from the header;
-      // any other file with a start was read from its name.
+      // Files with an AudioMoth device id are taken to have had their start read
+      // from the header (one with a device id but no recorded time was read from
+      // its name, and cannot be told apart here); any other file with a start was
+      // read from its name.
       db.exec(`
         UPDATE audio_files SET timestamp_source = CASE
           WHEN recording_start IS NULL THEN NULL
