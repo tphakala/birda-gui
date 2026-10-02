@@ -72,10 +72,15 @@
   // --- Time zone of file name timestamps ---
   let filenameTimezone = $state(systemTimeZone());
   // Files that carry no AudioMoth header time but are named YYYYMMDD_HHMMSS: their clock is the recorder's, so the user says which zone it is in.
+  // When the scan failed there is no file list, so the source's own name decides.
   const filenameTimestamped = $derived(
-    scanResult?.files.some(
-      (f) => !f.audiomoth?.recordedAt && parseRecordingName(f.name, { allowSuffix: true }) !== null,
-    ) ?? false,
+    scanResult
+      ? scanResult.files.some(
+          (f) => !f.audiomoth?.recordedAt && parseRecordingName(f.name, { allowSuffix: true }) !== null,
+        )
+      : !scanning &&
+          appState.sourcePath !== null &&
+          parseRecordingName(appState.sourcePath, { allowSuffix: true }) !== null,
   );
 
   function rememberTimezone(zone: string) {
@@ -185,6 +190,8 @@
   }
 
   async function startAnyway() {
+    // A new source may be scanning behind the open warning; the zone question depends on that scan.
+    if (scanning) return;
     startClickedAt = performance.now();
     doStart();
     // The warning is replaced by the Start/Stop button again; keep focus on it.
@@ -208,6 +215,8 @@
       onstop();
       return;
     }
+    // Which files carry a name timestamp is only known once the scan finished, and that decides whether the zone is asked for.
+    if (scanning) return;
     startClickedAt = performance.now();
     void handleStartClick();
   }
@@ -528,16 +537,20 @@
           bind:this={startStopButton}
           onclick={handleStartStopClick}
           onkeydown={ignoreKeyRepeat}
-          aria-disabled={appState.isAnalysisStopping}
+          aria-disabled={appState.isAnalysisStopping || (scanning && !appState.isAnalysisRunning)}
           class="btn w-full gap-2 {appState.isAnalysisRunning
             ? 'btn-error'
-            : 'btn-primary transition-all duration-200 hover:brightness-110'} {appState.isAnalysisStopping
+            : 'btn-primary transition-all duration-200 hover:brightness-110'} {appState.isAnalysisStopping ||
+          (scanning && !appState.isAnalysisRunning)
             ? 'btn-disabled'
             : ''}"
         >
           {#if appState.isAnalysisStopping}
             <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
             {m.analysis_stopping()}
+          {:else if scanning && !appState.isAnalysisRunning}
+            <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+            {m.sourceFiles_scanning()}
           {:else if appState.isAnalysisRunning}
             <Square size={18} />
             {m.analysis_stopAnalysis()}
