@@ -1,10 +1,16 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- tests work on temp paths they create */
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from './analysis-session';
 import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
+import { BIRDA_CLI_VERSION, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
-vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
+const dirs = vi.hoisted(() => ({ userData: '' }));
+dirs.userData = NO_USER_DATA;
+vi.mock('electron', () => ({ app: { getPath: () => dirs.userData } }));
 
 const spawned = vi.hoisted(() => ({ children: [] as unknown[] }));
 vi.mock('child_process', async (importOriginal) => ({
@@ -283,10 +289,44 @@ describe('killAll', () => {
 });
 
 describe('birdaChildEnv', () => {
-  it('sets NO_COLOR, keeps the environment and lets extra values override it', () => {
-    const env = birdaChildEnv({ LD_LIBRARY_PATH: '/cuda' });
+  it('sets NO_COLOR and keeps the rest of the environment', () => {
+    const env = birdaChildEnv();
     expect(env.NO_COLOR).toBe('1');
-    expect(env.LD_LIBRARY_PATH).toBe('/cuda');
     expect(env.PATH).toBe(process.env.PATH);
+  });
+
+  it('lets extra values override a variable the environment already has', () => {
+    const before = process.env.BIRDA_TEST_VAR;
+    process.env.BIRDA_TEST_VAR = 'from-environment';
+    try {
+      expect(birdaChildEnv({ BIRDA_TEST_VAR: 'extra' }).BIRDA_TEST_VAR).toBe('extra');
+    } finally {
+      if (before === undefined) delete process.env.BIRDA_TEST_VAR;
+      else process.env.BIRDA_TEST_VAR = before;
+    }
+  });
+});
+
+describe('runAnalysis CUDA libraries', () => {
+  it('puts the downloaded CUDA libraries on the library path of the child', async () => {
+    const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-cuda-env-'));
+    const libs = path.join(userData, CUDA_LIBS_DIR_NAME);
+    fs.mkdirSync(libs);
+    fs.writeFileSync(path.join(libs, CUDA_VERSION_FILE), BIRDA_CLI_VERSION);
+    const previous = dirs.userData;
+    dirs.userData = userData;
+    try {
+      const { spawn } = await import('child_process');
+      const handle = runAnalysis('/rec.wav', options);
+      (await spawnedChild()).exit(0);
+      await handle.promise;
+      const env = (vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env: NodeJS.ProcessEnv }).env;
+      const searchPath = process.platform === 'win32' ? env.PATH : env.LD_LIBRARY_PATH;
+      expect(searchPath?.startsWith(libs)).toBe(true);
+      expect(env.NO_COLOR).toBe('1');
+    } finally {
+      dirs.userData = previous;
+      fs.rmSync(userData, { recursive: true, force: true });
+    }
   });
 });

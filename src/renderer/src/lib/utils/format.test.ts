@@ -45,6 +45,13 @@ describe('formatDetectionDate', () => {
     expect(formatDetectionDate(late, 'Europe/Helsinki')).toBe('20-05-16');
   });
 
+  it('leaves the year out for a date in the current year', () => {
+    const year = new Date().getFullYear();
+    const now = { audio_file: { recording_start: `${year}-06-15T12:00:00Z` }, start_time: 0 };
+    expect(formatDetectionDate(now, 'UTC')).toBe('06-15');
+    expect(formatDetectionDate(now, 'Europe/Helsinki')).toBe('06-15');
+  });
+
   it('shows -- without a recording start', () => {
     expect(formatDetectionDate({ audio_file: null, start_time: 0 }, 'UTC')).toBe('--');
   });

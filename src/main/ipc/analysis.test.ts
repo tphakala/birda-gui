@@ -50,7 +50,18 @@ vi.mock('../birda/runner', () => ({
     return handle;
   }),
   findBirda: vi.fn(),
-  birdaChildEnv: () => ({}),
+  birdaChildEnv: () => ({ BIRDA_TEST_ENV: '1' }),
+  registerProcess: vi.fn(),
+  unregisterProcess: vi.fn(),
+}));
+vi.mock('child_process', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('child_process')>()),
+  execFile: vi.fn((_file: string, _args: string[], _options: unknown, callback: (...r: unknown[]) => void) => {
+    setImmediate(() => {
+      callback(null, '/clips/a.wav\n', '');
+    });
+    return { pid: 1 };
+  }),
 }));
 
 vi.mock('../db/runs', () => ({
@@ -584,7 +595,28 @@ describe('stopAnalysisForQuit', () => {
     });
   });
 
+  describe('birda:extract-clip', () => {
+    it('runs birda with the child environment', async () => {
+      const { execFile } = await import('child_process');
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-clip-env-'));
+      leftovers.push(dir);
+      await expect(invoke('birda:extract-clip', 1, 'a.wav', 0, 3, dir)).resolves.toBe('/clips/a.wav');
+      const options = vi.mocked(execFile).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv };
+      expect(options.env).toEqual({ BIRDA_TEST_ENV: '1' });
+    });
+  });
+
   describe('range filter warning', () => {
+    it('keeps the note in the result of a stopped run', async () => {
+      const run = analyze();
+      const handle = await started();
+      handle.emitStderr('WARN Range filtering disabled: no meta model configured');
+      cancel();
+      handle.reject(new AnalysisCancelledError());
+
+      await expect(run).resolves.toMatchObject({ status: 'cancelled', rangeFilterNote: 'no meta model configured' });
+    });
+
     it('stores the first warning on the run, logs it and returns it in the result', async () => {
       const run = analyze();
       const handle = await started();
