@@ -93,7 +93,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The following npm package may be included in this product:
 
- - wavesurfer.js@7.12.11
+ - wavesurfer.js@7.12.12
 
 This package contains the following license:
 
@@ -155,7 +155,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 The following npm package may be included in this product:
 
- - suncalc@2.0.2
+ - suncalc@2.1.1
 
 This package contains the following license:
 
@@ -237,7 +237,7 @@ MIT
 
 The following npm package may be included in this product:
 
- - daisyui@5.7.32
+ - daisyui@5.7.47
 
 This package contains the following license:
 
@@ -298,7 +298,7 @@ SOFTWARE.
 The following npm packages may be included in this product:
 
  - file-type@21.3.4
- - uint8array-extras@1.5.0
+ - uint8array-extras@1.6.0
 
 These packages each contain the following license:
 
