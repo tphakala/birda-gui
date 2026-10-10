@@ -830,7 +830,7 @@
       <ModelGallery />
 
       <!-- ==================== DATA ==================== -->
-    {:else if activeSubTab === 'data'}
+    {:else}
       <div class="card bg-base-200">
         <div class="card-body gap-4 p-4">
           <div class="flex items-center gap-2">

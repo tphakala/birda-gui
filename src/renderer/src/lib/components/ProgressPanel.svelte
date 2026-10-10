@@ -48,7 +48,7 @@
               <CircleX size={16} />
               {m.progress_failed()}
             </span>
-          {:else if analysisState.status === 'stopped'}
+          {:else}
             <span class="badge badge-warning gap-1">
               <CircleSlash size={14} />
               {analysisState.discarded ? m.progress_stoppedDiscarded() : m.progress_stopped()}

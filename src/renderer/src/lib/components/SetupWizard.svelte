@@ -400,7 +400,7 @@
       </div>
 
       <!-- ==================== LANGUAGE ==================== -->
-    {:else if currentStep === 'language'}
+    {:else}
       <div class="text-center">
         <h2 class="text-xl font-bold">{m.wizard_language_title()}</h2>
         <p class="text-base-content/60 mt-1 text-sm">{m.wizard_language_subtitle()}</p>
