@@ -174,7 +174,7 @@
                 <td class="{col.class ?? ''} font-medium">{detection.common_name}</td>
               {:else if col.key === 'scientific_name'}
                 <td class="{col.class ?? ''} text-base-content/50 italic">{detection.scientific_name}</td>
-              {:else if col.key === 'confidence'}
+              {:else}
                 <td class="{col.class ?? ''} text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
               {/if}
             {/each}
