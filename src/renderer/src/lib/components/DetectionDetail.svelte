@@ -47,7 +47,6 @@
   let gainNode: GainNode | null = null;
 
   // Region selection
-  let regionsPlugin: RegionsPlugin | null = null;
   let activeRegion = $state<Region | null>(null);
   let looping = $state(false);
   let disableDragSelection: (() => void) | null = null;
@@ -161,6 +160,8 @@
         // Connect media element through Web Audio GainNode for >1.0 boost
         try {
           const mediaEl = wavesurfer.getMediaElement();
+          // Null only under the WebAudio backend, which this player does not use.
+          if (!mediaEl) throw new Error('No media element to route through the gain node');
           audioContext = new AudioContext();
           const source = audioContext.createMediaElementSource(mediaEl);
           gainNode = audioContext.createGain();
@@ -172,7 +173,7 @@
         }
 
         // Initialize regions plugin for drag-to-select
-        regionsPlugin = RegionsPlugin.create();
+        const regionsPlugin = RegionsPlugin.create();
         wavesurfer.registerPlugin(regionsPlugin);
 
         disableDragSelection = regionsPlugin.enableDragSelection({

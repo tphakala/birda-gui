@@ -113,7 +113,8 @@
    * plugin decided to mount.
    */
   function ensureSpectrogramMount(): void {
-    const wrapper = (spectrogramPlugin as unknown as { wrapper?: HTMLElement } | null)?.wrapper;
+    // The plugin's wrapper is the parent of its frequency-labels canvas (labels: true below).
+    const wrapper = wavesurfer?.getWrapper().querySelector('[part="spec-labels"]')?.parentElement;
     if (wrapper && spectrogramEl && wrapper.parentElement !== spectrogramEl) {
       // eslint-disable-next-line svelte/no-dom-manipulating -- spectrogramEl's children are owned by the wavesurfer plugin, not Svelte
       spectrogramEl.appendChild(wrapper);

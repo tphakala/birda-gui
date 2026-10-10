@@ -14,7 +14,7 @@ Desktop GUI for the **birda** bird species detection CLI. Built with Electron + 
 | Database     | better-sqlite3                     | 13.x                                   |
 | i18n         | Paraglide (compile-time)           | 2.x                                    |
 | Maps         | MapLibre GL + svelte-maplibre-gl   | 6.x / 2.x                              |
-| Audio        | WaveSurfer.js                      | 7.x                                    |
+| Audio        | WaveSurfer.js                      | 8.x                                    |
 | Icons        | Lucide Svelte (`@lucide/svelte`)   | 1.x                                    |
 | Validation   | Zod                                | 4.x                                    |
 
