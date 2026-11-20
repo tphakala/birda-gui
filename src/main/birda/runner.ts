@@ -169,17 +169,18 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
  * ANSI escapes, which would show as junk in the log panel and in error text.
  *
  * On macOS and Linux it also sets ORT_DYLIB_PATH to the ONNX Runtime library
- * next to the real birda binary, when that file exists. The release archives
- * ship the library there, and birda does not look in that directory itself
- * (birda#442). Without it birda can pick up a system copy it cannot load. A
- * non-empty ORT_DYLIB_PATH in the environment is left alone. Windows is
- * skipped: birda finds onnxruntime.dll next to birda.exe by itself.
+ * next to the real birda binary, when that file exists (see birda#442). A
+ * non-empty ORT_DYLIB_PATH in the environment is left alone, and other
+ * platforms are unchanged.
  */
 export function birdaChildEnv(birdaPath: string, extra?: Record<string, string>): NodeJS.ProcessEnv {
   return { ...process.env, ...ortLibraryEnv(birdaPath), ...extra, NO_COLOR: '1' };
 }
 
-/** ORT_DYLIB_PATH for the library next to the binary; only ever an existing file, since birda rejects any other. */
+/**
+ * ORT_DYLIB_PATH for the library next to the binary; only ever an existing file.
+ * birda v1.8.1 rejects any other value (src/inference/runtime.rs:30-42 in that repository).
+ */
 function ortLibraryEnv(birdaPath: string): Record<string, string> | undefined {
   if (process.env.ORT_DYLIB_PATH) return undefined;
   let fileName: string;
