@@ -27,6 +27,13 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
+      # maplibre-gl 6.19.0 replaced the camera's Transform classes with a
+      # store, and svelte-maplibre-gl 2.2.1 still reads the camera's
+      # transform on every move, so the map breaks on pan and zoom. Lift
+      # this once a svelte-maplibre-gl release supports 6.19.
+      - dependency-name: 'maplibre-gl'
+        versions:
+          - '>=6.19.0'
 
   - package-ecosystem: github-actions
     directory: /

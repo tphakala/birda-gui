@@ -158,7 +158,7 @@
     "husky": "^9.1.7",
     "knip": "^6.47.0",
     "lint-staged": "^17.6.1",
-    "maplibre-gl": "^6.19.0",
+    "maplibre-gl": "~6.18.0",
     "prettier": "^3.10.1",
     "prettier-plugin-svelte": "^4.2.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
