@@ -350,7 +350,7 @@
 
 <div class="border-base-300 bg-base-200 border-t px-4 py-3">
   {#if error}
-    <div role="alert" class="alert alert-error py-2 text-sm">{error}</div>
+    <div role="alert" class="alert alert-error py-2 text-sm wrap-anywhere">{error}</div>
   {:else}
     <div class="flex items-start gap-3">
       <!-- Play button -->
