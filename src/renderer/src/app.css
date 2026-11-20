@@ -124,6 +124,10 @@
   color: inherit;
 }
 
+.maplibregl-map .maplibregl-popup-close-button:hover {
+  background-color: var(--color-base-300);
+}
+
 .maplibregl-map
   :is(.maplibregl-popup-anchor-top, .maplibregl-popup-anchor-top-left, .maplibregl-popup-anchor-top-right)
   .maplibregl-popup-tip {
