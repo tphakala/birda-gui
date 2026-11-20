@@ -257,4 +257,4 @@ The Rust CLI backend lives in the [birda](https://github.com/tphakala/birda) rep
 
 - When changing output types in TypeScript ([shared/types.ts](shared/types.ts)), ensure compatibility with Rust output structures in `../birda/src/output/types.rs`.
 - NDJSON streaming format from birda CLI is parsed in [src/main/birda/](src/main/birda/)
-- Birda children started with `birdaChildEnv(birdaPath)` from `src/main/birda/runner.ts` (analysis, `execBirda`, GPU provider detection, model install, clip extraction; not the `-V` version probe) get `NO_COLOR=1`, plus on macOS and Linux `ORT_DYLIB_PATH` pointing at the ONNX Runtime library next to the binary when that file exists and the variable is not already set (birda#442).
+- Birda children started with `birdaChildEnv(birdaPath)` from `src/main/birda/runner.ts` (analysis, `execBirda`, GPU provider detection, model install, clip extraction; not the `-V` version probe) get `NO_COLOR=1`, plus on macOS and Linux `ORT_DYLIB_PATH` pointing at the ONNX Runtime library next to the binary when that file exists and the variable is unset or empty (birda#442).

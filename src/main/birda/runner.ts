@@ -165,7 +165,7 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
 }
 
 /**
- * Environment for any birda child. NO_COLOR keeps birda's log output free of
+ * Environment for birda children. NO_COLOR keeps birda's log output free of
  * ANSI escapes, which would show as junk in the log panel and in error text.
  *
  * On macOS and Linux it also sets ORT_DYLIB_PATH to the ONNX Runtime library
