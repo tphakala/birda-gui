@@ -340,7 +340,7 @@
           disabled={appState.isAnalysisRunning}
           title={lockedTitle()}
           aria-describedby={appState.isAnalysisRunning ? 'analysis-locked' : undefined}
-          class="btn btn-outline btn-sm flex-1 gap-1.5 whitespace-nowrap"
+          class="btn btn-outline btn-sm flex-1 gap-1.5"
         >
           <FileHeadphone size={14} />
           {m.analysis_openFile()}
@@ -351,7 +351,7 @@
           disabled={appState.isAnalysisRunning}
           title={lockedTitle()}
           aria-describedby={appState.isAnalysisRunning ? 'analysis-locked' : undefined}
-          class="btn btn-outline btn-sm flex-1 gap-1.5 whitespace-nowrap"
+          class="btn btn-outline btn-sm flex-1 gap-1.5"
         >
           <FolderOpen size={14} />
           {m.analysis_openFolder()}
@@ -532,7 +532,7 @@
               onclick={() => void startAnyway()}
               onkeydown={ignoreKeyRepeat}
               aria-disabled={scanning}
-              class="btn btn-warning btn-sm flex-1 whitespace-nowrap {scanning ? 'btn-disabled' : ''}"
+              class="btn btn-warning btn-sm flex-1 {scanning ? 'btn-disabled' : ''}"
             >
               {#if scanning}
                 <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>

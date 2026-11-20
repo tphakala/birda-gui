@@ -57,7 +57,7 @@
         mapFailed = false;
         showMapModal = true;
       }}
-      class="btn btn-outline btn-sm ml-auto gap-1.5 whitespace-nowrap"
+      class="btn btn-outline btn-sm ml-auto gap-1.5"
       title={m.coords_pickOnMap()}
     >
       <Map size={14} />

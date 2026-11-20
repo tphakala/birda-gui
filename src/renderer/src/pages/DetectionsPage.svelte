@@ -590,7 +590,7 @@
               offset = 0;
               loadActiveView();
             }}
-            class="select select-bordered select-sm w-auto max-w-56 shrink-0 overflow-clip text-xs whitespace-nowrap [overflow-clip-margin:content-box]"
+            class="select select-bordered select-sm w-auto max-w-56 overflow-clip text-xs [overflow-clip-margin:content-box]"
           >
             <option value={0}>{m.species_allSpecies()}</option>
             {#each speciesLists as list (list.id)}

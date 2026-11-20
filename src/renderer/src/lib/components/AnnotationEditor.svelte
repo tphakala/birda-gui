@@ -479,7 +479,7 @@
     <div class="bg-base-100 flex h-full flex-col overflow-hidden rounded-lg shadow-xl">
       <!-- Header -->
       <div class="border-base-300 flex items-center gap-3 border-b px-4 py-2">
-        <span id="annotation-editor-title" class="shrink-0 font-medium whitespace-nowrap">
+        <span id="annotation-editor-title" class="font-medium whitespace-nowrap">
           {m.annotation_editor_title()}
         </span>
         <span class="text-base-content/70 truncate text-xs">{annotationEditor.filePath}</span>

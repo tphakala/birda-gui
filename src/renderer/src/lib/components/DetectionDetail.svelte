@@ -367,11 +367,11 @@
       <!-- Waveform + Spectrogram -->
       <div class="min-w-0 flex-1">
         <div class="text-base-content/60 mb-1 flex items-center gap-3 text-xs">
-          <span class="shrink-0 whitespace-nowrap tabular-nums">
+          <span class="whitespace-nowrap tabular-nums">
             {formatTime(detection.start_time)} - {formatTime(detection.end_time)}
           </span>
           <span class="min-w-0 truncate" title={detection.common_name}>{detection.common_name}</span>
-          <span class="text-base-content/40 shrink-0 whitespace-nowrap">
+          <span class="text-base-content/40 whitespace-nowrap">
             ({formatConfidence(detection.confidence)})
           </span>
           {#if detection.audio_file}
@@ -387,7 +387,7 @@
             </button>
           {/if}
           {#if !loading}
-            <span class="ml-auto shrink-0 whitespace-nowrap tabular-nums">
+            <span class="ml-auto whitespace-nowrap tabular-nums">
               {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
             </span>
           {/if}
@@ -400,11 +400,7 @@
           <div class="text-base-content/70 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <label class="flex shrink-0 items-center gap-1 whitespace-nowrap">
               {m.detail_freqMax()}
-              <select
-                value={freqMax}
-                onchange={handleFreqChange}
-                class="select select-bordered select-xs w-auto shrink-0"
-              >
+              <select value={freqMax} onchange={handleFreqChange} class="select select-bordered select-xs w-auto">
                 {#each freqOptions as opt (opt.value)}
                   <option value={opt.value}>{opt.label}</option>
                 {/each}
@@ -415,7 +411,7 @@
               <select
                 value={spectrogramHeight}
                 onchange={handleHeightChange}
-                class="select select-bordered select-xs w-auto shrink-0"
+                class="select select-bordered select-xs w-auto"
               >
                 <option value={128}>{m.settings_spectrogram_heightSmall()}</option>
                 <option value={160}>{m.settings_spectrogram_heightMedium()}</option>

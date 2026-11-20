@@ -46,7 +46,7 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="flex cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-md transition-opacity"
-            class:px-1={size >= 20 && String(shownCount(loc)).length >= 4}
+            class:px-1={shownCount(loc) >= 1000}
             style="min-width: {size}px; height: {size}px; background-color: {color}; opacity: {dimmed ? 0.3 : 1};"
             onclick={() => {
               toggleLocation(loc);

@@ -104,6 +104,11 @@
     0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
+/* daisyUI buttons have a fixed height, so a label that wraps spills out of the button. */
+.btn {
+  white-space: nowrap;
+}
+
 /* Checkboxes use the field radius; --radius-selector is 1.5rem and would round a 16px box into a circle. */
 .checkbox {
   border-radius: var(--radius-field);

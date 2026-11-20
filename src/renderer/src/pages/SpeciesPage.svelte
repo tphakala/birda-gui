@@ -321,11 +321,11 @@
 
     <!-- Action buttons -->
     <div class="border-base-300 flex flex-wrap gap-1 border-b px-3 py-2">
-      <button onclick={openFetchModal} class="btn btn-outline btn-xs flex-1 gap-1 whitespace-nowrap">
+      <button onclick={openFetchModal} class="btn btn-outline btn-xs flex-1 gap-1">
         <Download size={12} />
         {m.species_fetchNew()}
       </button>
-      <button onclick={openCustomModal} class="btn btn-outline btn-xs flex-1 gap-1 whitespace-nowrap">
+      <button onclick={openCustomModal} class="btn btn-outline btn-xs flex-1 gap-1">
         <Plus size={12} />
         {m.species_customList()}
       </button>
@@ -392,7 +392,7 @@
           <Bird size={16} class="text-primary shrink-0" />
           <span class="min-w-0 truncate font-medium" title={selectedList.name}>{selectedList.name}</span>
           <span class="text-base-content/40 shrink-0">|</span>
-          <span class="text-base-content/60 shrink-0 whitespace-nowrap">
+          <span class="text-base-content/60 whitespace-nowrap">
             {m.species_speciesCount({ count: String(selectedList.species_count) })}
           </span>
         </div>
@@ -445,11 +445,7 @@
             {/if}
           </div>
 
-          <button
-            onclick={handleUseAsFilter}
-            class="btn btn-primary btn-xs gap-1 whitespace-nowrap"
-            title={m.species_useAsFilter()}
-          >
+          <button onclick={handleUseAsFilter} class="btn btn-primary btn-xs gap-1" title={m.species_useAsFilter()}>
             <Funnel size={12} />
             {m.species_useAsFilter()}
           </button>
