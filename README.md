@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml/badge.svg)](https://github.com/tphakala/birda-gui/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Electron](https://img.shields.io/badge/Electron-43-47848F.svg)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-45-47848F.svg)](https://www.electronjs.org/)
 [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-pink.svg)](https://github.com/sponsors/tphakala)
 
 Desktop GUI for [birda](https://github.com/tphakala/birda), a bird species detection CLI powered by BirdNET. Analyze audio recordings for bird species, browse detections, and explore results on an interactive map.
@@ -64,7 +64,7 @@ The build automatically fetches the bundled birda CLI binary into `resources/bir
 
 ## Tech Stack
 
-- **Electron 43**: Desktop runtime
+- **Electron 45**: Desktop runtime
 - **Svelte 5**: UI framework (runes)
 - **Tailwind CSS 4** + **daisyUI 5**: Styling
 - **TypeScript**: Strict mode throughout

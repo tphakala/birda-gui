@@ -6,7 +6,7 @@ Desktop GUI for the **birda** bird species detection CLI. Built with Electron + 
 
 | Layer        | Technology                         | Version                                |
 | ------------ | ---------------------------------- | -------------------------------------- |
-| Runtime      | Electron                           | 43.x                                   |
+| Runtime      | Electron                           | 45.x                                   |
 | UI Framework | Svelte                             | 5.x (runes API, **not** legacy stores) |
 | CSS          | Tailwind CSS v4 + daisyUI v5       | 4.3.x / 5.8.x                          |
 | Language     | TypeScript                         | 6.0.x (strict mode)                    |
