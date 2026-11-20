@@ -115,7 +115,10 @@
 
 <div class="relative">
   <div class="relative">
-    <Search size={16} class="text-base-content/40 absolute top-1/2 left-2.5 -translate-y-1/2" />
+    <Search
+      size={16}
+      class="text-base-content/40 pointer-events-none absolute top-1/2 left-2.5 z-10 -translate-y-1/2"
+    />
     <input
       type="text"
       data-focus-search

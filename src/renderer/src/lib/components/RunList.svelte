@@ -98,7 +98,9 @@
             <span class="text-base-content/50 mt-0.5 flex items-center gap-1.5 text-xs">
               <span class="truncate">{run.model}</span>
               <span class="text-base-content/30">·</span>
-              <span>{run.detection_count > 0 ? detectionLabel(run.detection_count) : m.runs_noDetections()}</span>
+              <span class="whitespace-nowrap">
+                {run.detection_count > 0 ? detectionLabel(run.detection_count) : m.runs_noDetections()}
+              </span>
             </span>
             <span class="text-base-content/40 mt-0.5 flex items-center gap-1.5 text-xs">
               {#if run.location_name}
@@ -106,7 +108,7 @@
                 <span class="text-base-content/30">·</span>
               {/if}
               {#if run.started_at}
-                <span>{formatDate(run.started_at)}</span>
+                <span class="whitespace-nowrap">{formatDate(run.started_at)}</span>
               {/if}
               {#if run.status === 'running'}
                 <span class="badge badge-info badge-xs">{m.runs_status_running()}</span>

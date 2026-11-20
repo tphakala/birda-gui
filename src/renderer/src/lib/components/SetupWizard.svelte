@@ -196,8 +196,8 @@
   }
 </script>
 
-<div class="bg-base-100 flex h-screen items-center justify-center">
-  <div class="w-full max-w-2xl px-6">
+<div class="bg-base-100 flex h-screen overflow-y-auto">
+  <div class="m-auto w-full max-w-2xl px-6 py-6">
     <!-- Step indicator -->
     <div class="mb-8 flex items-center justify-center gap-2">
       {#each steps as step, i (step)}

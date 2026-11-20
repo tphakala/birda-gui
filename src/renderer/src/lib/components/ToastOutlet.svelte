@@ -20,7 +20,7 @@
      Hover pauses the timeout for pointer users; focusin does it for keyboard users. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="toast toast-end toast-bottom z-[100] {toast.message ? '' : 'pointer-events-none'}"
+  class="toast toast-end toast-bottom bottom-10 z-[100] {toast.message ? '' : 'pointer-events-none'}"
   onmouseenter={pauseToast}
   onmouseleave={resumeToast}
   onfocusin={pauseToast}

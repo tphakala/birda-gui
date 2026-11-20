@@ -333,7 +333,7 @@
       <h1 class="text-lg font-semibold">{m.analysis_title()}</h1>
 
       <!-- Compact Open File / Open Folder buttons -->
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button
           type="button"
           onclick={handleOpenFile}
@@ -416,9 +416,9 @@
 
         <!-- Location & Date section -->
         <div class="border-base-300 space-y-3 rounded-lg border p-3">
-          <div class="flex items-center gap-1.5">
-            <h3 class="text-base-content/50 text-xs font-medium">{m.analysis_locationDate()}</h3>
-            <div class="ml-auto flex gap-1">
+          <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <h3 class="text-base-content/50 text-xs font-medium whitespace-nowrap">{m.analysis_locationDate()}</h3>
+            <div class="ml-auto flex shrink-0 gap-1">
               <span class="badge badge-xs gap-0.5 {hasCoords ? 'badge-success' : 'badge-ghost text-base-content/30'}">
                 {#if hasCoords}<Check size={10} />{:else}<Minus size={10} />{/if}
                 {m.analysis_statusCoords()}
@@ -517,7 +517,7 @@
               </p>
             </div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <button
               type="button"
               onclick={() => void backFromWarning()}
@@ -532,7 +532,7 @@
               onclick={() => void startAnyway()}
               onkeydown={ignoreKeyRepeat}
               aria-disabled={scanning}
-              class="btn btn-warning btn-sm flex-1 whitespace-nowrap {scanning ? 'btn-disabled' : ''}"
+              class="btn btn-warning btn-sm flex-1 {scanning ? 'btn-disabled' : ''}"
             >
               {#if scanning}
                 <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
