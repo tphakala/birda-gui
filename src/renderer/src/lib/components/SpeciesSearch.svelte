@@ -181,9 +181,9 @@
           <span class="text-base-content/50 ml-1 italic">{species.scientific_name}</span>
         </div>
         {#if species.detection_count > 0}
-          <span class="text-base-content/50 text-xs"
-            >{m.speciesSearch_detCount({ count: String(species.detection_count) })}</span
-          >
+          <span class="text-base-content/50 text-xs">
+            {m.speciesSearch_detCount({ count: String(species.detection_count) })}
+          </span>
         {/if}
       </li>
     {/each}

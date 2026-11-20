@@ -145,8 +145,8 @@
         barRadius: 2,
         sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
         url: toBirdaMediaUrl(clipPath),
-        plugins: spectrogramPlugin ? [spectrogramPlugin] : [],
       });
+      if (spectrogramPlugin) wavesurfer.registerPlugin(spectrogramPlugin);
 
       wavesurfer.on('ready', () => {
         if (!wavesurfer) return;
@@ -423,12 +423,12 @@
               <span class="w-8 text-right tabular-nums">{Math.round(gain * 100)}%</span>
             </div>
             {#if nyquist}
-              <span
-                >{m.detail_sampleRate({
+              <span>
+                {m.detail_sampleRate({
                   rate: (sampleRate / 1000).toFixed(1),
                   nyquist: (nyquist / 1000).toFixed(1),
-                })}</span
-              >
+                })}
+              </span>
             {/if}
           </div>
         {/if}

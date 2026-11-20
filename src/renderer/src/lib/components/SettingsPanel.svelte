@@ -711,9 +711,9 @@
                   bind:value={settings.default_confidence}
                   class="range range-primary flex-1"
                 />
-                <span class="text-base-content/70 w-12 text-sm tabular-nums"
-                  >{(settings.default_confidence * 100).toFixed(0)}%</span
-                >
+                <span class="text-base-content/70 w-12 text-sm tabular-nums">
+                  {(settings.default_confidence * 100).toFixed(0)}%
+                </span>
               </div>
             </label>
 
@@ -869,13 +869,13 @@
                   {m.settings_data_dbHealthError({ message: dbHealth.integrity_message })}
                 </span>
               {/if}
-              <span class="text-base-content/50"
-                >{m.settings_data_dbSize({ size: formatFileSize(dbHealth.file_size_bytes) })}</span
-              >
+              <span class="text-base-content/50">
+                {m.settings_data_dbSize({ size: formatFileSize(dbHealth.file_size_bytes) })}
+              </span>
               {#if dbHealth.freelist_count > 0}
-                <span class="text-base-content/50"
-                  >{m.settings_data_dbFreePages({ count: dbHealth.freelist_count })}</span
-                >
+                <span class="text-base-content/50">
+                  {m.settings_data_dbFreePages({ count: dbHealth.freelist_count })}
+                </span>
               {/if}
               {#if dbHealth.wal_mode}
                 <span class="badge badge-ghost badge-sm">{m.settings_data_dbWalMode()}</span>
@@ -977,8 +977,9 @@
                   locations: clearResult.locations,
                   annotations: clearResult.annotations,
                 })}
-                <span class="block break-words">{m.settings_data_clearedBackup({ path: clearResult.backup_path })}</span
-                >
+                <span class="block break-words">
+                  {m.settings_data_clearedBackup({ path: clearResult.backup_path })}
+                </span>
               {/if}
             </span>
           </div>

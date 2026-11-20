@@ -20,7 +20,7 @@
     actions?: Snippet | undefined;
   }
 
-  /* eslint-disable prefer-const, @typescript-eslint/no-useless-default-assignment */
+  /* eslint-disable prefer-const */
   let {
     open = $bindable(false),
     title,
@@ -34,7 +34,7 @@
     children,
     actions,
   }: Props = $props();
-  /* eslint-enable prefer-const, @typescript-eslint/no-useless-default-assignment */
+  /* eslint-enable prefer-const */
 
   function close() {
     open = false;

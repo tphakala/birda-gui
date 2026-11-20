@@ -391,9 +391,9 @@
             {#each installedModels as model (model.id)}
               <option value={model.id}>{modelNames.get(model.id) ?? model.id}</option>
             {:else}
-              <option value={appState.selectedModel}
-                >{modelNames.get(appState.selectedModel) ?? appState.selectedModel}</option
-              >
+              <option value={appState.selectedModel}>
+                {modelNames.get(appState.selectedModel) ?? appState.selectedModel}
+              </option>
             {/each}
           </select>
         </label>
@@ -486,9 +486,9 @@
         <!-- Time zone of the clock in the file names -->
         {#if filenameTimestamped}
           <div class="space-y-1">
-            <label for="filename-timezone" class="text-base-content/70 text-xs font-medium"
-              >{m.analysis_filenameTimezone()}</label
-            >
+            <label for="filename-timezone" class="text-base-content/70 text-xs font-medium">
+              {m.analysis_filenameTimezone()}
+            </label>
             <TimeZoneSelect
               id="filename-timezone"
               bind:value={filenameTimezone}
@@ -522,8 +522,10 @@
               type="button"
               onclick={() => void backFromWarning()}
               onkeydown={ignoreKeyRepeat}
-              class="btn btn-sm flex-1">{m.common_button_back()}</button
+              class="btn btn-sm flex-1"
             >
+              {m.common_button_back()}
+            </button>
             <button
               type="button"
               bind:this={startAnywayButton}

@@ -55,9 +55,9 @@
             </span>
           {/if}
           {#if analysisState.filesFailed > 0 && analysisState.status !== 'running'}
-            <span class="text-error text-xs font-normal"
-              >{m.progress_filesFailed({ count: formatNumber(analysisState.filesFailed) })}</span
-            >
+            <span class="text-error text-xs font-normal">
+              {m.progress_filesFailed({ count: formatNumber(analysisState.filesFailed) })}
+            </span>
           {/if}
         </span>
         {#if analysisState.status !== 'running'}

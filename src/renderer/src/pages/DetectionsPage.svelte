@@ -452,12 +452,13 @@
         <AudioLines size={16} class="text-primary shrink-0" />
 
         {#if selectedRun.is_directory}
-          <span class="min-w-20 shrink-[10] truncate font-medium" title={selectedRun.source_path}>{sourceFileName}</span
-          >
+          <span class="min-w-20 shrink-[10] truncate font-medium" title={selectedRun.source_path}>
+            {sourceFileName}
+          </span>
           <span class="text-base-content/40 hidden @2xl:inline">|</span>
-          <span class="text-base-content/60 whitespace-nowrap"
-            >{m.detections_fileCount({ count: String(selectedRun.file_count) })}</span
-          >
+          <span class="text-base-content/60 whitespace-nowrap">
+            {m.detections_fileCount({ count: String(selectedRun.file_count) })}
+          </span>
         {:else}
           <span class="min-w-20 shrink-[10] truncate font-medium" title={sourceFileName}>{sourceFileName}</span>
         {/if}

@@ -37,7 +37,7 @@ describe('cuda:download', () => {
     expect(sentOn('cuda:download-finished')).toEqual([{ outcome: 'installed', error: undefined }]);
   });
 
-  it.each([
+  it.each<[string, Error]>([
     ['cancelled', new CudaDownloadCancelledError()],
     ['failed', new Error('Download cancelled by user')],
   ])('reports %s', async (outcome, err) => {

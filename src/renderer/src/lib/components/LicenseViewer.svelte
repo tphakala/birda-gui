@@ -4,9 +4,7 @@
   import { getLicenses } from '$lib/utils/ipc';
   import * as m from '$paraglide/messages';
 
-  let {
-    open = $bindable(), // eslint-disable-line @typescript-eslint/no-useless-default-assignment -- $bindable() required for Svelte bind:
-  }: { open: boolean } = $props();
+  let { open = $bindable() }: { open: boolean } = $props();
 
   let licenseText = $state<string | null>(null);
   let loading = $state(false);
@@ -47,9 +45,9 @@
       <div class="mt-4 flex-1 overflow-auto">
         {#if loading}
           <div class="flex items-center justify-center py-12">
-            <span role="status" aria-label={m.common_loading()}
-              ><Loader size={24} class="motion-safe:animate-spin" /></span
-            >
+            <span role="status" aria-label={m.common_loading()}>
+              <Loader size={24} class="motion-safe:animate-spin" />
+            </span>
           </div>
         {:else if error}
           <p class="text-error text-sm">{error}</p>
