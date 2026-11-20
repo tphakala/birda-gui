@@ -43,9 +43,9 @@
 </script>
 
 <div class="space-y-2">
-  <div class="flex items-center gap-2">
-    <MapPin size={16} class="text-base-content/50" />
-    <span class="text-base-content/70 text-sm font-medium">{m.coords_title()}</span>
+  <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <MapPin size={16} class="text-base-content/50 shrink-0" />
+    <span class="text-base-content/70 text-sm font-medium whitespace-nowrap">{m.coords_title()}</span>
     {#if autoDetected}
       <span class="badge badge-success badge-sm">{m.coords_autoDetected()}</span>
     {/if}
@@ -57,7 +57,7 @@
         mapFailed = false;
         showMapModal = true;
       }}
-      class="btn btn-outline btn-sm ml-auto gap-1.5"
+      class="btn btn-outline btn-sm ml-auto gap-1.5 whitespace-nowrap"
       title={m.coords_pickOnMap()}
     >
       <Map size={14} />

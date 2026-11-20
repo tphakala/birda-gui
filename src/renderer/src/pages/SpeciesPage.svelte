@@ -320,12 +320,12 @@
     </div>
 
     <!-- Action buttons -->
-    <div class="border-base-300 flex gap-1 border-b px-3 py-2">
-      <button onclick={openFetchModal} class="btn btn-outline btn-xs flex-1 gap-1">
+    <div class="border-base-300 flex flex-wrap gap-1 border-b px-3 py-2">
+      <button onclick={openFetchModal} class="btn btn-outline btn-xs flex-1 gap-1 whitespace-nowrap">
         <Download size={12} />
         {m.species_fetchNew()}
       </button>
-      <button onclick={openCustomModal} class="btn btn-outline btn-xs flex-1 gap-1">
+      <button onclick={openCustomModal} class="btn btn-outline btn-xs flex-1 gap-1 whitespace-nowrap">
         <Plus size={12} />
         {m.species_customList()}
       </button>
@@ -385,60 +385,75 @@
   {#if selectedList}
     <div class="flex flex-1 flex-col overflow-hidden">
       <!-- Header -->
-      <div class="border-base-300 bg-base-200/50 flex items-center gap-3 border-b px-4 py-2.5 text-sm">
-        <Bird size={16} class="text-primary shrink-0" />
-        <span class="font-medium">{selectedList.name}</span>
-        <span class="text-base-content/40">|</span>
-        <span class="text-base-content/60">
-          {m.species_speciesCount({ count: String(selectedList.species_count) })}
-        </span>
-
-        {#if selectedList.source === 'fetched'}
-          {#if selectedList.latitude !== null && selectedList.longitude !== null}
-            <span class="text-base-content/40">|</span>
-            <span class="text-base-content/50 flex items-center gap-1 text-xs">
-              <MapPin size={11} />
-              {selectedList.latitude.toFixed(2)}, {selectedList.longitude.toFixed(2)}
-            </span>
-          {/if}
-          {#if selectedList.week !== null}
-            <span class="text-base-content/50 text-xs">
-              {m.species_detail_week({ week: String(selectedList.week) })}
-            </span>
-          {/if}
-          {#if selectedList.threshold !== null}
-            <span class="text-base-content/50 text-xs">
-              {m.species_detail_threshold({ threshold: (selectedList.threshold * 100).toFixed(1) })}
-            </span>
-          {/if}
-        {/if}
-
-        <!-- Search within list -->
-        <div class="relative ml-auto">
-          <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder={m.species_searchInList()}
-            aria-label={m.species_searchInList()}
-            bind:value={entryFilter}
-            class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
-          />
-          {#if entryFilter}
-            <button
-              type="button"
-              onclick={() => (entryFilter = '')}
-              aria-label={m.common_button_clear()}
-              class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
-            >
-              <X size={12} />
-            </button>
-          {/if}
+      <div
+        class="border-base-300 bg-base-200/50 flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5 text-sm"
+      >
+        <div class="flex min-w-0 flex-auto items-center gap-3">
+          <Bird size={16} class="text-primary shrink-0" />
+          <span class="min-w-0 truncate font-medium" title={selectedList.name}>{selectedList.name}</span>
+          <span class="text-base-content/40 shrink-0">|</span>
+          <span class="text-base-content/60 shrink-0 whitespace-nowrap">
+            {m.species_speciesCount({ count: String(selectedList.species_count) })}
+          </span>
         </div>
 
-        <button onclick={handleUseAsFilter} class="btn btn-primary btn-xs gap-1" title={m.species_useAsFilter()}>
-          <Funnel size={12} />
-          {m.species_useAsFilter()}
-        </button>
+        {#if selectedList.source === 'fetched'}
+          <div class="flex shrink-0 items-center gap-3 whitespace-nowrap">
+            {#if selectedList.latitude !== null && selectedList.longitude !== null}
+              <span class="text-base-content/40">|</span>
+              <span class="text-base-content/50 flex items-center gap-1 text-xs">
+                <MapPin size={11} />
+                {selectedList.latitude.toFixed(2)}, {selectedList.longitude.toFixed(2)}
+              </span>
+            {/if}
+            {#if selectedList.week !== null}
+              <span class="text-base-content/50 text-xs">
+                {m.species_detail_week({ week: String(selectedList.week) })}
+              </span>
+            {/if}
+            {#if selectedList.threshold !== null}
+              <span class="text-base-content/50 text-xs">
+                {m.species_detail_threshold({ threshold: (selectedList.threshold * 100).toFixed(1) })}
+              </span>
+            {/if}
+          </div>
+        {/if}
+
+        <div class="ml-auto flex shrink-0 items-center gap-3">
+          <!-- Search within list -->
+          <div class="relative">
+            <Search
+              size={14}
+              class="text-base-content/40 pointer-events-none absolute top-1/2 left-2 z-10 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              placeholder={m.species_searchInList()}
+              aria-label={m.species_searchInList()}
+              bind:value={entryFilter}
+              class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
+            />
+            {#if entryFilter}
+              <button
+                type="button"
+                onclick={() => (entryFilter = '')}
+                aria-label={m.common_button_clear()}
+                class="text-base-content/40 hover:text-base-content absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5"
+              >
+                <X size={12} />
+              </button>
+            {/if}
+          </div>
+
+          <button
+            onclick={handleUseAsFilter}
+            class="btn btn-primary btn-xs gap-1 whitespace-nowrap"
+            title={m.species_useAsFilter()}
+          >
+            <Funnel size={12} />
+            {m.species_useAsFilter()}
+          </button>
+        </div>
       </div>
 
       <!-- Species table -->
@@ -651,7 +666,10 @@
         <div>
           <span class="text-base-content/70 text-xs">{m.species_custom_searchAdd()}</span>
           <div class="relative mt-1">
-            <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
+            <Search
+              size={14}
+              class="text-base-content/40 pointer-events-none absolute top-1/2 left-2 z-10 -translate-y-1/2"
+            />
             <input
               type="text"
               bind:value={customSearchQuery}

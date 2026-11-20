@@ -206,7 +206,10 @@
   {:else}
     <!-- Grid -->
     <div class="flex-1 overflow-auto px-4 pt-2 pb-4">
-      <div class="grid w-fit" style="grid-template-columns: minmax(180px, max-content) repeat(24, 32px); gap: 2px;">
+      <div
+        class="grid w-full"
+        style="grid-template-columns: minmax(180px, max-content) repeat(24, minmax(24px, 32px)); gap: 2px;"
+      >
         <!-- Header row: empty corner + hour labels -->
         <div class="bg-base-100 sticky left-0 z-10"></div>
         {#each hours as h (h)}
@@ -238,10 +241,10 @@
         {#each speciesList as sp (sp.scientific_name)}
           <!-- Species label (sticky left) -->
           <div
-            class="bg-base-100 text-base-content/70 sticky left-0 z-10 flex items-center truncate pr-2 text-xs"
+            class="bg-base-100 text-base-content/70 sticky left-0 z-10 flex min-w-0 items-center pr-2 text-xs"
             title={`${sp.common_name} (${sp.scientific_name})`}
           >
-            {sp.common_name}
+            <span class="truncate">{sp.common_name}</span>
           </div>
 
           <!-- Hour cells -->

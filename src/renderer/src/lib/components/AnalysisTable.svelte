@@ -56,21 +56,21 @@
     {
       key: 'date',
       label: m.table_columnDate(),
-      class: 'w-20',
+      class: 'w-20 whitespace-nowrap',
       sortable: false,
       visible: isDirectory && hasTimestamps,
     },
     {
       key: 'time',
       label: m.table_columnTime(),
-      class: 'w-20',
+      class: 'w-20 whitespace-nowrap',
       sortable: false,
       visible: isDirectory && hasTimestamps,
     },
     {
       key: 'start_time',
       label: hasTimestamps ? m.table_columnOffset() : m.table_columnTime(),
-      class: 'w-20',
+      class: 'w-20 whitespace-nowrap',
       sortable: true,
       visible: true,
     },
@@ -111,94 +111,98 @@
 
 <div class="flex flex-1 flex-col overflow-hidden">
   <div class="bg-base-100 flex-1 overflow-auto">
-    <table class="table-sm table">
-      <thead>
-        <tr>
-          <th class="w-8"></th>
-          {#each visibleColumns as col (col.key)}
-            <th class={col.class ?? ''}>
-              {#if col.sortable}
-                <button
-                  class="hover:text-base-content flex items-center gap-1"
-                  onclick={() => {
-                    onsort(col.key);
-                  }}
-                >
-                  {col.label}
-                  {#if sortColumn === col.key}
-                    {#if sortDir === 'asc'}
-                      <ArrowUp size={14} />
-                    {:else}
-                      <ArrowDown size={14} />
-                    {/if}
-                  {:else}
-                    <ArrowUpDown size={14} class="opacity-30" />
-                  {/if}
-                </button>
-              {:else}
-                {col.label}
-              {/if}
-            </th>
-          {/each}
-        </tr>
-      </thead>
-      <tbody>
-        {#each detections as detection (detection.id)}
-          <tr
-            class="hover cursor-pointer {expandedId === detection.id ? 'bg-primary/10' : ''}"
-            onclick={() => {
-              toggleExpand(detection.id);
-            }}
-          >
-            <td class="text-base-content/50">
-              {#if expandedId === detection.id}
-                <ChevronDown size={14} />
-              {:else}
-                <ChevronRight size={14} />
-              {/if}
-            </td>
+    <div class="@container/table">
+      <table class="table-sm table">
+        <thead>
+          <tr>
+            <th class="w-8"></th>
             {#each visibleColumns as col (col.key)}
-              {#if col.key === 'file_name'}
-                <td class={col.class ?? ''}>{detection.audio_file?.file_name ?? '--'}</td>
-              {:else if col.key === 'date'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
-                  {formatDetectionDate(detection, zoneOf(detection))}
-                </td>
-              {:else if col.key === 'time'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
-                  {formatDetectionTime(detection, zoneOf(detection))}
-                </td>
-              {:else if col.key === 'start_time'}
-                <td class="{col.class ?? ''} tabular-nums">{formatTime(detection.start_time)}</td>
-              {:else if col.key === 'common_name'}
-                <td class="{col.class ?? ''} font-medium">{detection.common_name}</td>
-              {:else if col.key === 'scientific_name'}
-                <td class="{col.class ?? ''} text-base-content/50 italic">{detection.scientific_name}</td>
-              {:else}
-                <td class="{col.class ?? ''} text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
-              {/if}
+              <th class={col.class ?? ''}>
+                {#if col.sortable}
+                  <button
+                    class="hover:text-base-content flex items-center gap-1"
+                    onclick={() => {
+                      onsort(col.key);
+                    }}
+                  >
+                    {col.label}
+                    {#if sortColumn === col.key}
+                      {#if sortDir === 'asc'}
+                        <ArrowUp size={14} />
+                      {:else}
+                        <ArrowDown size={14} />
+                      {/if}
+                    {:else}
+                      <ArrowUpDown size={14} class="opacity-30" />
+                    {/if}
+                  </button>
+                {:else}
+                  {col.label}
+                {/if}
+              </th>
             {/each}
           </tr>
-          {#if expandedId === detection.id && detection.audio_file}
+        </thead>
+        <tbody>
+          {#each detections as detection (detection.id)}
+            <tr
+              class="hover cursor-pointer {expandedId === detection.id ? 'bg-primary/10' : ''}"
+              onclick={() => {
+                toggleExpand(detection.id);
+              }}
+            >
+              <td class="text-base-content/50">
+                {#if expandedId === detection.id}
+                  <ChevronDown size={14} />
+                {:else}
+                  <ChevronRight size={14} />
+                {/if}
+              </td>
+              {#each visibleColumns as col (col.key)}
+                {#if col.key === 'file_name'}
+                  <td class={col.class ?? ''}>{detection.audio_file?.file_name ?? '--'}</td>
+                {:else if col.key === 'date'}
+                  <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
+                    {formatDetectionDate(detection, zoneOf(detection))}
+                  </td>
+                {:else if col.key === 'time'}
+                  <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
+                    {formatDetectionTime(detection, zoneOf(detection))}
+                  </td>
+                {:else if col.key === 'start_time'}
+                  <td class="{col.class ?? ''} tabular-nums">{formatTime(detection.start_time)}</td>
+                {:else if col.key === 'common_name'}
+                  <td class="{col.class ?? ''} font-medium">{detection.common_name}</td>
+                {:else if col.key === 'scientific_name'}
+                  <td class="{col.class ?? ''} text-base-content/50 italic">{detection.scientific_name}</td>
+                {:else}
+                  <td class="{col.class ?? ''} text-right tabular-nums">{formatConfidence(detection.confidence)}</td>
+                {/if}
+              {/each}
+            </tr>
+            {#if expandedId === detection.id && detection.audio_file}
+              <tr>
+                <td colspan={colCount} class="p-0">
+                  <div class="sticky left-0 w-[100cqw]">
+                    <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} zone={zoneOf(detection)} />
+                  </div>
+                </td>
+              </tr>
+            {/if}
+          {:else}
             <tr>
-              <td colspan={colCount} class="p-0">
-                <DetectionDetail {detection} sourceFile={detection.audio_file.file_path} zone={zoneOf(detection)} />
+              <td colspan={colCount} class="text-base-content/50 px-3 py-8 text-center">
+                {#if loading}
+                  {m.table_loadingDetections()}
+                {:else}
+                  {m.table_noDetections()}
+                {/if}
               </td>
             </tr>
-          {/if}
-        {:else}
-          <tr>
-            <td colspan={colCount} class="text-base-content/50 px-3 py-8 text-center">
-              {#if loading}
-                {m.table_loadingDetections()}
-              {:else}
-                {m.table_noDetections()}
-              {/if}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- Pagination -->

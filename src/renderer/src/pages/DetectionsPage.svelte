@@ -534,10 +534,15 @@
       </div>
 
       <!-- Filter row -->
-      <div class="border-base-300 bg-base-200/30 flex items-center gap-3 border-b px-4 py-1.5 text-sm">
+      <div
+        class="border-base-300 bg-base-200/30 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-1.5 text-sm"
+      >
         <!-- Species filter -->
-        <div class="relative">
-          <Search size={14} class="text-base-content/40 absolute top-1/2 left-2 -translate-y-1/2" />
+        <div class="relative max-w-48 min-w-32 flex-1">
+          <Search
+            size={14}
+            class="text-base-content/40 pointer-events-none absolute top-1/2 left-2 z-10 -translate-y-1/2"
+          />
           <input
             type="text"
             placeholder={m.analysis_filterByName()}
@@ -545,7 +550,7 @@
             data-focus-search
             bind:value={speciesQuery}
             oninput={handleSpeciesInput}
-            class="input input-bordered input-sm w-48 pr-7 pl-7 text-xs"
+            class="input input-bordered input-sm w-full pr-7 pl-7 text-xs"
           />
           {#if speciesQuery}
             <button
@@ -585,7 +590,7 @@
               offset = 0;
               loadActiveView();
             }}
-            class="select select-bordered select-sm text-xs"
+            class="select select-bordered select-sm w-auto max-w-56 shrink-0 overflow-clip text-xs whitespace-nowrap [overflow-clip-margin:content-box]"
           >
             <option value={0}>{m.species_allSpecies()}</option>
             {#each speciesLists as list (list.id)}
@@ -594,10 +599,11 @@
           </select>
         {/if}
 
-        <div class="flex-1"></div>
-
         <!-- Confidence filter -->
-        <label class="text-base-content/60 flex shrink-0 items-center gap-1.5" title={m.filter_minConfidence()}>
+        <label
+          class="text-base-content/60 ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+          title={m.filter_minConfidence()}
+        >
           {m.analysis_conf()}
           <input
             type="range"

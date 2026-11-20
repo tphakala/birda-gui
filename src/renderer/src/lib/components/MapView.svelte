@@ -46,7 +46,8 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="flex cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-md transition-opacity"
-            style="width: {size}px; height: {size}px; background-color: {color}; opacity: {dimmed ? 0.3 : 1};"
+            class:px-1={size >= 20 && String(shownCount(loc)).length >= 4}
+            style="min-width: {size}px; height: {size}px; background-color: {color}; opacity: {dimmed ? 0.3 : 1};"
             onclick={() => {
               toggleLocation(loc);
             }}
@@ -62,7 +63,7 @@
     {#if selectedLocation}
       {@const loc = selectedLocation}
       <Popup lnglat={[loc.longitude, loc.latitude]} onclose={() => (selectedLocationId = null)}>
-        <div class="bg-base-100 text-base-content min-w-40 p-2">
+        <div class="min-w-40">
           <h4 class="text-sm font-semibold">{loc.name ?? m.map_unknownLocation()}</h4>
           <p class="text-base-content/60 text-xs">
             {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}

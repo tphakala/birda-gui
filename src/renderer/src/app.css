@@ -104,6 +104,41 @@
     0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
+/* Checkboxes use the field radius; --radius-selector is 1.5rem and would round a 16px box into a circle. */
+.checkbox {
+  border-radius: var(--radius-field);
+}
+
+/* Map popups follow the theme. maplibre-gl.css loads after this file (main.ts), so each selector adds .maplibregl-map to outrank it. */
+.maplibregl-map .maplibregl-popup-content {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.maplibregl-map .maplibregl-popup-close-button {
+  color: inherit;
+}
+
+.maplibregl-map
+  :is(.maplibregl-popup-anchor-top, .maplibregl-popup-anchor-top-left, .maplibregl-popup-anchor-top-right)
+  .maplibregl-popup-tip {
+  border-bottom-color: var(--color-base-100);
+}
+
+.maplibregl-map
+  :is(.maplibregl-popup-anchor-bottom, .maplibregl-popup-anchor-bottom-left, .maplibregl-popup-anchor-bottom-right)
+  .maplibregl-popup-tip {
+  border-top-color: var(--color-base-100);
+}
+
+.maplibregl-map .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--color-base-100);
+}
+
+.maplibregl-map .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--color-base-100);
+}
+
 /* Override daisyUI double-border focus style with a clean single highlight */
 .input:focus,
 .input:focus-within,
