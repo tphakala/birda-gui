@@ -115,9 +115,9 @@
           {#each logState.entries as entry (entry.id)}
             <div class="hover:bg-neutral-content/5 flex gap-1 px-1">
               <span class="text-neutral-content/50 shrink-0">{formatTime(entry.timestamp)}</span>
-              <span class="shrink-0 rounded px-1 {levelBadgeColor(entry.level)}"
-                >{entry.level.toUpperCase().padEnd(5)}</span
-              >
+              <span class="shrink-0 rounded px-1 {levelBadgeColor(entry.level)}">
+                {entry.level.toUpperCase().padEnd(5)}
+              </span>
               <span class="text-info shrink-0">[{entry.source}]</span>
               <span class="{levelColor(entry.level)} break-all whitespace-pre-wrap">{entry.message}</span>
             </div>

@@ -14,8 +14,8 @@
   const canShowMap = $derived(mapSupported && !mapFailed);
 
   let {
-    latitude = $bindable(), // eslint-disable-line @typescript-eslint/no-useless-default-assignment -- $bindable() required for Svelte bind:
-    longitude = $bindable(), // eslint-disable-line @typescript-eslint/no-useless-default-assignment -- $bindable() required for Svelte bind:
+    latitude = $bindable(),
+    longitude = $bindable(),
     autoDetected = false, // eslint-disable-line prefer-const -- destructuring requires `let` for other reassigned props
   }: {
     latitude: number;

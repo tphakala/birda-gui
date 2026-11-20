@@ -161,13 +161,13 @@
               {#if col.key === 'file_name'}
                 <td class={col.class ?? ''}>{detection.audio_file?.file_name ?? '--'}</td>
               {:else if col.key === 'date'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums"
-                  >{formatDetectionDate(detection, zoneOf(detection))}</td
-                >
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
+                  {formatDetectionDate(detection, zoneOf(detection))}
+                </td>
               {:else if col.key === 'time'}
-                <td class="{col.class ?? ''} text-base-content/60 tabular-nums"
-                  >{formatDetectionTime(detection, zoneOf(detection))}</td
-                >
+                <td class="{col.class ?? ''} text-base-content/60 tabular-nums">
+                  {formatDetectionTime(detection, zoneOf(detection))}
+                </td>
               {:else if col.key === 'start_time'}
                 <td class="{col.class ?? ''} tabular-nums">{formatTime(detection.start_time)}</td>
               {:else if col.key === 'common_name'}
@@ -205,18 +205,18 @@
   <div
     class="border-base-300 bg-base-200 text-base-content/60 flex items-center justify-between border-t px-3 py-2 text-xs"
   >
-    <span
-      >{total === 1
+    <span>
+      {total === 1
         ? m.pagination_detectionCountSingular({ count: String(total) })
-        : m.pagination_detectionCount({ count: String(total) })}</span
-    >
+        : m.pagination_detectionCount({ count: String(total) })}
+    </span>
     <div class="flex items-center gap-2">
       <button onclick={prevPage} disabled={currentPage <= 1} class="btn btn-ghost btn-xs">
         <ChevronLeft size={14} />
       </button>
-      <span class="tabular-nums"
-        >{m.pagination_pageOf({ current: String(currentPage), total: String(totalPages) })}</span
-      >
+      <span class="tabular-nums">
+        {m.pagination_pageOf({ current: String(currentPage), total: String(totalPages) })}
+      </span>
       <button onclick={nextPage} disabled={currentPage >= totalPages} class="btn btn-ghost btn-xs">
         <ChevronRight size={14} />
       </button>

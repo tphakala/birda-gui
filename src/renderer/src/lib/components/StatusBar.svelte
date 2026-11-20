@@ -50,9 +50,9 @@
   <div class="bg-base-300 h-3 w-px"></div>
 
   <!-- Totals of finished analyses; a running one is counted when it ends. -->
-  <span title={m.status_catalogTotals()}
-    >{m.status_detections({ count: formatNumber(appState.catalogStats.total_detections) })}</span
-  >
+  <span title={m.status_catalogTotals()}>
+    {m.status_detections({ count: formatNumber(appState.catalogStats.total_detections) })}
+  </span>
   <span>{m.status_species({ count: formatNumber(appState.catalogStats.total_species) })}</span>
   <span>{m.status_locations({ count: formatNumber(appState.catalogStats.total_locations) })}</span>
 
@@ -97,8 +97,9 @@
         </div>
         <div class="flex items-center justify-between text-sm">
           <span class="text-base-content/70">{m.status_updateModal_requiredVersion()}</span>
-          <span class="font-semibold">{m.status_updateModal_minVersion({ version: birdaStatus.minVersion ?? '' })}</span
-          >
+          <span class="font-semibold">
+            {m.status_updateModal_minVersion({ version: birdaStatus.minVersion ?? '' })}
+          </span>
         </div>
       </div>
 

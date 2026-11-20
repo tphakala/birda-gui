@@ -170,8 +170,8 @@
       cursorColor: '#012d65',
       sampleRate: 48000, // Default is 8000 which kills spectrogram frequency range
       url: toBirdaMediaUrl(filePath),
-      plugins: [spectrogramPlugin],
     });
+    wavesurfer.registerPlugin(spectrogramPlugin);
 
     wavesurfer.on('ready', () => {
       if (!wavesurfer) return;
@@ -502,12 +502,12 @@
               size={16}
             />{:else}<Play size={16} />{/if}
         </button>
-        <button class="btn btn-ghost btn-sm" onclick={zoomOut} aria-label={m.annotation_zoomOut()}
-          ><ZoomOut size={14} /></button
-        >
-        <button class="btn btn-ghost btn-sm" onclick={zoomIn} aria-label={m.annotation_zoomIn()}
-          ><ZoomIn size={14} /></button
-        >
+        <button class="btn btn-ghost btn-sm" onclick={zoomOut} aria-label={m.annotation_zoomOut()}>
+          <ZoomOut size={14} />
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick={zoomIn} aria-label={m.annotation_zoomIn()}>
+          <ZoomIn size={14} />
+        </button>
         <span class="text-base-content/80 ml-2">{m.annotation_drawHint()}</span>
       </div>
 

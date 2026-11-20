@@ -52,9 +52,9 @@
       <h4 class="truncate text-sm font-semibold" title={variant.region_name}>{variant.region_name}</h4>
       <div class="shrink-0">
         {#if installed}
-          <span class="badge badge-success badge-sm gap-1"
-            ><CircleCheckBig size={10} />{m.gallery_installedBadge()}</span
-          >
+          <span class="badge badge-success badge-sm gap-1">
+            <CircleCheckBig size={10} />{m.gallery_installedBadge()}
+          </span>
         {:else if !download}
           <button
             class="btn btn-primary btn-xs gap-1"

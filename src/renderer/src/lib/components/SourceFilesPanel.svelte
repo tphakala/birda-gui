@@ -125,43 +125,43 @@
           <div class="flex items-center gap-2">
             <CircleDot size={14} class="text-base-content/40" />
             <span class="text-base-content/60">{m.sourceFiles_channels()}</span>
-            <span class="ml-auto font-medium"
-              >{file.channels === 1
+            <span class="ml-auto font-medium">
+              {file.channels === 1
                 ? m.sourceFiles_mono()
                 : file.channels === 2
                   ? m.sourceFiles_stereo()
-                  : file.channels}</span
-            >
+                  : file.channels}
+            </span>
           </div>
         {/if}
         <div class="flex items-center gap-2">
           <Calendar size={14} class="text-base-content/40" />
           <span class="text-base-content/60">{m.sourceFiles_recordingDate()}</span>
-          <span class="ml-auto font-medium"
-            >{recStart
+          <span class="ml-auto font-medium">
+            {recStart
               ? recStart.toLocaleDateString(undefined, {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
                   ...tzOpt,
                 })
-              : m.sourceFiles_recordingDateUnknown()}</span
-          >
+              : m.sourceFiles_recordingDateUnknown()}
+          </span>
         </div>
         {#if recStart}
           <div class="flex items-center gap-2">
             <Play size={14} class="text-base-content/40" />
             <span class="text-base-content/60">{m.sourceFiles_recordingStartTime()}</span>
-            <span class="ml-auto font-medium tabular-nums"
-              >{recStart.toLocaleTimeString(undefined, {
+            <span class="ml-auto font-medium tabular-nums">
+              {recStart.toLocaleTimeString(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hour12: false,
                 timeZoneName: 'short',
                 ...tzOpt,
-              })}</span
-            >
+              })}
+            </span>
           </div>
         {/if}
       </div>

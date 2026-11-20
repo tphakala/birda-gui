@@ -17,7 +17,7 @@
     'aria-label'?: string | undefined;
   }
 
-  /* eslint-disable prefer-const, @typescript-eslint/no-useless-default-assignment */
+  /* eslint-disable prefer-const */
   let {
     value = $bindable(),
     placeholder,
@@ -27,7 +27,7 @@
     class: className = '',
     'aria-label': ariaLabel,
   }: Props = $props();
-  /* eslint-enable prefer-const, @typescript-eslint/no-useless-default-assignment */
+  /* eslint-enable prefer-const */
 
   const system = systemTimeZone();
 
