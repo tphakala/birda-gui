@@ -207,13 +207,13 @@
     <!-- Grid -->
     <div class="flex-1 overflow-auto px-4 pt-2 pb-4">
       <div
-        class="grid w-full"
-        style="grid-template-columns: minmax(180px, max-content) repeat(24, minmax(24px, 32px)); gap: 2px;"
+        class="grid w-full min-w-min"
+        style="grid-template-columns: minmax(180px, max-content) repeat(24, minmax(min-content, 32px)); gap: 2px;"
       >
         <!-- Header row: empty corner + hour labels -->
         <div class="bg-base-100 sticky left-0 z-10"></div>
         {#each hours as h (h)}
-          <div class="text-base-content/50 flex h-6 items-center justify-center text-[10px] font-medium">
+          <div class="text-base-content/50 flex h-6 min-w-6 items-center justify-center text-[10px] font-medium">
             {String(h).padStart(2, '0')}
           </div>
         {/each}
