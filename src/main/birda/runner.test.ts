@@ -343,6 +343,29 @@ describe('birdaChildEnv', () => {
       expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe(expected);
     });
 
+    it('picks the library name for darwin and linux and sets nothing on win32', () => {
+      const dir = path.dirname(own.path);
+      fs.writeFileSync(path.join(dir, 'libonnxruntime.dylib'), '');
+      fs.writeFileSync(path.join(dir, 'libonnxruntime.so'), '');
+      const real = fs.realpathSync(dir);
+      const host = process.platform;
+      const define = (value: string) =>
+        Object.defineProperty(process, 'platform', { value, configurable: true, enumerable: true });
+      const cases: [string, string | undefined][] = [
+        ['darwin', path.join(real, 'libonnxruntime.dylib')],
+        ['linux', path.join(real, 'libonnxruntime.so')],
+        ['win32', undefined],
+      ];
+      try {
+        for (const [name, expected] of cases) {
+          define(name);
+          expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe(expected);
+        }
+      } finally {
+        define(host);
+      }
+    });
+
     it('follows a symlinked birda to the library next to the real binary', () => {
       const expected = addOrtLibrary(own.path);
       const linkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-fake-link-'));

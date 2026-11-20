@@ -50,7 +50,7 @@ vi.mock('../birda/runner', () => ({
     return handle;
   }),
   findBirda: vi.fn(),
-  birdaChildEnv: () => ({ BIRDA_TEST_ENV: '1' }),
+  birdaChildEnv: (birdaPath: string) => ({ BIRDA_TEST_ENV: birdaPath }),
   registerProcess: vi.fn(),
   unregisterProcess: vi.fn(),
 }));
@@ -602,13 +602,15 @@ describe('stopAnalysisForQuit', () => {
   });
 
   describe('birda:extract-clip', () => {
-    it('runs birda with the child environment', async () => {
+    it('runs birda with the child environment built for the resolved birda path', async () => {
       const { execFile } = await import('child_process');
+      const { findBirda } = await import('../birda/runner');
+      vi.mocked(findBirda).mockResolvedValueOnce('/opt/birda/birda');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-clip-env-'));
       leftovers.push(dir);
       await expect(invoke('birda:extract-clip', 1, 'a.wav', 0, 3, dir)).resolves.toBe('/clips/a.wav');
       const options = vi.mocked(execFile).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv };
-      expect(options.env).toEqual({ BIRDA_TEST_ENV: '1' });
+      expect(options.env).toEqual({ BIRDA_TEST_ENV: '/opt/birda/birda' });
     });
   });
 
