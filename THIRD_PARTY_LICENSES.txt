@@ -62,7 +62,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The following npm package may be included in this product:
 
- - content-type@2.1.0
+ - content-type@3.1.1
 
 This package contains the following license:
 
@@ -93,7 +93,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 The following npm package may be included in this product:
 
- - wavesurfer.js@8.0.2
+ - wavesurfer.js@8.1.0
 
 This package contains the following license:
 
@@ -131,7 +131,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The following npm package may be included in this product:
 
- - @tokenizer/inflate@0.4.1
+ - @tokenizer/inflate@0.6.1
 
 This package contains the following license:
 
@@ -155,7 +155,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 
 The following npm package may be included in this product:
 
- - suncalc@2.1.1
+ - suncalc@2.1.4
 
 This package contains the following license:
 
@@ -186,7 +186,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The following npm package may be included in this product:
 
- - tslib@2.8.1
+ - tslib@2.9.1
 
 This package contains the following license:
 
@@ -237,7 +237,7 @@ MIT
 
 The following npm package may be included in this product:
 
- - daisyui@5.7.47
+ - daisyui@5.8.1
 
 This package contains the following license:
 
@@ -267,7 +267,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - zod@4.6.5
+ - zod@4.6.7
 
 This package contains the following license:
 
@@ -297,7 +297,7 @@ SOFTWARE.
 
 The following npm packages may be included in this product:
 
- - file-type@21.3.4
+ - file-type@22.3.0
  - uint8array-extras@1.6.0
 
 These packages each contain the following license:
@@ -316,7 +316,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm package may be included in this product:
 
- - strtok3@10.3.5
+ - strtok3@10.8.0
 
 This package contains the following license:
 
@@ -394,7 +394,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm package may be included in this product:
 
- - better-sqlite3@13.0.3
+ - better-sqlite3@13.2.0
 
 This package contains the following license:
 
@@ -454,25 +454,7 @@ SOFTWARE.
 
 The following npm package may be included in this product:
 
- - music-metadata@11.16.1
-
-This package contains the following license:
-
-The MIT License (MIT)
-
-Copyright © 2026 Borewit
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------------
-
-The following npm package may be included in this product:
-
- - @borewit/text-codec@0.2.2
+ - @borewit/text-codec@0.2.3
 
 This package contains the following license:
 
@@ -490,10 +472,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 The following npm packages may be included in this product:
 
- - token-types@6.1.2
- - win-guid@0.2.1
+ - music-metadata@12.7.0
+ - token-types@6.2.0
 
 These packages each contain the following license:
+
+The MIT License (MIT)
+
+Copyright © 2026 Borewit
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----------
+
+The following npm package may be included in this product:
+
+ - win-guid@0.2.1
+
+This package contains the following license:
 
 The MIT License (MIT)
 
