@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { addOrtLibrary } from '../test-support/fake-child';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
 
 vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
@@ -40,6 +41,18 @@ describe.skipIf(!posix)('execBirda', () => {
   it('runs birda with NO_COLOR set', async () => {
     setBirdaPath(fakeBirda('env', 'echo "$NO_COLOR"'));
     await expect(execBirda([])).resolves.toBe('1\n');
+  });
+
+  it.skipIf(process.platform === 'win32')('gives birda the ONNX Runtime library next to it', async () => {
+    vi.stubEnv('ORT_DYLIB_PATH', undefined);
+    try {
+      const file = fakeBirda('ort', 'echo "$ORT_DYLIB_PATH"');
+      const expected = addOrtLibrary(file);
+      setBirdaPath(file);
+      await expect(execBirda([])).resolves.toBe(`${expected}\n`);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('kills a birda that does not finish and says how long it waited', async () => {

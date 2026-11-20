@@ -129,7 +129,7 @@ export async function installModel(
       // and manages defaults separately via birda:models-set-default.
       const proc = spawn(birdaPath, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: birdaChildEnv(),
+        env: birdaChildEnv(birdaPath),
       });
       const tracked = superviseChild(proc);
       installProcess = tracked;

@@ -23,7 +23,7 @@ async function checkNvidiaSmi(): Promise<boolean> {
 
 async function getBirdaProviders(birdaPath: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(birdaPath, ['providers', '--output-mode', 'json'], { env: birdaChildEnv() });
+    const proc = spawn(birdaPath, ['providers', '--output-mode', 'json'], { env: birdaChildEnv(birdaPath) });
     let stdout = '';
     let stderr = '';
     let resolved = false;
