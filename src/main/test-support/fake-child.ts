@@ -69,6 +69,21 @@ export function createFakeBirda(): { path: string; remove: () => void } {
   };
 }
 
+/**
+ * Writes an empty ONNX Runtime library file next to the given binary and returns the ORT_DYLIB_PATH value a child
+ * should get for it. The directory is resolved through realpath because on macOS the temp dir is under /var, a
+ * symlink to /private/var. The file name is spelled out here on purpose so the expectation does not share code with
+ * the code under test. Only for darwin and linux.
+ */
+export function addOrtLibrary(birdaPath: string): string {
+  const name = process.platform === 'darwin' ? 'libonnxruntime.dylib' : 'libonnxruntime.so';
+  const dir = path.dirname(birdaPath);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixture under a fresh temp dir
+  fs.writeFileSync(path.join(dir, name), '');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixture under a fresh temp dir
+  return path.join(fs.realpathSync(dir), name);
+}
+
 /** Waits until spawn has produced the given number of children and returns the last one. */
 export async function spawnedChild(children: unknown[], count = 1): Promise<FakeChild> {
   await vi.waitFor(() => {

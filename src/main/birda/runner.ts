@@ -165,11 +165,42 @@ function getExecutionProviderFlag(ep: string | undefined): string | null {
 }
 
 /**
- * Environment for any birda child. NO_COLOR keeps birda's log output free of
+ * Environment for birda children. NO_COLOR keeps birda's log output free of
  * ANSI escapes, which would show as junk in the log panel and in error text.
+ *
+ * On macOS and Linux it also sets ORT_DYLIB_PATH to the ONNX Runtime library
+ * next to the real birda binary, when that file exists (see birda#442). A
+ * non-empty ORT_DYLIB_PATH in the environment is left alone, and other
+ * platforms are unchanged.
  */
-export function birdaChildEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
-  return { ...process.env, ...extra, NO_COLOR: '1' };
+export function birdaChildEnv(birdaPath: string, extra?: Record<string, string>): NodeJS.ProcessEnv {
+  return { ...process.env, ...ortLibraryEnv(birdaPath), ...extra, NO_COLOR: '1' };
+}
+
+/**
+ * ORT_DYLIB_PATH for the library next to the binary; only ever an existing file.
+ * birda v1.8.1 rejects any other value (src/inference/runtime.rs:30-42 in that repository).
+ */
+function ortLibraryEnv(birdaPath: string): Record<string, string> | undefined {
+  if (process.env.ORT_DYLIB_PATH) return undefined;
+  let fileName: string;
+  if (process.platform === 'darwin') fileName = 'libonnxruntime.dylib';
+  else if (process.platform === 'linux') fileName = 'libonnxruntime.so';
+  else return undefined;
+  let binary = path.resolve(birdaPath);
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    binary = fs.realpathSync(binary);
+  } catch {
+    // Keep the path as given.
+  }
+  const library = path.join(path.dirname(binary), fileName);
+  try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    return fs.statSync(library).isFile() ? { ORT_DYLIB_PATH: library } : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function getCudaEnv(): Record<string, string> | undefined {
@@ -423,7 +454,7 @@ export function runAnalysis(sourcePath: string, options: AnalysisOptions): Analy
       try {
         child = spawn(birdaPath, args, {
           stdio: ['ignore', 'pipe', 'pipe'],
-          env: birdaChildEnv(getCudaEnv()),
+          env: birdaChildEnv(birdaPath, getCudaEnv()),
         });
       } catch (err) {
         // spawn can throw synchronously as well as emit 'error'.

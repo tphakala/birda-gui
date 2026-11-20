@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NVIDIA_VENDOR_ID } from '$shared/constants';
-import { FakeChild } from '../test-support/fake-child';
+import { FakeChild, addOrtLibrary, createFakeBirda } from '../test-support/fake-child';
 
 const h = vi.hoisted(() => ({
   execCalls: [] as { command: string; options: { timeout?: number } }[],
@@ -45,17 +45,26 @@ describe('detectGpuCapabilities', () => {
     expect(h.execCalls[0].options.timeout).toBe(5000);
   });
 
-  it('runs birda providers with NO_COLOR set', async () => {
+  it('runs birda providers with NO_COLOR set and the ONNX Runtime library next to birda', async () => {
     const { spawn } = await import('child_process');
-    const detection = detectGpuCapabilities('/opt/birda');
-    await vi.waitFor(() => {
-      expect(h.children).toHaveLength(1);
-    });
-    const options = vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv } | undefined;
-    expect(options?.env?.NO_COLOR).toBe('1');
-    const child = h.children[0] as FakeChild;
-    child.stdout.write(JSON.stringify({ payload: { providers: [{ name: 'CPU' }] } }));
-    child.exit(0);
-    await expect(detection).resolves.toMatchObject({ availableProviders: ['CPU'] });
+    const fake = createFakeBirda();
+    vi.stubEnv('ORT_DYLIB_PATH', undefined);
+    try {
+      const ortLibrary = process.platform === 'win32' ? undefined : addOrtLibrary(fake.path);
+      const detection = detectGpuCapabilities(fake.path);
+      await vi.waitFor(() => {
+        expect(h.children).toHaveLength(1);
+      });
+      const options = vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv } | undefined;
+      expect(options?.env?.NO_COLOR).toBe('1');
+      expect(options?.env?.ORT_DYLIB_PATH).toBe(ortLibrary);
+      const child = h.children[0] as FakeChild;
+      child.stdout.write(JSON.stringify({ payload: { providers: [{ name: 'CPU' }] } }));
+      child.exit(0);
+      await expect(detection).resolves.toMatchObject({ availableProviders: ['CPU'] });
+    } finally {
+      vi.unstubAllEnvs();
+      fake.remove();
+    }
   });
 });

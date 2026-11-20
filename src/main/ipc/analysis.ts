@@ -680,7 +680,7 @@ export function registerAnalysisHandlers(): void {
         const child = execFile(
           birdaPath,
           args,
-          { maxBuffer: 10 * 1024 * 1024, timeout: 30000, env: birdaChildEnv() },
+          { maxBuffer: 10 * 1024 * 1024, timeout: 30000, env: birdaChildEnv(birdaPath) },
           (err, stdout, stderr) => {
             unregisterProcess(child);
             if (err) {

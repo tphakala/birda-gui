@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
+import { FakeChild, addOrtLibrary, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
 
 vi.mock('electron', () => ({ app: { getPath: () => NO_USER_DATA } }));
@@ -34,12 +34,22 @@ afterAll(() => {
 });
 
 describe('installModel', () => {
-  it('starts birda with NO_COLOR set', async () => {
+  it('starts birda with NO_COLOR set and the ONNX Runtime library next to birda', async () => {
     const { spawn } = await import('child_process');
+    const own = createFakeBirda();
+    vi.stubEnv('ORT_DYLIB_PATH', undefined);
+    setBirdaPath(own.path);
+    const ortLibrary = process.platform === 'win32' ? undefined : addOrtLibrary(own.path);
     const install = installModel({ id: 'birdnet' });
     const child = await spawnedChild();
-    const options = vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv } | undefined;
-    expect(options?.env?.NO_COLOR).toBe('1');
+    try {
+      const options = vi.mocked(spawn).mock.calls.at(-1)?.[2] as { env?: NodeJS.ProcessEnv } | undefined;
+      expect(options?.env?.NO_COLOR).toBe('1');
+      expect(options?.env?.ORT_DYLIB_PATH).toBe(ortLibrary);
+    } finally {
+      vi.unstubAllEnvs();
+      own.remove();
+    }
     child.stdout.write(JSON.stringify({ payload: { id: 'birdnet' } }));
     child.exit(0);
     await install;

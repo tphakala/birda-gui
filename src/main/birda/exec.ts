@@ -23,7 +23,7 @@ export async function execBirda(
     execFile(
       birdaPath,
       args,
-      { maxBuffer: BIRDA_MAX_BUFFER_BYTES, timeout: timeoutMs, env: birdaChildEnv() },
+      { maxBuffer: BIRDA_MAX_BUFFER_BYTES, timeout: timeoutMs, env: birdaChildEnv(birdaPath) },
       (err, stdout, stderr) => {
         if (err) {
           if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {

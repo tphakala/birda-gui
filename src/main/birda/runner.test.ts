@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalysisCancelledError } from './analysis-session';
-import { FakeChild, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
+import { FakeChild, addOrtLibrary, createFakeBirda, spawnedChild as waitForChild } from '../test-support/fake-child';
 import { NO_USER_DATA } from '../test-support/ipc-harness';
 import { BIRDA_CLI_VERSION, CUDA_LIBS_DIR_NAME, CUDA_VERSION_FILE } from '$shared/constants';
 
@@ -290,7 +290,7 @@ describe('killAll', () => {
 
 describe('birdaChildEnv', () => {
   it('sets NO_COLOR and keeps the rest of the environment', () => {
-    const env = birdaChildEnv();
+    const env = birdaChildEnv(fakeBirda.path);
     expect(env.NO_COLOR).toBe('1');
     expect(env.PATH).toBe(process.env.PATH);
   });
@@ -299,11 +299,84 @@ describe('birdaChildEnv', () => {
     const before = process.env.BIRDA_TEST_VAR;
     process.env.BIRDA_TEST_VAR = 'from-environment';
     try {
-      expect(birdaChildEnv({ BIRDA_TEST_VAR: 'extra' }).BIRDA_TEST_VAR).toBe('extra');
+      expect(birdaChildEnv(fakeBirda.path, { BIRDA_TEST_VAR: 'extra' }).BIRDA_TEST_VAR).toBe('extra');
     } finally {
       if (before === undefined) delete process.env.BIRDA_TEST_VAR;
       else process.env.BIRDA_TEST_VAR = before;
     }
+  });
+
+  describe.skipIf(process.platform === 'win32')('ORT_DYLIB_PATH', () => {
+    // A fresh folder per test: the shared fake birda must stay free of a library.
+    let own: ReturnType<typeof createFakeBirda>;
+
+    beforeEach(() => {
+      vi.stubEnv('ORT_DYLIB_PATH', undefined);
+      own = createFakeBirda();
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      own.remove();
+    });
+
+    it('is set only while the library is next to birda', () => {
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBeUndefined();
+      const expected = addOrtLibrary(own.path);
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe(expected);
+      fs.rmSync(expected);
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBeUndefined();
+    });
+
+    it('is not set when something that is not a file has the library name', () => {
+      const expected = addOrtLibrary(own.path);
+      fs.rmSync(expected);
+      fs.mkdirSync(expected);
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBeUndefined();
+    });
+
+    it('keeps a value that is already set, and replaces an empty one', () => {
+      const expected = addOrtLibrary(own.path);
+      vi.stubEnv('ORT_DYLIB_PATH', '/custom/libonnxruntime');
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe('/custom/libonnxruntime');
+      vi.stubEnv('ORT_DYLIB_PATH', '');
+      expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe(expected);
+    });
+
+    it('picks the library name for darwin and linux and sets nothing on win32', () => {
+      const dir = path.dirname(own.path);
+      fs.writeFileSync(path.join(dir, 'libonnxruntime.dylib'), '');
+      fs.writeFileSync(path.join(dir, 'libonnxruntime.so'), '');
+      const real = fs.realpathSync(dir);
+      const host = process.platform;
+      const define = (value: string) =>
+        Object.defineProperty(process, 'platform', { value, configurable: true, enumerable: true });
+      const cases: [string, string | undefined][] = [
+        ['darwin', path.join(real, 'libonnxruntime.dylib')],
+        ['linux', path.join(real, 'libonnxruntime.so')],
+        ['win32', undefined],
+      ];
+      try {
+        for (const [name, expected] of cases) {
+          define(name);
+          expect(birdaChildEnv(own.path).ORT_DYLIB_PATH).toBe(expected);
+        }
+      } finally {
+        define(host);
+      }
+    });
+
+    it('follows a symlinked birda to the library next to the real binary', () => {
+      const expected = addOrtLibrary(own.path);
+      const linkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birda-fake-link-'));
+      try {
+        const link = path.join(linkDir, 'birda');
+        fs.symlinkSync(own.path, link);
+        expect(birdaChildEnv(link).ORT_DYLIB_PATH).toBe(expected);
+      } finally {
+        fs.rmSync(linkDir, { recursive: true, force: true });
+      }
+    });
   });
 });
 
@@ -315,7 +388,11 @@ describe('runAnalysis CUDA libraries', () => {
     fs.writeFileSync(path.join(libs, CUDA_VERSION_FILE), BIRDA_CLI_VERSION);
     const previous = dirs.userData;
     dirs.userData = userData;
+    const own = createFakeBirda();
+    vi.stubEnv('ORT_DYLIB_PATH', undefined);
     try {
+      setBirdaPath(own.path);
+      const ortLibrary = process.platform === 'win32' ? undefined : addOrtLibrary(own.path);
       const { spawn } = await import('child_process');
       const handle = runAnalysis('/rec.wav', options);
       (await spawnedChild()).exit(0);
@@ -324,7 +401,10 @@ describe('runAnalysis CUDA libraries', () => {
       const searchPath = process.platform === 'win32' ? env.PATH : env.LD_LIBRARY_PATH;
       expect(searchPath?.startsWith(libs)).toBe(true);
       expect(env.NO_COLOR).toBe('1');
+      expect(env.ORT_DYLIB_PATH).toBe(ortLibrary);
     } finally {
+      vi.unstubAllEnvs();
+      own.remove();
       dirs.userData = previous;
       fs.rmSync(userData, { recursive: true, force: true });
     }
